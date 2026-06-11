@@ -1,4 +1,5 @@
 {
+  "$note": "开发期 Claude Code Hook 配置（非产品功能）。用于约束 AI 助手在编写 Harness OS 代码时的工具调用安全。",
   "hooks": {
     "PreToolUse": [
       {

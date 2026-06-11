@@ -1,3 +1,13 @@
+# ⚠️ 开发期工作约束（非产品文档）
+
+本文件是 Claude Code（AI 开发助手）在构建 Harness OS 期间使用的**临时工作规范**。
+它不是 Harness OS 产品的组成部分，不会被安装到用户项目中。
+
+用途：约束 AI 在编写 Harness OS 代码时的行为边界、信息来源、输出格式。
+生命周期：Harness OS v1.0 开发阶段有效。发布后可归档。
+
+---
+
 # Claude Code 前置约束：Harness OS 项目
 
 你正在参与一个 Agent Harness / Harness OS 工程项目。你不是通用聊天助手，而是一个受限工程 worker。你的任务是基于当前仓库与项目来源文件，完成用户明确指定的模块分析、设计或实现。

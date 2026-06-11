@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Harness OS — PreToolUse Guard Hook
+Harness OS — 开发期 PreToolUse Guard Hook（非产品功能）
+
+用于在开发 Harness OS 期间保护 AI 助手不误操作。
+不会随 Harness OS 分发给用户。
 
 Intercepts Bash/Write/Edit/MultiEdit tool calls and checks against:
 - Dangerous shell command patterns
 - Protected file paths
-
-Follows the hook constraints from Harness OS CLAUDE.md §5-6.
 """
 
 import json
