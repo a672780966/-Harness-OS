@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Harness OS local runtime state
+.project/state/runtime.json
+.project/tasks/active/
+.project/context/
+.project/sessions/
+.project/checkpoints/
+.project/cache/
+.project/tmp/
+.project/index/
+
+# Harness OS event and trace logs
+.project/reports/events/
+.project/reports/traces/
+.project/reports/artifacts/
+
+# Harness OS raw outputs
+.project/**/raw-output/
+.project/**/stdout-raw.*
+.project/**/stderr-raw.*
+
+# Environment files
+.env
+.env.*
+*.pem
+*.key
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Editor
+.vscode/
+.idea/
