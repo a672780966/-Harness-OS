@@ -1,0 +1,419 @@
+====================================================================
+  Harness OS — 开发实施步骤
+  生成日期：2026-06-11
+  目标：基于 19 份设计文档实现 Thin Harness 最小可交付版本
+====================================================================
+
+目录：
+  阶段 0：开发环境（已完成）
+  阶段 1：Project Manager 核心
+  阶段 2：AGENTS.md 协议与工程初始化
+  阶段 3：Task Manager 基础生命周期
+  阶段 4：Context Engineering 核心
+  阶段 5：Governance 基础层
+  阶段 6：Verification Pipeline
+  阶段 7：Observability 基础
+  阶段 8：Delivery Pipeline 基础
+  阶段 9：State 与 Recovery
+  阶段 10：Skill 实现
+  阶段 11：集成与 Thin Harness 验收
+  阶段 12：Thick Harness 扩展
+
+====================================================================
+阶段 0：开发环境（✅ 已完成）
+====================================================================
+
+  已安装：
+    - Node.js v24.16.0
+    - pnpm 11.5.3
+    - Rust 1.96.0 / Cargo 1.96.0
+    - Git（已初始化）
+    - TypeScript 6.0
+
+  已配置：
+    - tsconfig.json（ES2022 + DOM lib）
+    - package.json（全部脚本 + 入口）
+    - .gitignore（遵循 17_PROJECT_STORAGE_GIT_POLICY.md）
+    - AGENTS.md（项目自描述协议）
+
+  已创建目录结构：
+    src/cli/ — CLI 入口（16 个命令已注册）
+    src/types.ts — 核心类型定义
+    src/project/ — Project Manager
+    src/task/ — Task Manager
+    src/decision/ — Decision Manager
+    src/context/ — Context Engineering
+    src/skills/ — 7 个 Skills（filesystem/shell/git/github/repo-scanner/test-runner/delivery）
+    src/governance/ — Policy Engine
+    src/verification/ — Verification Pipeline
+    src/observability/ — Event Log / Report
+    src/delivery/ — Delivery Pipeline
+    src/state/ — Checkpoint / Recovery
+
+  类型检查：tsc --noEmit ✅ PASSED
+
+====================================================================
+阶段 1：Project Manager 核心
+====================================================================
+
+  参考文档：06_TASK_DECISION_PROJECT_MANAGER.md §6
+  验收标准：11_ACCEPTANCE_CRITERIA.md §5
+
+  1.1 实现 create 流程 (src/project/create.ts)
+      - 创建项目目录
+      - 初始化 Git repo
+      - 注入 AGENTS.md 模板
+      - 创建 .project/ 结构
+      - 写入 manifest.json
+      - 扫描技术栈（tech-stack.md）
+      - 生成 repository-map.md
+      - 创建 checkpoint
+      - 生成 project-created 报告
+
+  1.2 实现 open 流程 (src/project/open.ts)
+      - 校验路径和 Git repo
+      - 检查 AGENTS.md 是否存在
+      - 检查 .project/ 完整性
+      - 读取并校验 manifest.json
+      - 刷新 repository-map.md
+      - 读取 git status
+      - 输出 project open summary
+
+  1.3 实现 init/repair 流程 (src/project/repair.ts)
+      - 创建缺失目录
+      - 补齐 manifest 字段
+      - 刷新 tech-stack.md / repository-map.md
+      - 检查 AGENTS.md 必填章节
+      - 生成 repair report
+
+  1.4 CLI 集成
+      - harness create <name>
+      - harness open <path>
+      - harness init / harness repair
+
+====================================================================
+阶段 2：AGENTS.md 协议与工程初始化
+====================================================================
+
+  参考文档：03_AGENTS_MD_STANDARD.md
+  验收标准：11_ACCEPTANCE_CRITERIA.md §6
+
+  2.1 AGENTS.md 模板 (templates/AGENTS.md)
+      - Project Identity / Goals
+      - Architecture Rules
+      - Repository Structure
+      - Development Commands
+      - Testing and Verification
+      - Coding Standards
+      - Context Rules
+      - Skill / Tool Rules
+      - Permission and Approval Rules
+      - Security Rules
+      - Task Completion Rules
+
+  2.2 AGENTS.md 校验器 (src/project/agents-validator.ts)
+      - 检查必填章节
+      - 缺失章节报 WARN
+      - 缺失核心节阻止任务执行
+
+  2.3 .project/ 结构生成器
+      - state/ — manifest.json, project.md, tech-stack.md, repository-map.md
+      - tasks/ — active/, completed/, failed/
+      - decisions/ — ADR-*.md, ADR-*.json
+      - context/ — <run-id>.json, <run-id>.md
+      - reports/ — runs/, verification/, delivery/, events/, traces/
+      - checkpoints/ — <checkpoint-id>.json
+      - sessions/ — <session-id>.json
+
+====================================================================
+阶段 3：Task Manager 基础生命周期
+====================================================================
+
+  参考文档：06_TASK_DECISION_PROJECT_MANAGER.md §7
+  验收标准：11_ACCEPTANCE_CRITERIA.md §7
+
+  3.1 Task Record 生成 (src/task/create.ts)
+      - 生成 task id
+      - 规范化任务标题
+      - 推断 task type
+      - 提取显式文件、命令
+      - 写入 .project/tasks/active/<task-id>.md
+      - 写入 .project/tasks/active/<task-id>.json
+
+  3.2 Task 状态机 (src/task/state-machine.ts)
+      - 状态流转：created → ready → running → blocked → paused
+        → verifying → completed / failed
+      - 非法状态转移报错
+
+  3.3 Task 完成流程 (src/task/complete.ts)
+      - 收集 changed files
+      - 生成 task summary
+      - 移动 active → completed 或 failed
+      - 生成 completion event
+
+  3.4 Task Manager API
+      - create / start / pause / resume / block / complete / fail
+      - linkRun / linkContext / linkCheckpoint / linkDecision
+
+====================================================================
+阶段 4：Context Engineering 核心
+====================================================================
+
+  参考文档：05_CONTEXT_ENGINEERING.md
+  验收标准：11_ACCEPTANCE_CRITERIA.md §9
+
+  4.1 Source Collectors
+      - AGENTS.md Collector — 提取核心规则
+      - Project State Collector — 读取 project.md, manifest.json
+      - Task Collector — 读取当前 task
+      - Git Collector — 读取 git status/diff/log
+      - Decision Collector — 读取相关 ADR
+
+  4.2 Relevance Engine (src/context/relevance.ts)
+      - 显式文件匹配（优先）
+      - Git diff 文件匹配
+      - 测试文件映射
+      - 关键词匹配（ripgrep）
+
+  4.3 Context Pack 生成 (src/context/build.ts)
+      - 组装 Context Pack JSON
+      - 组装 Context Pack Markdown
+      - 写入 .project/context/<run-id>.json
+      - 写入 .project/context/<run-id>.md
+
+  4.4 Context Budget Manager (src/context/budget.ts)
+      - Token 估算（char/4）
+      - P0 → P3 优先级裁切
+      - P0 保留规则
+
+  4.5 Context Snapshot & Refresh
+      - 保存每次 run 后的 Context 快照
+      - 文件变更时触发 refresh
+
+====================================================================
+阶段 5：Governance 基础层
+====================================================================
+
+  参考文档：08_GOVERNANCE_SECURITY.md
+  验收标准：11_ACCEPTANCE_CRITERIA.md §11
+
+  5.1 Policy Engine (src/governance/policy.ts)
+      - 策略来源：Global → Project Manifest → AGENTS.md
+      - 策略检查流程：Operation + Risk → Allow/Deny/Requires-Approval
+      - 路径保护：workspace boundary check
+      - 命令风险分类：危险命令检测
+
+  5.2 Approval Gate (src/governance/approval.ts)
+      - 审批请求创建
+      - 审批状态管理（pending / approved / denied）
+      - CLI 交互式提示
+      - 非交互模式处理
+
+  5.3 Secret Redactor (src/governance/redactor.ts)
+      - 常见 secret 模式检测（API keys, tokens, .env）
+      - 统一替换为 [REDACTED]
+      - 在 Skill 输出和日志中自动脱敏
+
+  5.4 Context Pack 治理集成
+      - Context Pack 中包含审批规则
+      - 可用 Skills 列表
+
+====================================================================
+阶段 6：Verification Pipeline
+====================================================================
+
+  参考文档：09_VERIFICATION_OBSERVABILITY.md §6-10
+  验收标准：11_ACCEPTANCE_CRITERIA.md §12
+
+  6.1 命令检测器 (src/verification/commands.ts)
+      - 从 AGENTS.md 读取命令
+      - 从 manifest.json 读取命令
+      - 从 package.json 推断命令
+      - 标记不确定性（inferred 命令标 uncertain）
+
+  6.2 Verification Plan 生成 (src/verification/plan.ts)
+      - 按优先级排序：lint → typecheck → test → build
+      - 标记 required / optional
+      - 设置 timeout
+
+  6.3 Verification Runner (src/verification/runner.ts)
+      - 通过 Shell Skill 执行命令
+      - 捕获 exit code / stdout / stderr
+      - 汇总结果（passed / failed / partial / skipped）
+
+  6.4 Verification Report (src/verification/report.ts)
+      - 写入 .project/reports/verification/<run-id>.md
+      - 包含命令结果表、风险说明
+
+====================================================================
+阶段 7：Observability 基础
+====================================================================
+
+  参考文档：09_VERIFICATION_OBSERVABILITY.md §11-20
+  验收标准：11_ACCEPTANCE_CRITERIA.md §13
+
+  7.1 Event Logger (src/observability/events.ts)
+      - JSONL 格式写入 .project/reports/events/<run-id>.jsonl
+      - 事件类型：run.*, task.*, skill.*, file.*, approval.*, verification.*
+      - Secret Redaction 后写入
+
+  7.2 Run Trace (src/observability/trace.ts)
+      - 记录每次 run 的事件序列
+      - 记录工具调用
+      - 记录文件变更
+
+  7.3 Run Report 生成 (src/observability/report.ts)
+      - 写入 .project/reports/runs/<run-id>.md
+      - 包含：Task / Context Used / Skill Calls / Changes / Verification / Risks
+
+====================================================================
+阶段 8：Delivery Pipeline 基础
+====================================================================
+
+  参考文档：10_DELIVERY_PIPELINE.md
+  验收标准：11_ACCEPTANCE_CRITERIA.md §14
+
+  8.1 Delivery Guard (src/delivery/guard.ts)
+      - 检查 verification result
+      - 检查 run report
+      - 检查 Governance（push main / deploy 需审批）
+
+  8.2 Commit Message 生成 (src/delivery/commit.ts)
+      - Conventional Commit 格式
+      - 从 task summary + diff 生成
+
+  8.3 PR Body 生成 (src/delivery/pr.ts)
+      - 必需章节：Task / Summary / Changed Files / Verification / Risks
+
+  8.4 Delivery Report (src/delivery/report.ts)
+      - 写入 .project/reports/delivery/<delivery-id>.md
+
+====================================================================
+阶段 9：State 与 Recovery
+====================================================================
+
+  参考文档：06_TASK_DECISION_PROJECT_MANAGER.md §6.7 / §7.8 / §8
+  验收标准：11_ACCEPTANCE_CRITERIA.md §15
+
+  9.1 Run State (src/state/run.ts)
+      - 记录每次 run 的状态
+      - 支持 resume
+
+  9.2 Checkpoint (src/state/checkpoint.ts)
+      - 高风险操作前创建 checkpoint
+      - 记录 Git 状态 + Task 状态
+      - 支持 rollback
+
+  9.3 Session State (src/state/session.ts)
+      - 保存会话元数据
+
+====================================================================
+阶段 10：Skill 实现
+====================================================================
+
+  参考文档：07_MCP_SKILLS_SPEC.md §11-19
+  验收标准：11_ACCEPTANCE_CRITERIA.md §10
+
+  10.1 Skill Registry (src/skills/registry.ts)
+      - Skill 注册 / 查询
+      - Manifest 校验
+      - 按项目启用/禁用
+
+  10.2 Filesystem Skill
+      - read_file / write_file / edit_file / delete_file / list_dir / search_text
+      - 路径边界检查
+      - 写操作记录 diff
+
+  10.3 Shell Skill
+      - run_command / run_test / run_build
+      - Timeout 管理
+      - 危险命令检测
+
+  10.4 Git Skill
+      - git_status / git_diff / git_log / git_commit
+      - 编辑前检查 dirty state
+      - Push 操作需审批
+
+  10.5 Repo Scanner Skill
+      - scan_files / build_repository_map / detect_commands
+      - 技术栈检测
+
+====================================================================
+阶段 11：集成与 Thin Harness 验收
+====================================================================
+
+  参考文档：11_ACCEPTANCE_CRITERIA.md §18（Thin Harness）
+
+  11.1 E2E 场景测试
+      - harness create demo（项目创建）
+      - harness open ./demo（项目打开）
+      - harness run "task" + verify（任务执行 + 验证）
+      - 高风险命令被阻止
+      - 交付被阻止（无验证时）
+
+  11.2 Thin Harness 验收清单
+      ✅ CLI 入口可运行
+      ✅ create 创建项目
+      ✅ open 打开项目
+      ✅ AGENTS.md 注入和校验
+      ✅ .project/ 结构
+      ✅ Task Manager 基础生命周期
+      ✅ Context Pack 生成
+      ✅ Filesystem / Shell / Git / Repo Scanner Skill
+      ✅ Policy Engine + Approval Gate
+      ✅ Secret Redaction
+      ✅ Verification（lint/typecheck/test）
+      ✅ Event Log + Run Report
+      ✅ Checkpoint
+      ✅ Delivery Report
+
+  11.3 测试覆盖
+      - 安全边界测试（path escape / secret / dangerous command）
+      - 状态转移测试
+      - CLI 输出契约测试
+
+====================================================================
+阶段 12：Thick Harness 扩展（后续）
+====================================================================
+
+  参考文档：11_ACCEPTANCE_CRITERIA.md §19
+
+  - GitHub Skill（PR/Issue/Release）
+  - Browser Skill（文档读取）
+  - Test Runner Skill（完整命令推断）
+  - Database Skill（可选）
+  - Decision Manager 完整 ADR 生命周期
+  - Replay 命令
+  - Trace 聚合
+  - 完整 commit/PR/release/deploy
+  - Governance policy config
+  - 多项目注册
+  - 项目 archive/restore
+  - 迁移支持
+  - 文档 + 测试覆盖
+
+====================================================================
+参考文档索引
+====================================================================
+
+  01_ARCHITECTURE.md       — 系统总架构
+  02_CODEX_DEVELOPMENT_SPEC.md — Codex 开发规范
+  03_AGENTS_MD_STANDARD.md — 项目协议模板
+  04_HARNESS_OS_DESIGN.md  — 系统设计
+  05_CONTEXT_ENGINEERING.md — 上下文工程
+  06_TASK_DECISION_PROJECT_MANAGER.md — 项目/任务/决策管理
+  07_MCP_SKILLS_SPEC.md    — MCP Skills 规范
+  08_GOVERNANCE_SECURITY.md — 治理与安全
+  09_VERIFICATION_OBSERVABILITY.md — 验证与可观测性
+  10_DELIVERY_PIPELINE.md  — 交付流水线
+  11_ACCEPTANCE_CRITERIA.md — 验收标准
+  12_OPEN_SOURCE_REFERENCES.md — 开源参考
+  13_TESTING_STRATEGY.md   — 测试策略
+  14_ERROR_CODES.md        — 错误码体系
+  15_CONFIG_REFERENCE.md   — 配置参考
+  16_CLI_OUTPUT_CONTRACT.md — CLI 输出契约
+  17_PROJECT_STORAGE_GIT_POLICY.md — 存储与 Git 策略
+  18_MIGRATION_VERSIONING.md — 迁移与版本
+  19_PERFORMANCE_SLA.md    — 性能与 SLA
+
+====================================================================

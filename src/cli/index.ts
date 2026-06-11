@@ -19,9 +19,28 @@ program
 program
   .command('create <project-name>')
   .description('Create a new Harness OS project')
-  .action(async (name) => {
+  .option('-p, --path <path>', 'Custom project path')
+  .option('-t, --type <type>', 'Project type (web-app, backend-service, cli, library, agent-harness)')
+  .action(async (name, options) => {
     const { createProject } = await import('../project/index.js');
-    await createProject(name);
+    try {
+      const result = await createProject({
+        name,
+        path: options.path,
+        projectType: options.type,
+      });
+      console.log(`\nProject created: ${result.name}`);
+      console.log(`Path: ${result.path}`);
+      console.log(`AGENTS.md: ${result.agentsMdCreated ? 'created' : 'already exists'}`);
+      console.log(`Manifest: ${result.manifestPath}`);
+      console.log(`Checkpoint: ${result.checkpointId}`);
+      console.log(`\nNext:`);
+      console.log(`  cd ${result.path}`);
+      console.log(`  harness run "your task"`);
+    } catch (err) {
+      console.error(`Error creating project: ${(err as Error).message}`);
+      process.exit(1);
+    }
   });
 
 program
@@ -29,7 +48,20 @@ program
   .description('Open an existing project')
   .action(async (path) => {
     const { openProject } = await import('../project/index.js');
-    await openProject(path);
+    const result = await openProject(path);
+    if (!result.ready) {
+      console.log(`\nProject opened with issues:`);
+    } else {
+      console.log(`\nProject opened: ${result.name}`);
+    }
+    console.log(`Path: ${result.path}`);
+    console.log(`Branch: ${result.branch}`);
+    console.log(`Ready: ${result.ready ? 'yes' : 'no'}`);
+    console.log(`Uncommitted changes: ${result.hasUserChanges ? 'yes' : 'no'}`);
+    if (result.warnings.length > 0) {
+      console.log(`\nWarnings:`);
+      for (const w of result.warnings) console.log(`  - ${w}`);
+    }
   });
 
 program
@@ -37,7 +69,14 @@ program
   .description('Initialize Harness OS in an existing project')
   .action(async () => {
     const { initProject } = await import('../project/index.js');
-    await initProject();
+    const result = await initProject();
+    console.log(`\nInit ${result.path}`);
+    console.log(`Directories created: ${result.dirsCreated.length}`);
+    console.log(`Manifest: ${result.manifestCreated ? 'created' : 'already exists'}`);
+    console.log(`AGENTS.md: ${result.agentsMdCreated ? 'created' : 'already exists'}`);
+    if (result.agentsMdMissingSections.length > 0) {
+      console.log(`Missing AGENTS.md sections: ${result.agentsMdMissingSections.join(', ')}`);
+    }
   });
 
 program
@@ -45,7 +84,39 @@ program
   .description('Repair missing or invalid project structure')
   .action(async () => {
     const { repairProject } = await import('../project/index.js');
-    await repairProject();
+    const result = await repairProject();
+    console.log(`\nRepair ${result.path}`);
+    console.log(`Directories created: ${result.dirsCreated.length}`);
+    console.log(`Manifest: ${result.manifestCreated ? 'created' : result.manifestUpdated ? 'updated' : 'ok'}`);
+    if (result.agentsMdMissingSections.length > 0) {
+      console.log(`Missing AGENTS.md sections (${result.agentsMdMissingSections.length}):`);
+      for (const s of result.agentsMdMissingSections) console.log(`  - ${s}`);
+    }
+    console.log(`Tech stack: ${result.techStackWritten ? 'refreshed' : 'ok'}`);
+    console.log(`Repository map: ${result.repoMapWritten ? 'refreshed' : 'ok'}`);
+  });
+
+program
+  .command('check')
+  .description('Check AGENTS.md validity')
+  .action(async () => {
+    const { validateAgentsMd } = await import('../project/index.js');
+    const result = validateAgentsMd(process.cwd());
+    console.log(`\nAGENTS.md check: ${result.fileExists ? 'found' : 'missing'}`);
+    console.log(`Valid: ${result.isValid ? 'yes' : 'no'}`);
+
+    const present = result.sections.filter(s => s.present).length;
+    const missing = result.sections.filter(s => !s.present).length;
+    console.log(`Sections: ${present} present, ${missing} missing`);
+
+    if (result.missingCore.length > 0) {
+      console.log(`\nBLOCKING — core sections missing:`);
+      for (const s of result.missingCore) console.log(`  - ${s}`);
+    }
+    if (result.missingRequired.length > 0) {
+      console.log(`\nWarnings — non-core sections missing:`);
+      for (const s of result.missingRequired) console.log(`  - ${s}`);
+    }
   });
 
 // Task commands

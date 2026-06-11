@@ -1,23 +1,38 @@
-import { PolicyCheckResult, PolicyDecision, RiskLevel } from '../types.js';
+/**
+ * Harness OS — Governance Module
+ *
+ * Central module for policy evaluation, risk classification, and approval gating.
+ *
+ * Source: CLAUDE.md §4 (permission three-state), §7 (approval gate),
+ *   §10 (tool call trace), §11 (Thin Harness steps 4-6).
+ *
+ * Sub-modules:
+ * - policy.ts       — Policy engine: checkPolicy, classifyRisk, PolicyRule
+ * - approval-gate.ts — Approval gate: submit, resolve, query pending approvals
+ *
+ * Thin Harness scope (§11):
+ *   4. PreToolUse gate  → 5. allow/deny/needs_approval  → 6. approval resolve
+ */
 
-export async function checkPolicy(
-  action: string,
-  args: { affectedPaths?: string[]; command?: string }
-): Promise<PolicyCheckResult> {
-  console.log(`Checking policy for: ${action}`);
-  // TODO: Full Policy Engine per 08_GOVERNANCE_SECURITY.md
-  // 1. Read policy sources (global, project, AGENTS.md)
-  // 2. Classify risk level
-  // 3. Check protected paths
-  // 4. Check dangerous commands
-  // 5. Return allow/deny/requires-approval
-  return { decision: 'allow', reason: 'Default allow', riskLevel: 'low', policySource: 'default', affectedPaths: [] };
-}
+// Re-export policy
+export {
+  checkPolicy,
+  classifyRisk,
+  createRule,
+  type PolicyContext,
+  type PolicyRule,
+} from './policy.js';
 
-export function classifyRisk(command: string): RiskLevel {
-  const dangerous = ['rm -rf', 'sudo', 'chmod -R', 'chown -R', 'git reset --hard', 'git clean -fd', 'git push --force'];
-  for (const d of dangerous) {
-    if (command.includes(d)) return 'high';
-  }
-  return 'low';
-}
+// Re-export approval gate
+export {
+  submitApproval,
+  resolveApproval,
+  getApproval,
+  listPendingApprovals,
+  listAllApprovals,
+  approvalToDecision,
+  __test_clearStore,
+  type ApprovalStatus,
+  type PendingApproval,
+  type ApprovalResolution,
+} from './approval-gate.js';

@@ -1,34 +1,44 @@
-import { ProjectManifest } from '../types.js';
+/**
+ * Harness OS — Project Manager Module
+ *
+ * Phase 1-2: Project lifecycle + AGENTS.md validation.
+ *
+ * Sub-modules:
+ * - create.ts           — Create a new Harness OS project
+ * - open.ts             — Open an existing Harness OS project
+ * - repair.ts           — Initialize or repair project structure
+ * - agents-validator.ts — Validate AGENTS.md against 14-section standard
+ *
+ * Reference: 06_TASK_DECISION_PROJECT_MANAGER.md §6
+ *            03_AGENTS_MD_STANDARD.md
+ */
 
-const PROJECT_DIR = '.project';
-const STATE_DIR = `${PROJECT_DIR}/state`;
-const TASKS_DIR = `${PROJECT_DIR}/tasks`;
-const DECISIONS_DIR = `${PROJECT_DIR}/decisions`;
-const REPORTS_DIR = `${PROJECT_DIR}/reports`;
-const CONTEXT_DIR = `${PROJECT_DIR}/context`;
+export {
+  createProject,
+  type CreateProjectOptions,
+  type CreateProjectResult,
+  detectTechStack,
+  buildRepositoryMap,
+  type TechStack,
+  type RepositoryMap,
+} from './create.js';
 
-export async function createProject(name: string): Promise<void> {
-  console.log(`Creating project: ${name}`);
-  // TODO: Implement full project creation flow per 06_TASK_DECISION_PROJECT_MANAGER.md
-  // 1. Create project directory
-  // 2. Initialize Git repo
-  // 3. Inject AGENTS.md template
-  // 4. Create .project/ structure
-  // 5. Generate manifest.json
-  // 6. Create initial checkpoint
-}
+export {
+  openProject,
+  type OpenProjectResult,
+} from './open.js';
 
-export async function openProject(path: string): Promise<void> {
-  console.log(`Opening project: ${path}`);
-  // TODO: Validate repo, read AGENTS.md, check .project/, repair if needed
-}
+export {
+  initProject,
+  repairProject,
+  type RepairResult,
+} from './repair.js';
 
-export async function initProject(): Promise<void> {
-  console.log('Initializing Harness OS in current project');
-  // TODO: Create .project/ structure in existing project
-}
-
-export async function repairProject(): Promise<void> {
-  console.log('Repairing project structure');
-  // TODO: Fix missing directories, validate manifest, refresh repo map
-}
+export {
+  validateAgentsMd,
+  canExecuteTask,
+  type AgentsMdValidationResult,
+  type SectionResult,
+  type AgentsSection,
+  REQUIRED_SECTIONS,
+} from './agents-validator.js';
