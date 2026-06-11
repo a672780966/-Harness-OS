@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "lint": "echo \"eslint pending\"",
     "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
