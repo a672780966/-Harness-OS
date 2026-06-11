@@ -1,5 +1,5 @@
 {
-  "$note": "开发期 Claude Code Hook 配置（非产品功能）。用于约束 AI 助手在编写 Harness OS 代码时的工具调用安全。",
+  "$note": "开发期 Claude Code Hook 配置（非产品功能）。用于约束 AI 助手在编写 Harness OS 代码时的工具调用安全。参考: everything-claude-code-zh hooks 架构，已扩展至 6 个事件阶段。",
   "hooks": {
     "PreToolUse": [
       {
@@ -21,6 +21,28 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/pre_compact.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/session_start.py"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "*",
@@ -28,6 +50,28 @@
           {
             "type": "command",
             "command": "python .claude/hooks/post_tool_trace.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/stop_check.py"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/session_end.py"
           }
         ]
       }

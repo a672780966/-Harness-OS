@@ -260,20 +260,43 @@ export interface ContextPack {
 
 export type RiskLevel = 'low' | 'medium' | 'high';
 
+export type SkillCategory =
+  | 'filesystem'
+  | 'shell'
+  | 'git'
+  | 'github'
+  | 'browser'
+  | 'repo-scanner'
+  | 'test-runner'
+  | 'database'
+  | 'delivery'
+  | 'custom';
+
+export interface SkillPermission {
+  type: 'filesystem-read' | 'filesystem-write' | 'network' | 'env-read' | 'git-config';
+  description: string;
+}
+
 export interface SkillManifest {
   name: string;
   version: string;
   description: string;
-  category: string;
+  category: SkillCategory;
   tools: SkillToolManifest[];
+  defaultEnabled: boolean;
+  requiresNetwork: boolean;
+  requiresFilesystem: boolean;
   riskLevel: RiskLevel;
+  permissions?: SkillPermission[];
+  /** Path to the SKILL.md documentation file (relative to project root). */
+  docPath?: string;
 }
 
 export interface SkillToolManifest {
   name: string;
   description: string;
-  inputSchema: unknown;
-  outputSchema: unknown;
+  inputSchema: Record<string, unknown>;
+  outputSchema: Record<string, unknown>;
   riskLevel: RiskLevel;
   requiresApproval: boolean;
   timeoutMs: number;

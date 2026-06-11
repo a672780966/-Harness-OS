@@ -8,9 +8,12 @@ Harness OS — 开发期 PreToolUse Guard Hook（非产品功能）
 Intercepts Bash/Write/Edit/MultiEdit tool calls and checks against:
 - Dangerous shell command patterns
 - Protected file paths
+- Dev server running outside tmux (blocks)
+- Git push without review reminder
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -39,11 +42,29 @@ DANGEROUS_BASH_PATTERNS = [
     "terraform destroy",
 ]
 
+DEV_SERVER_PATTERNS = [
+    r"npm run dev",
+    r"pnpm dev",
+    r"pnpm run dev",
+    r"yarn dev",
+    r"npm start",
+    r"pnpm start",
+]
+
 
 def deny(reason: str):
     print(json.dumps({
         "continue": False,
         "permissionDecision": "deny",
+        "permissionDecisionReason": reason
+    }))
+    sys.exit(0)
+
+
+def needs_approval(reason: str):
+    print(json.dumps({
+        "continue": False,
+        "permissionDecision": "needs_approval",
         "permissionDecisionReason": reason
     }))
     sys.exit(0)
@@ -56,6 +77,21 @@ def allow(reason: str = "allowed by pre_tool_guard"):
         "permissionDecisionReason": reason
     }))
     sys.exit(0)
+
+
+def is_dev_server_command(command: str) -> bool:
+    """Detect dev server startup commands that should run in tmux."""
+    normalized = command.lower().strip()
+    for pattern in DEV_SERVER_PATTERNS:
+        if re.search(pattern, normalized):
+            return True
+    return False
+
+
+def is_git_push(command: str) -> bool:
+    """Detect git push to warn about review."""
+    normalized = command.lower().strip()
+    return normalized.startswith("git push") or "git push " in normalized
 
 
 def main():
@@ -71,9 +107,18 @@ def main():
         command = tool_input.get("command", "")
         normalized = command.lower()
 
+        # Check dangerous patterns
         for pattern in DANGEROUS_BASH_PATTERNS:
             if pattern in normalized:
                 deny(f"Dangerous bash command requires explicit human approval: {pattern}")
+
+        # Detect dev server commands
+        if is_dev_server_command(command):
+            needs_approval("Dev server commands should run in tmux to persist across sessions")
+
+        # Warn on git push
+        if is_git_push(command):
+            allow(f"Git push detected — please review changes before push: {command[:60]}")
 
         allow("Bash command passed basic guard")
 

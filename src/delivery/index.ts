@@ -1,8 +1,99 @@
-export async function runDelivery(options?: { commit?: boolean; pr?: boolean; release?: boolean; deploy?: string }): Promise<void> {
-  console.log('Running delivery pipeline');
-  // TODO: Full delivery per 10_DELIVERY_PIPELINE.md
-  // 1. Check verification status
-  // 2. Check governance
-  // 3. Generate commit/PR/release
-  // 4. Generate delivery report
+/**
+ * Harness OS — Delivery Module
+ *
+ * Phase 8: Delivery Pipeline — guard, commit message, PR body, report.
+ *
+ * Reference: 10_DELIVERY_PIPELINE.md
+ */
+
+export { runGuard, formatGuardResult, type GuardResult, type GuardCheck } from './guard.js';
+export { generateCommitMessage, generateCommitFromTask, taskTypeToCommitType, type CommitMessage } from './commit.js';
+export { generatePrBody, type PrBody, type PrBodyInput } from './pr.js';
+export { generateDeliveryReport, saveDeliveryReport, type DeliveryReport, type DeliveryType, type DeliveryStatus } from './report.js';
+
+// ============================================================
+// CLI Entry Point
+// ============================================================
+
+import type { DeliveryType } from './report.js';
+
+export async function runDelivery(options?: {
+  commit?: boolean;
+  pr?: boolean;
+  release?: boolean;
+  deploy?: string;
+  taskId?: string;
+  runId?: string;
+  taskTitle?: string;
+  taskType?: string;
+  changedFiles?: string[];
+  projectPath?: string;
+}): Promise<void> {
+  const projectPath = options?.projectPath ?? process.cwd();
+  const projectId = 'proj_' + Date.now().toString(36);
+
+  // Determine delivery type
+  let deliveryType: DeliveryType = 'commit';
+  if (options?.pr) deliveryType = 'pull-request';
+  if (options?.release) deliveryType = 'release';
+  if (options?.deploy) deliveryType = 'deploy';
+
+  // 1. Run guard
+  const { runGuard, formatGuardResult } = await import('./guard.js');
+  const guard = await runGuard({ deliveryType, projectPath, taskId: options?.taskId, runId: options?.runId });
+  console.log(formatGuardResult(guard));
+  console.log('');
+
+  // 2. Generate commit message
+  const { generateCommitFromTask } = await import('./commit.js');
+  const commitMsg = generateCommitFromTask({
+    taskTitle: options?.taskTitle ?? 'Update',
+    taskType: options?.taskType,
+    changedFiles: options?.changedFiles,
+    runId: options?.runId,
+  });
+  console.log('Generated commit message:');
+  console.log('---');
+  console.log(commitMsg.full);
+  console.log('---\n');
+
+  // 3. Generate PR body if requested
+  let prBody;
+  if (options?.pr) {
+    const { generatePrBody } = await import('./pr.js');
+    prBody = generatePrBody({
+      title: commitMsg.full,
+      taskId: options?.taskId,
+      runId: options?.runId,
+      changedFiles: options?.changedFiles,
+    });
+    console.log('Generated PR body:');
+    console.log('---');
+    console.log(prBody.body);
+    console.log('---\n');
+  }
+
+  // 4. Save delivery report
+  const { generateDeliveryReport, saveDeliveryReport } = await import('./report.js');
+  const deliveryId = `del_${Date.now().toString(36)}`;
+  const report = generateDeliveryReport({
+    deliveryId,
+    projectId,
+    type: deliveryType,
+    taskId: options?.taskId,
+    runId: options?.runId,
+    commitMessage: commitMsg,
+    prBody,
+    guardResult: guard,
+    summary: `Delivery for ${options?.taskTitle || 'untitled task'}`,
+  });
+  const reportPath = saveDeliveryReport(report, projectPath);
+  console.log(`Delivery report saved: ${reportPath}`);
+
+  // 5. Final status
+  if (guard.canProceed) {
+    console.log('\n✅ Delivery guard passed. Ready to proceed.');
+  } else {
+    console.log('\n❌ Delivery blocked by guard checks.');
+  }
 }

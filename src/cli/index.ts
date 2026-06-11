@@ -149,12 +149,18 @@ program
 // Verification commands
 program
   .command('verify')
-  .description('Run verification pipeline')
+  .description('Run verification pipeline (lint → typecheck → test → build)')
   .option('--task <task-id>', 'Task to verify')
   .option('--run <run-id>', 'Run to verify')
   .action(async (options) => {
-    const { runVerification } = await import('../verification/index.js');
-    await runVerification(options);
+    const { runVerificationPipeline } = await import('../verification/index.js');
+    const result = await runVerificationPipeline(options);
+    if (result.status === 'passed') {
+      console.log('\n✅ Verification passed');
+    } else {
+      console.log(`\n❌ Verification ${result.status}`);
+      process.exit(70); // verification error exit code
+    }
   });
 
 // Report commands
@@ -224,18 +230,35 @@ program
 // Checkpoint commands
 program
   .command('checkpoint')
-  .description('Create or manage checkpoints')
-  .action(async () => {
+  .description('Create a checkpoint capturing git and task state')
+  .option('--task <task-id>', 'Task ID')
+  .option('--run <run-id>', 'Run ID')
+  .action(async (options) => {
     const { createCheckpoint } = await import('../state/index.js');
-    await createCheckpoint();
+    const cp = await createCheckpoint({
+      taskId: options.task,
+      runId: options.run,
+    });
+    console.log(`\nCheckpoint created: ${cp.id}`);
+    console.log(`Branch: ${cp.currentBranch}`);
+    console.log(`Changed files: ${cp.changedFiles.length}`);
+    console.log(`Created: ${cp.createdAt}`);
   });
 
 program
   .command('rollback <checkpoint-id>')
-  .description('Rollback to a checkpoint')
+  .description('Show checkpoint rollback information (requires separate approval)')
   .action(async (id) => {
-    const { rollbackTo } = await import('../state/index.js');
-    await rollbackTo(id);
+    const { rollbackToCheckpoint } = await import('../state/index.js');
+    const result = await rollbackToCheckpoint(id);
+    console.log(`\nRollback analysis for: ${result.checkpointId}`);
+    console.log(`Current branch: ${result.branch}`);
+    console.log(`Can rollback: ${result.success ? 'yes' : 'no'}`);
+    if (result.warnings.length > 0) {
+      console.log(`\nWarnings:`);
+      for (const w of result.warnings) console.log(`  - ${w}`);
+    }
+    console.log(`\nNote: git reset requires explicit human approval.`);
   });
 
 // Config command

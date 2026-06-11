@@ -1,18 +1,16 @@
 /**
  * Harness OS — State Module
  *
- * Persistent state store using SQLite for sessions, turns, and approvals.
- *
- * Source: CLAUDE.md §8 (Session/State constraints).
+ * Phase 9: Run state, checkpoint, and session state management.
  *
  * Sub-modules:
- * - store.ts  — SqliteStore: persistent CRUD for sessions/turns/approvals
- * - schema.ts — Table DDL and schema versioning
+ * - store.ts     — SqliteStore: persistent CRUD for sessions/turns/approvals
+ * - schema.ts    — Table DDL and schema versioning
+ * - run.ts       — Run lifecycle state (create/get/update/pause/fail/complete)
+ * - checkpoint.ts — Checkpoint creation, loading, listing, rollback
  *
- * Thin Harness: in-memory stores in runtime/session.ts and
- *   governance/approval-gate.ts are the default.
- *   SqliteStore is the "persistent upgrade" — swap in when needed.
- * Thick Harness extension: distributed state store, OpenTelemetry traces.
+ * Reference: 06_TASK_DECISION_PROJECT_MANAGER.md §7.8
+ *            11_ACCEPTANCE_CRITERIA.md §15
  */
 
 export {
@@ -20,15 +18,26 @@ export {
   type StoreConfig,
 } from './store.js';
 
-// Legacy API — kept for backward compat
-import type { Checkpoint } from '../types.js';
+export {
+  createRunState,
+  saveRunState,
+  loadRunState,
+  updateRunState,
+  pauseRun,
+  completeRun,
+  failRun,
+  listRunStates,
+  linkCheckpointToRun,
+  linkContextToRun,
+  type RunStatus,
+  type RunState,
+} from './run.js';
 
-export async function createCheckpoint(): Promise<void> {
-  console.log('Creating checkpoint');
-  // TODO: Save git state, task state, context summary to .project/checkpoints/
-}
-
-export async function rollbackTo(checkpointId: string): Promise<void> {
-  console.log(`Rolling back to: ${checkpointId}`);
-  // TODO: Restore checkpoint state
-}
+export {
+  createCheckpoint,
+  loadCheckpoint,
+  listCheckpoints,
+  rollbackToCheckpoint,
+  type CreateCheckpointParams,
+  type RollbackResult,
+} from './checkpoint.js';

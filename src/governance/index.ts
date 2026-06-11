@@ -36,3 +36,15 @@ export {
   type PendingApproval,
   type ApprovalResolution,
 } from './approval-gate.js';
+
+// Re-export redactor
+export {
+  redactText,
+  redactObject,
+  redactFileContent,
+  redactError,
+  isProtectedFile,
+  hasProtectedFragment,
+  countRedactions,
+  type RedactionReport,
+} from './redactor.js';
