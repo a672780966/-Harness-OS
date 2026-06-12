@@ -11,6 +11,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
+import { safeWriteJson, redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -106,8 +107,8 @@ export function proposeDecision(params: {
 
   const mdPath = join(dir, `${id}-${fmtFile(params.title)}.md`);
   const jsonPath = join(dir, `${id}.json`);
-  writeFileSync(mdPath, generateAdrMarkdown(state), 'utf-8');
-  writeFileSync(jsonPath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  writeFileSync(mdPath, redactText(generateAdrMarkdown(state)), 'utf-8');
+  safeWriteJson(jsonPath, state, 2);
   return state;
 }
 
@@ -165,7 +166,7 @@ export function loadDecision(projectPath: string, adrId: string): DecisionState 
 function saveDecision(projectPath: string, state: DecisionState): void {
   const dir = getDecisionsDir(projectPath);
   const jsonPath = join(dir, `${state.id}.json`);
-  writeFileSync(jsonPath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  safeWriteJson(jsonPath, state, 2);
 
   // Also update the markdown file
   const files = readdirSync(dir).filter(f => f.startsWith(state.id + '-') && f.endsWith('.md'));
@@ -181,7 +182,7 @@ function saveDecision(projectPath: string, state: DecisionState): void {
         md += `\n## Approval\n\nApproved By: ${state.approvedBy}\nApproved At: ${state.approvedAt}\n`;
       }
     }
-    writeFileSync(join(dir, files[0]), md, 'utf-8');
+    writeFileSync(join(dir, files[0]), redactText(md), 'utf-8');
   }
 }
 

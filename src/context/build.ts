@@ -16,7 +16,7 @@
  * Reference: 05_CONTEXT_ENGINEERING.md §6, §7, §11, §12
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 import type {
   ContextPack,
@@ -27,7 +27,7 @@ import type {
 import { collectAgentsMd, collectProject, collectGit, collectTask } from './sources.js';
 import { scoreFile, sortCandidates, extractKeywords } from './relevance.js';
 import { calculateBudget, availableContextTokens, trimToBudget } from './budget.js';
-import { redactObject, redactText } from '../governance/redactor.js';
+import { redactObject, redactText, safeWriteJson, safeWriteText } from '../governance/redactor.js';
 
 // ============================================================
 // Build Input
@@ -179,12 +179,12 @@ function saveContextPack(pack: ContextPack, contextDir: string): void {
 
   // JSON snapshot
   const jsonPath = join(contextDir, `${runId}.json`);
-  writeFileSync(jsonPath, JSON.stringify(safePack, null, 2) + '\n', 'utf-8');
+  safeWriteJson(jsonPath, safePack, 2);
 
   // Markdown snapshot
   const mdPath = join(contextDir, `${runId}.md`);
   const md = generateContextMarkdown(safePack);
-  writeFileSync(mdPath, md, 'utf-8');
+  safeWriteText(mdPath, md);
 }
 
 // ============================================================

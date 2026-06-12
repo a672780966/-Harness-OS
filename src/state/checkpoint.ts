@@ -18,6 +18,7 @@ import { join, resolve } from 'path';
 import { execSync } from 'child_process';
 import { simpleGit } from 'simple-git';
 import type { Checkpoint } from '../types.js';
+import { safeWriteJson } from '../governance/redactor.js';
 
 // ============================================================
 // Generate Checkpoint ID
@@ -92,7 +93,7 @@ export async function createCheckpoint(
   }
 
   const filePath = join(checkpointDir, `${checkpointId}.json`);
-  writeFileSync(filePath, JSON.stringify(checkpoint, null, 2) + '\n', 'utf-8');
+  safeWriteJson(filePath, checkpoint, 2);
 
   return checkpoint;
 }

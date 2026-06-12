@@ -26,6 +26,7 @@ import {
   loadVerificationResult,
   checkVerificationBinding,
 } from '../verification/result.js';
+import { safeWriteJson, redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Verification Binding (VER3-01/VER3-02/VER3-03)
@@ -200,7 +201,7 @@ export async function completeTask(
   const completedJson = join(completedDir, `${params.taskId}.json`);
 
   // 6. Write updated JSON
-  writeFileSync(activeJson, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  safeWriteJson(activeJson, state, 2);
 
   // 7. Replace markdown summary at the bottom
   if (existsSync(activeMd)) {
@@ -224,7 +225,7 @@ export async function completeTask(
       `$1${filesSection || '(none)'}`,
     );
 
-    writeFileSync(activeMd, md, 'utf-8');
+    writeFileSync(activeMd, redactText(md), 'utf-8');
   }
 
   // 8. Move files
@@ -319,7 +320,7 @@ export async function failTask(
   const failedJson = join(failedDir, `${params.taskId}.json`);
 
   // 6. Write updated JSON
-  writeFileSync(activeJson, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  safeWriteJson(activeJson, state, 2);
 
   // 7. Update markdown
   if (existsSync(activeMd)) {
@@ -334,7 +335,7 @@ export async function failTask(
       if (params.recoveryHint) md += `\n## Recovery\n\n${params.recoveryHint}\n`;
     }
 
-    writeFileSync(activeMd, md, 'utf-8');
+    writeFileSync(activeMd, redactText(md), 'utf-8');
   }
 
   // 8. Move files
@@ -424,7 +425,7 @@ export function updateTaskState(params: UpdateTaskParams): TaskState | undefined
   }
 
   // Write updated JSON
-  writeFileSync(jsonPath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  safeWriteJson(jsonPath, state, 2);
 
   return state;
 }

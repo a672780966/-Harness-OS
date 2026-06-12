@@ -15,11 +15,12 @@
  *            03_VERIFICATION_DELIVERY_STRONG_BINDING_FIX.md §4
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { join, resolve } from 'path';
 import { createHash } from 'crypto';
 import type { VerificationStep } from './plan.js';
+import { safeWriteJson } from '../governance/redactor.js';
 
 // ============================================================
 // Schema
@@ -129,7 +130,7 @@ export function saveVerificationResult(
     ...result,
     integrity: result.integrity || computeIntegrity(result),
   };
-  writeFileSync(filePath, JSON.stringify(toStore, null, 2) + '\n', 'utf-8');
+  safeWriteJson(filePath, toStore, 2);
   return filePath;
 }
 

@@ -14,6 +14,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
+import { redactObject } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -215,7 +216,8 @@ export class ObservationStore {
   private append(obs: Observation): void {
     this.ensureDir();
     try {
-      appendFileSync(this.filePath, JSON.stringify(obs) + '\n', 'utf-8');
+      const safe = redactObject(obs);
+      appendFileSync(this.filePath, JSON.stringify(safe) + '\n', 'utf-8');
     } catch {
       // non-fatal
     }

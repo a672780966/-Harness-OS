@@ -13,11 +13,11 @@
  *            11_ACCEPTANCE_CRITERIA.md §12
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 import type { VerificationStep } from './plan.js';
 import type { RunResult } from './runner.js';
-import { redactText } from '../governance/redactor.js';
+import { redactText, safeWriteText } from '../governance/redactor.js';
 import {
   saveVerificationResult,
   getCurrentCommit,
@@ -97,7 +97,7 @@ export function saveReport(report: VerificationReport): { mdPath: string; jsonPa
 
   const mdPath = join(reportDir, `${report.runId}.md`);
   const content = formatReport(report);
-  writeFileSync(mdPath, content, 'utf-8');
+  safeWriteText(mdPath, content);
 
   // ── Structured JSON result (VER3-01) ──
   const now = new Date().toISOString();

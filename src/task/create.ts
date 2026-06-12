@@ -18,6 +18,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import type { TaskState, TaskStatus, TaskType } from '../types.js';
+import { safeWriteJson, redactText } from '../governance/redactor.js';
 
 // ============================================================
 // ID Generation
@@ -226,8 +227,8 @@ export async function createTaskRecord(
   const mdPath = join(activeDir, `${taskId}.md`);
   const jsonPath = join(activeDir, `${taskId}.json`);
 
-  writeFileSync(mdPath, md, 'utf-8');
-  writeFileSync(jsonPath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  writeFileSync(mdPath, redactText(md), 'utf-8');
+  safeWriteJson(jsonPath, state, 2);
 
   return { state, mdPath, jsonPath };
 }

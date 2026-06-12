@@ -12,6 +12,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
+import { safeWriteJson } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -90,7 +91,7 @@ export function saveRunState(state: RunState, projectPath?: string): string {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
   const filePath = join(dir, `${state.runId}.json`);
-  writeFileSync(filePath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
+  safeWriteJson(filePath, state, 2);
   return filePath;
 }
 
