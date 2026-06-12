@@ -43,12 +43,12 @@ DANGEROUS_BASH_PATTERNS = [
 ]
 
 DEV_SERVER_PATTERNS = [
-    r"npm run dev",
-    r"pnpm dev",
-    r"pnpm run dev",
-    r"yarn dev",
-    r"npm start",
-    r"pnpm start",
+    r"^npm run dev(\s|$)",
+    r"^pnpm dev(\s|$)",
+    r"^pnpm run dev(\s|$)",
+    r"^yarn dev(\s|$)",
+    r"^npm start(\s|$)",
+    r"^pnpm start(\s|$)",
 ]
 
 

@@ -1,6 +1,6 @@
 import { SkillManifest } from '../../types.js';
-import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, realpathSync } from 'fs';
+import { join, resolve, relative } from 'path';
 import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult, blockedResult } from '../executor.js';
 
 // ============================================================
@@ -38,7 +38,23 @@ export const manifest: SkillManifest = {
 // ============================================================
 
 function safeResolve(inputPath: string, basePath: string): string {
-  return resolve(basePath, inputPath);
+  // Resolve the full path
+  const resolved = resolve(basePath, inputPath);
+
+  // Real path for symlink detection (if path exists)
+  let realPath: string | undefined;
+  try {
+    realPath = realpathSync(resolved);
+  } catch {
+    realPath = resolved; // path doesn't exist yet, use logical path
+  }
+
+  // Check: resolved path must start with basePath (workspace boundary)
+  if (!realPath.startsWith(basePath) && !resolved.startsWith(basePath)) {
+    throw new Error(`Path escape detected: ${inputPath} resolves outside workspace`);
+  }
+
+  return resolved;
 }
 
 export async function execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {

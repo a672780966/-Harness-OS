@@ -1,0 +1,14 @@
+{
+  "runId": "run_mqanpsuq",
+  "projectId": "proj_mqan86l1",
+  "taskId": "task_mqanpsur_0001",
+  "status": "running",
+  "startedAt": "2026-06-12T08:20:50.395Z",
+  "contextPackIds": [],
+  "checkpointIds": [
+    "cp_mqanpw3s_0001"
+  ],
+  "deliveryIds": [],
+  "summary": "",
+  "currentCheckpointId": "cp_mqanpw3s_0001"
+}

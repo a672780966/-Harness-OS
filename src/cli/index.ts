@@ -26,7 +26,7 @@ program
   .action(async (name, options) => {
     const { createProject } = await import('../project/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } = await import('./formatter.js');
-    const mode = detectOutputMode(options);
+    const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
 
     try {
@@ -145,7 +145,7 @@ program
   .option('-q, --quiet', 'Quiet output mode')
   .action(async (task, options) => {
     const { runTask } = await import('../task/index.js');
-    await runTask(task, options);
+    await runTask(task, { ...program.opts(), ...options });
   });
 
 program
@@ -215,7 +215,7 @@ program
       .action(async (options) => {
         const { listDecisions, listActiveDecisions } = await import('../decision/index.js');
         const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable } = await import('./formatter.js');
-        const mode = detectOutputMode(options);
+        const mode = detectOutputMode({ ...program.opts(), ...options });
 
         const decisions = options.active
           ? listActiveDecisions(process.cwd())
@@ -372,7 +372,9 @@ program
   .action(async (options) => {
     const { loadConfig } = await import('../config/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyTable } = await import('./formatter.js');
-    const mode = detectOutputMode(options);
+    // Merge global opts + command opts
+    const mergedOpts = { ...program.opts(), ...options };
+    const mode = detectOutputMode(mergedOpts);
 
     const loaded = loadConfig(process.cwd());
 

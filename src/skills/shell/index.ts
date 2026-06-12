@@ -1,8 +1,15 @@
 import { SkillManifest } from '../../types.js';
 import { execSync } from 'child_process';
-import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult } from '../executor.js';
+import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult, blockedResult } from '../executor.js';
 
 const runCommandSchema = { type: 'object', properties: { command: { type: 'string' }, cwd: { type: 'string' }, timeout: { type: 'number' } }, required: ['command'] };
+
+const DANGEROUS_PATTERNS = [
+  'rm -rf', 'sudo ', 'chmod -R', 'chown -R', 'git reset --hard', 'git clean -fd',
+  'git push --force', 'git push -f', 'curl | sh', 'wget | sh',
+  'npm publish', 'pnpm publish', 'docker system prune',
+  'kubectl delete', 'terraform apply', 'terraform destroy',
+];
 
 export const manifest: SkillManifest = {
   name: 'shell',
@@ -16,7 +23,7 @@ export const manifest: SkillManifest = {
   docPath: 'src/skills/shell/SKILL.md',
   permissions: [{ type: 'filesystem-read', description: 'Read command output' }, { type: 'filesystem-write', description: 'Write artifacts' }],
   tools: [
-    { name: 'run_command', description: 'Execute shell command', inputSchema: runCommandSchema, outputSchema: { type: 'object', properties: { exitCode: { type: 'number' }, stdout: { type: 'string' }, stderr: { type: 'string' }, durationMs: { type: 'number' } } }, riskLevel: 'medium', requiresApproval: false, timeoutMs: 300000 },
+    { name: 'run_command', description: 'Execute shell command (dangerous patterns blocked)', inputSchema: runCommandSchema, outputSchema: { type: 'object', properties: { exitCode: { type: 'number' }, stdout: { type: 'string' }, stderr: { type: 'string' }, durationMs: { type: 'number' } } }, riskLevel: 'high', requiresApproval: false, timeoutMs: 300000 },
     { name: 'run_test', description: 'Run test command', inputSchema: runCommandSchema, outputSchema: { type: 'object', properties: { exitCode: { type: 'number' }, summary: { type: 'string' } } }, riskLevel: 'low', requiresApproval: false, timeoutMs: 300000 },
     { name: 'run_build', description: 'Run build command', inputSchema: runCommandSchema, outputSchema: { type: 'object', properties: { exitCode: { type: 'number' }, durationMs: { type: 'number' } } }, riskLevel: 'low', requiresApproval: false, timeoutMs: 600000 },
   ],
@@ -28,6 +35,14 @@ export async function execute(toolName: string, input: Record<string, unknown>, 
   try {
     const command = String(input.command ?? '');
     if (!command) return failedResult('shell', toolName, new Error('No command provided'), Date.now() - start);
+
+    // Check for dangerous patterns
+    const normalized = command.toLowerCase();
+    for (const pattern of DANGEROUS_PATTERNS) {
+      if (normalized.includes(pattern)) {
+        return blockedResult('shell', toolName, `Dangerous command pattern detected: ${pattern}. This requires human approval.`, Date.now() - start);
+      }
+    }
 
     const cwd = input.cwd ? String(input.cwd) : context.projectPath;
     const timeout = (input.timeout as number) || 300000;

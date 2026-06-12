@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "projectId": "proj_mqan86l1",
+  "projectName": "Harness os",
+  "projectType": "unknown",
+  "rootPath": "C:\\Users\\Administrator\\Desktop\\Harness os",
+  "defaultBranch": "main",
+  "language": {
+    "primary": "TypeScript",
+    "secondary": []
+  },
+  "runtime": {
+    "name": "Node.js"
+  },
+  "packageManager": {
+    "name": "pnpm"
+  },
+  "commands": {
+    "install": "pnpm install",
+    "dev": "pnpm tsx src/cli/index.ts",
+    "build": "pnpm run build",
+    "lint": "pnpm run lint",
+    "typecheck": "pnpm run typecheck",
+    "test": "pnpm test"
+  },
+  "skills": {
+    "enabled": [
+      "filesystem",
+      "shell",
+      "git",
+      "repo-scanner"
+    ],
+    "disabled": []
+  },
+  "createdAt": "2026-06-12T08:07:05.557Z",
+  "updatedAt": "2026-06-12T08:07:05.559Z"
+}

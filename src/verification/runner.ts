@@ -12,11 +12,12 @@
  * Reference: 09_VERIFICATION_OBSERVABILITY.md §8
  */
 
-import { execFile } from 'child_process';
+import { execFile, exec } from 'child_process';
 import { promisify } from 'util';
 import type { VerificationPlan, VerificationStep } from './plan.js';
 
 const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
 // ============================================================
 // Run Result
@@ -46,17 +47,29 @@ async function runStep(
   step.status = 'running';
 
   try {
-    // Split command into program and args
-    const parts = step.command.split(/\s+/);
-    const program = parts[0];
-    const args = parts.slice(1);
+    // Use full command string on Windows (for .cmd/.bat), execFile+args on Unix
+    let stdout: string, stderr: string;
 
-    const { stdout, stderr } = await execFileAsync(program, args, {
-      cwd,
-      timeout: step.timeoutMs,
-      maxBuffer: 10 * 1024 * 1024, // 10MB
-      shell: process.platform === 'win32', // Use shell on Windows for .cmd/.bat
-    });
+    if (process.platform === 'win32') {
+      const result = await execAsync(step.command, {
+        cwd,
+        timeout: step.timeoutMs,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      stdout = result.stdout || '';
+      stderr = result.stderr || '';
+    } else {
+      const parts = step.command.split(/\s+/);
+      const program = parts[0];
+      const args = parts.slice(1);
+      const result = await execFileAsync(program, args, {
+        cwd,
+        timeout: step.timeoutMs,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      stdout = result.stdout || '';
+      stderr = result.stderr || '';
+    }
 
     step.exitCode = 0;
     step.stdout = stdout.slice(0, 5000); // Summarize

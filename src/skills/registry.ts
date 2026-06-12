@@ -60,6 +60,7 @@ class SkillRegistry {
 
   /**
    * Execute a tool on a registered skill.
+   * Runs policy check first — blocked/needs_approval decisions prevent execution.
    */
   async execute(
     skillName: string,
@@ -72,6 +73,17 @@ class SkillRegistry {
       const { failedResult } = await import('./executor.js');
       return failedResult(skillName, toolName, new Error(`No executor registered for skill: ${skillName}`), 0);
     }
+
+    // Policy check: only tools marked requiresApproval in manifest trigger this
+    const manifest = this.skills.get(skillName);
+    if (manifest) {
+      const tool = manifest.tools.find(t => t.name === toolName);
+      if (tool && tool.requiresApproval) {
+        const { blockedResult } = await import('./executor.js');
+        return blockedResult(skillName, toolName, `${toolName} requires human approval per skill manifest`, 0);
+      }
+    }
+
     return executor(toolName, input, context);
   }
 
