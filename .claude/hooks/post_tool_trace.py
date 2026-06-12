@@ -2,12 +2,9 @@
 """
 Harness OS — PostToolUse Trace Hook（resilient version）
 
-保留记录功能，但任何异常不阻塞 Claude Code：
-  - 兼容空 stdin、坏 JSON、非 dict payload、非字符串 tool_name
-  - 所有异常写入 .claude/hook-errors.log
-  - 脚本始终返回 0
-
-Records tool calls to JSONL trace file + observations for continuous learning.
+GOV4-06: Write failures are observable — output includes write_success flag.
+Only catches Exception, not BaseException (SystemExit not suppressed).
+Still resilient: never blocks Claude Code on failure.
 """
 
 import json
@@ -21,7 +18,7 @@ OBSERVATIONS_FILE = Path(".claude/observations.jsonl")
 ERROR_LOG = Path(".claude/hook-errors.log")
 
 
-def _log_error(context: str, exc: BaseException) -> None:
+def _log_error(context: str, exc: Exception) -> None:
     """Append an error record to the error log; never raises."""
     try:
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -127,6 +124,8 @@ def extract_signal(tool_name: str, tool_input: dict) -> str:
 
 
 def main() -> None:
+    write_success = True
+
     # ---- Phase 1: read + parse (never raises) ----
     raw = _safe_read_stdin()
     payload = _safe_parse_json(raw)
@@ -143,7 +142,8 @@ def main() -> None:
         "event": "PostToolUse",
         "payload": payload if payload else {"note": "no input received"},
     }
-    _append_jsonl(TRACE_FILE, trace_event)
+    if not _append_jsonl(TRACE_FILE, trace_event):
+        write_success = False
 
     # ---- Phase 4: write observation for learning ----
     if tool_name:
@@ -158,16 +158,18 @@ def main() -> None:
             "confidence": 0.5,
             "frequency": 1,
         }
-        _append_jsonl(OBSERVATIONS_FILE, observation)
+        if not _append_jsonl(OBSERVATIONS_FILE, observation):
+            write_success = False
 
-    # ---- Phase 5: always respond with continue ----
+    # ---- Phase 5: always respond with continue + write status ----
+    # GOV4-06: Write failures are OBSERVABLE in the output.
     try:
-        print(json.dumps({"continue": True}))
+        print(json.dumps({"continue": True, "writeSuccess": write_success}))
     except Exception as exc:
         _log_error("print output", exc)
         # Last-ditch: write to stderr so Claude Code sees something
         try:
-            print('{"continue": true}', file=sys.stderr)
+            print('{"continue": true, "writeSuccess": false}', file=sys.stderr)
         except Exception:
             pass
 
@@ -175,8 +177,9 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except BaseException as exc:
+    except Exception as exc:
+        # GOV4-06: Only catch Exception, NOT BaseException.
+        # SystemExit should never happen in this hook — if it does, let it propagate.
         _log_error("unhandled top-level", exc)
-        # Never let an exception bubble up — always return 0.
     finally:
         sys.exit(0)

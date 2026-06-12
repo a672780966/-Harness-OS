@@ -1,6 +1,8 @@
 import { SkillManifest } from '../../types.js';
 import { execSync } from 'child_process';
+import { resolve } from 'path';
 import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult, blockedResult } from '../executor.js';
+import { type SkillRegistry } from '../registry.js';
 
 const runCommandSchema = { type: 'object', properties: { command: { type: 'string' }, cwd: { type: 'string' }, timeout: { type: 'number' } }, required: ['command'] };
 
@@ -29,7 +31,9 @@ export const manifest: SkillManifest = {
   ],
 };
 
-export async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+// GOV4-01/GOV4-04: _execute is NOT exported. cwd is canonicalized and
+// bounded to workspace. Shell commands default needs_approval via policy.
+async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
 
   try {
@@ -44,11 +48,23 @@ export async function _execute(toolName: string, input: Record<string, unknown>,
       }
     }
 
-    const cwd = input.cwd ? String(input.cwd) : context.projectPath;
+    // GOV4-04: Canonicalize cwd and verify it's within workspace
+    const workspacePath = resolve(context.projectPath);
+    const rawCwd = input.cwd ? String(input.cwd) : '';
+    let effectiveCwd = workspacePath;
+    if (rawCwd) {
+      const resolvedCwd = resolve(workspacePath, rawCwd);
+      const rel = resolve(resolvedCwd);
+      if (!rel.startsWith(workspacePath + '/') && !rel.startsWith(workspacePath + '\\') && rel !== workspacePath) {
+        return blockedResult('shell', toolName, `cwd "${rawCwd}" resolves outside workspace — blocked (GOV4-04)`, Date.now() - start);
+      }
+      effectiveCwd = rel;
+    }
+
     const timeout = (input.timeout as number) || 300000;
 
     try {
-      const output = execSync(command, { cwd, timeout, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+      const output = execSync(command, { cwd: effectiveCwd, timeout, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
       return successResult('shell', toolName,
         { exitCode: 0, stdout: output.slice(0, 5000), stderr: '', durationMs: Date.now() - start },
         `Command completed (exit 0)`,
@@ -64,4 +80,9 @@ export async function _execute(toolName: string, input: Record<string, unknown>,
   } catch (err) {
     return failedResult('shell', toolName, err as Error, Date.now() - start);
   }
+}
+
+// GOV4-01: Self-registration — only entry point for executor registration.
+export function _register(r: SkillRegistry): void {
+  r.registerExecutor('shell', _execute);
 }

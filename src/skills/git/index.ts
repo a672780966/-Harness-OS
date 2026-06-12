@@ -1,6 +1,7 @@
 import { SkillManifest } from '../../types.js';
 import { simpleGit } from 'simple-git';
 import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult, blockedResult } from '../executor.js';
+import { type SkillRegistry } from '../registry.js';
 
 export const manifest: SkillManifest = {
   name: 'git',
@@ -21,7 +22,8 @@ export const manifest: SkillManifest = {
   ],
 };
 
-export async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+// GOV4-01: _execute is NOT exported from barrel.
+async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
   const git = simpleGit(context.projectPath);
 
@@ -62,4 +64,9 @@ export async function _execute(toolName: string, input: Record<string, unknown>,
   } catch (err) {
     return failedResult('git', toolName, err as Error, Date.now() - start);
   }
+}
+
+// GOV4-01/GOV4-05: Self-registration. git_commit goes through policy (needs_approval).
+export function _register(r: SkillRegistry): void {
+  r.registerExecutor('git', _execute);
 }

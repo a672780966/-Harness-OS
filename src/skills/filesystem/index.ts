@@ -109,7 +109,11 @@ function safeResolve(inputPath: string, basePath: string): string {
   return resolved;
 }
 
-export async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+// GOV4-01: _execute is NOT exported — raw executors cannot be reached from
+// public API. Skills self-register via _register() below.
+import { type SkillRegistry } from '../registry.js';
+
+async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
   const base = context.projectPath;
 
@@ -147,4 +151,10 @@ export async function _execute(toolName: string, input: Record<string, unknown>,
   } catch (err) {
     return failedResult('filesystem', toolName, err as Error, Date.now() - start);
   }
+}
+
+// GOV4-01: Self-registration — called by registry.ts at import time.
+// Only entry point for executor registration; _execute is module-private.
+export function _register(r: SkillRegistry): void {
+  r.registerExecutor('filesystem', _execute);
 }

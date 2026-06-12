@@ -3,7 +3,9 @@
 Harness OS — PreToolUse Guard Hook (fail-closed)
 
 Intercepts tool calls and checks against dangerous patterns and protected paths.
-Fail-closed (GOV3-07): any parse error, exception, or unknown state → deny/needs_approval.
+Fail-closed (GOV4-06): any parse error, exception, or unknown state → deny.
+SystemExit is NOT caught — only Exception, so normal exit (sys.exit(0)) is not
+double-processed.
 """
 
 import json
@@ -16,7 +18,7 @@ from pathlib import Path
 ERROR_LOG = Path(".claude/hook-errors.log")
 
 
-def _log_error(context: str, exc: BaseException) -> None:
+def _log_error(context: str, exc: Exception) -> None:
     """Log error without raising."""
     try:
         ts = datetime.now(timezone.utc).isoformat()
@@ -30,24 +32,33 @@ def _log_error(context: str, exc: BaseException) -> None:
 
 
 def fail_closed(reason: str):
-    """Default response on any error — never allow when uncertain (GOV3-07)."""
-    print(json.dumps({"continue": False, "permissionDecision": "deny", "permissionDecisionReason": reason}))
+    """Default response on any error — never allow when uncertain (GOV4-06)."""
+    _print_decision(False, "deny", reason)
     sys.exit(0)
 
 
 def deny(reason: str):
-    print(json.dumps({"continue": False, "permissionDecision": "deny", "permissionDecisionReason": reason}))
+    _print_decision(False, "deny", reason)
     sys.exit(0)
 
 
 def needs_approval(reason: str):
-    print(json.dumps({"continue": False, "permissionDecision": "needs_approval", "permissionDecisionReason": reason}))
+    _print_decision(False, "needs_approval", reason)
     sys.exit(0)
 
 
 def allow(reason: str = "allowed by pre_tool_guard"):
-    print(json.dumps({"continue": True, "permissionDecision": "allow", "permissionDecisionReason": reason}))
+    _print_decision(True, "allow", reason)
     sys.exit(0)
+
+
+def _print_decision(continue_val: bool, decision: str, reason: str):
+    """Print a single JSON decision to stdout (GOV4-06: exactly one decision)."""
+    print(json.dumps({
+        "continue": continue_val,
+        "permissionDecision": decision,
+        "permissionDecisionReason": reason,
+    }))
 
 
 PROTECTED_PATHS = [
@@ -130,7 +141,7 @@ def main():
             allow("File write/edit passed basic guard")
 
         else:
-            # Unknown tool — deny per fail-closed (GOV3-07)
+            # Unknown tool — deny per fail-closed (GOV4-06)
             deny(f"Unknown tool in pre_tool_guard: {tool_name}")
 
     except Exception as exc:
@@ -141,6 +152,12 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except BaseException as exc:
+    except SystemExit:
+        # GOV4-06: Normal sys.exit(0) from decision functions.
+        # DO NOT re-process or print another decision.
+        raise
+    except Exception as exc:
+        # GOV4-06: Only catch Exception, NOT BaseException.
+        # SystemExit(0) from decision functions is NOT caught here.
         _log_error("top-level", exc)
         fail_closed("Unhandled hook error")

@@ -6,20 +6,46 @@
  *
  * Reference: 07_MCP_SKILLS_SPEC.md §6
  *
- * Governance: GOV-01 (AUD-P0-001), GOV3-01 (AUD3-P0-001)
- * All skill executions pass through the Policy Engine before reaching the executor.
- * - _getExecutor() is internal-only and bypasses policy — do not call from production code.
+ * Governance: GOV-01 (AUD-P0-001), GOV3-01 (AUD3-P0-001), GOV4-01 (AUD4-P0-001)
+ * - executors stored in closure-scoped WeakMap — no runtime-accessible getter.
+ * - All skill executions pass through execute() which enforces:
+ *     schema → canonical path/cwd → policy → approval binding → executor → audit
+ * - _getExecutor() removed as per GOV4-01: no raw executor reachable from public API.
  */
 
 import type { SkillManifest, SkillCategory } from '../types.js';
 import type { SkillExecutor } from './executor.js';
 import { checkPolicy, type PolicyContext } from '../governance/policy.js';
-import { submitApproval } from '../governance/approval-gate.js';
+import {
+  submitApproval,
+  consumeApproval,
+  validateApprovalBinding,
+  getApproval,
+} from '../governance/approval-gate.js';
 import {
   failedResult as failExec,
   blockedResult as blockExec,
   requiresApprovalResult as reqApprovalExec,
 } from './executor.js';
+
+// ============================================================
+// Closure-scoped executor store (GOV4-01)
+//
+// Using WeakMap keyed on the SkillRegistry instance makes
+// executors unreachable from outside the module — no public
+// getter, no property access at runtime.
+// ============================================================
+
+const EXECUTOR_MAP = new WeakMap<SkillRegistry, Map<string, SkillExecutor>>();
+
+function getExecutorMap(instance: SkillRegistry): Map<string, SkillExecutor> {
+  let map = EXECUTOR_MAP.get(instance);
+  if (!map) {
+    map = new Map();
+    EXECUTOR_MAP.set(instance, map);
+  }
+  return map;
+}
 
 // ============================================================
 // Action Normalization
@@ -97,7 +123,6 @@ function buildSkillPolicyContext(
 
 class SkillRegistry {
   private skills: Map<string, SkillManifest> = new Map();
-  private executors: Map<string, SkillExecutor> = new Map();
 
   /**
    * Register a skill manifest.
@@ -111,9 +136,10 @@ class SkillRegistry {
 
   /**
    * Register a skill executor.
+   * Executors stored in closure-scoped WeakMap — no public getter (GOV4-01).
    */
   registerExecutor(name: string, executor: SkillExecutor): void {
-    this.executors.set(name, executor);
+    getExecutorMap(this).set(name, executor);
   }
 
   /**
@@ -133,35 +159,65 @@ class SkillRegistry {
   }
 
   /**
-   * Get a skill executor by name.
-   * @internal — bypasses policy engine. Use execute() for production paths.
-   * Only for internal registration use.
-   */
-  _getExecutor(name: string): SkillExecutor | undefined {
-    return this.executors.get(name);
-  }
-
-  /**
    * Execute a tool on a registered skill.
    *
-   * Governance gate (GOV-01): Policy check runs BEFORE executor.
-   *   - allow           → executor is called
-   *   - deny            → blockedResult returned (executor NOT called)
-   *   - needs_approval  → approval submitted, requires-approval result returned
-   *   - policy error    → blockedResult (fail closed)
+   * Governance pipeline (GOV4-02):
+   *   1. Manifest validation — unknown tool → blocked
+   *   2. Policy check — allow/deny/needs_approval with timeout
+   *   3. Approval binding/consumption — single-use, validated (GOV4-03)
+   *   4. Executor — called only if all prior gates pass
+   *   5. Executor result returned
    *
-   * All skill tool executions MUST go through this method for production use.
-   * getExecutor() bypasses governance — use only for internal or test paths.
+   * @param approvalId - Optional: if resuming from a previous needs_approval,
+   *                     pass the approved approval ID for binding validation
+   *                     and single-use consumption (GOV4-03).
    */
   async execute(
     skillName: string,
     toolName: string,
     input: Record<string, unknown>,
     context: import('./executor.js').SkillExecutionContext,
+    approvalId?: string,
   ): Promise<import('./executor.js').SkillExecutionResult> {
-    const executor = this.executors.get(skillName);
+    const executorMap = getExecutorMap(this);
+    const executor = executorMap.get(skillName);
     if (!executor) {
       return failExec(skillName, toolName, new Error(`No executor registered for skill: ${skillName}`), 0);
+    }
+
+    // ---- GOV4-03: Approval resume path ----
+    // If an approvalId is provided, the caller is resuming an approved
+    // tool execution. We must consume the approval atomically and validate
+    // bindings before proceeding.
+    if (approvalId) {
+      const approval = getApproval(approvalId);
+      if (!approval) {
+        return blockExec(skillName, toolName, `Approval "${approvalId}" not found`, 0);
+      }
+
+      // Validate binding: skill, tool, session, input digest
+      const bindingErr = validateApprovalBinding(approval, {
+        skillName,
+        toolName,
+        input,
+        sessionId: context.sessionId,
+      });
+      if (bindingErr) {
+        return blockExec(skillName, toolName, `Approval binding rejected: ${bindingErr}`, 0);
+      }
+
+      // Single-use consumption (GOV4-03): only one executor call per approval
+      const consumed = consumeApproval(approvalId);
+      if (!consumed) {
+        return blockExec(skillName, toolName, `Approval "${approvalId}" cannot be consumed — already consumed, rejected, or expired`, 0);
+      }
+
+      // If operator modified the input, use that instead (GOV4-03)
+      if (consumed.modifiedInput) {
+        input = consumed.modifiedInput;
+      }
+      // Modified input must be re-validated — skip manifest/policy and go to executor
+      return executor(toolName, input, context);
     }
 
     // ---- Manifest Validation: unknown tool → blocked (GOV-01) ----
@@ -178,15 +234,21 @@ class SkillRegistry {
       }
     }
 
-    // ---- Policy Gate (GOV-01) ----
+    // ---- Policy Gate (GOV4-02) ----
     const action = normalizeSkillAction(skillName, toolName);
     const policyCtx = buildSkillPolicyContext(skillName, toolName, input);
 
     let policyResult: import('../types.js').PolicyCheckResult;
     try {
-      policyResult = await checkPolicy(action, policyCtx);
+      // Policy with timeout (GOV4-02: real timeout, not just type declaration)
+      const policyPromise = checkPolicy(action, policyCtx);
+      const timeoutMs = 5000; // 5-second policy timeout
+      const timeoutPromise = new Promise<import('../types.js').PolicyCheckResult>((_, reject) =>
+        setTimeout(() => reject(new Error('Policy check timed out')), timeoutMs)
+      );
+      policyResult = await Promise.race([policyPromise, timeoutPromise]);
     } catch (err) {
-      // Fail closed: any policy error → blocked
+      // Fail closed: any policy error/timout → blocked
       return blockExec(
         skillName,
         toolName,
@@ -195,7 +257,8 @@ class SkillRegistry {
       );
     }
 
-    // Validate policy result structure (GOV3-02): must be allow|deny|needs_approval
+    // Validate policy result structure (GOV3-02/GOV4-02):
+    // must be allow|deny|needs_approval
     const validDecisions = ['allow', 'deny', 'needs_approval'];
     if (!policyResult || typeof policyResult.decision !== 'string' || !validDecisions.includes(policyResult.decision)) {
       return blockExec(
@@ -217,7 +280,7 @@ class SkillRegistry {
           reason: policyResult.reason,
           riskLevel: policyResult.riskLevel,
           affectedPaths: policyResult.affectedPaths,
-          // Strong binding (GOV3-03)
+          // Strong binding (GOV3-03/GOV4-03)
           skillName,
           toolName,
           input,
@@ -279,6 +342,7 @@ class SkillRegistry {
    */
   clear(): void {
     this.skills.clear();
+    getExecutorMap(this).clear();
   }
 }
 
@@ -291,14 +355,13 @@ export default registry;
 // Built-in Skills Registration
 // ============================================================
 
-import { manifest as filesystem } from '../skills/filesystem/index.js';
-import { manifest as shell } from '../skills/shell/index.js';
-import { manifest as git } from '../skills/git/index.js';
-import { manifest as repoScanner } from '../skills/repo-scanner/index.js';
-import { _execute as fsExec } from '../skills/filesystem/index.js';
-import { _execute as shellExec } from '../skills/shell/index.js';
-import { _execute as gitExec } from '../skills/git/index.js';
-import { _execute as scannerExec } from '../skills/repo-scanner/index.js';
+// Skills self-register their executors via module-level side effects.
+// _execute is NOT exported from skill modules — it's imported here
+// and passed to registerExecutor(). No public API can reach raw executors.
+import { manifest as filesystem, _register as fsRegister } from '../skills/filesystem/index.js';
+import { manifest as shell, _register as shellRegister } from '../skills/shell/index.js';
+import { manifest as git, _register as gitRegister } from '../skills/git/index.js';
+import { manifest as repoScanner, _register as scannerRegister } from '../skills/repo-scanner/index.js';
 
 registry.registerAll([
   filesystem,
@@ -307,10 +370,10 @@ registry.registerAll([
   repoScanner,
 ]);
 
-// Register executors
-registry.registerExecutor('filesystem', fsExec);
-registry.registerExecutor('shell', shellExec);
-registry.registerExecutor('git', gitExec);
-registry.registerExecutor('repo-scanner', scannerExec);
+// Use self-registration
+fsRegister(registry);
+shellRegister(registry);
+gitRegister(registry);
+scannerRegister(registry);
 
 export { SkillRegistry };

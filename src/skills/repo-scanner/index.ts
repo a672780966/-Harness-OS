@@ -2,6 +2,7 @@ import { SkillManifest } from '../../types.js';
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult } from '../executor.js';
+import { type SkillRegistry } from '../registry.js';
 
 export const manifest: SkillManifest = {
   name: 'repo-scanner',
@@ -56,7 +57,8 @@ function detectScripts(projectPath: string): Record<string, string> {
   } catch { return {}; }
 }
 
-export async function _execute(toolName: string, _input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+// GOV4-01: _execute is NOT exported from barrel.
+async function _execute(toolName: string, _input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
 
   try {
@@ -87,4 +89,9 @@ export async function _execute(toolName: string, _input: Record<string, unknown>
   } catch (err) {
     return failedResult('repo-scanner', toolName, err as Error, Date.now() - start);
   }
+}
+
+// GOV4-01: Self-registration.
+export function _register(r: SkillRegistry): void {
+  r.registerExecutor('repo-scanner', _execute);
 }

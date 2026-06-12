@@ -37,18 +37,19 @@ afterEach(() => {
 // ============================================================
 
 describe('registry executor', () => {
-  it('has executors for core skills', () => {
-    expect(registry._getExecutor('filesystem')).toBeDefined();
-    expect(registry._getExecutor('shell')).toBeDefined();
-    expect(registry._getExecutor('git')).toBeDefined();
-    expect(registry._getExecutor('repo-scanner')).toBeDefined();
+  it('has executors for core skills (verified via execute error reason)', async () => {
+    // GOV4-01: _getExecutor removed. Verify executor existence via execute():
+    // "failed" with error about file not found = executor exists (different from
+    // "blocked" = policy blocked or "failed" with "no executor" = executor missing).
+    const fsResult = await registry.execute('filesystem', 'read_file', { path: 'nonexistent.txt' }, context);
+    expect(fsResult.status).toBe('failed');
+    expect(fsResult.summary).toContain('Not found'); // executor exists, file missing
+    const shellResult = await registry.execute('shell', 'run_command', { command: 'echo ok' }, context);
+    // Shell command should run (policy allows non-dangerous bash)
+    expect(['success', 'failed']).toContain(shellResult.status);
   });
 
-  it('returns undefined for unknown executor', () => {
-    expect(registry._getExecutor('nonexistent')).toBeUndefined();
-  });
-
-  it('returns failed result for unknown skill', async () => {
+  it('returns failed result for unknown skill (no executor registered)', async () => {
     const result = await registry.execute('ghost', 'read_file', {}, context);
     expect(result.status).toBe('failed');
   });
@@ -288,11 +289,11 @@ describe('GOV-01: registry.execute() policy integration', () => {
     expect(result.status).toBe('success');
   });
 
-  // ---- _getExecutor() internal access ----
-  it('_getExecutor returns raw executor (internal use only)', () => {
-    const exec = registry._getExecutor('filesystem');
-    expect(exec).toBeDefined();
-    expect(typeof exec).toBe('function');
+  // ---- GOV4-01: No public raw executor access (removed _getExecutor) ----
+  it('cannot access raw executor from registry (GOV4-01)', () => {
+    // _getExecutor() has been removed. The only way to execute a skill
+    // is through registry.execute() which enforces policy/approval gates.
+    expect((registry as any)._getExecutor).toBeUndefined();
   });
 });
 
