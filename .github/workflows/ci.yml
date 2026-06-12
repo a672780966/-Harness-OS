@@ -1,0 +1,45 @@
+# Harness OS CI — Corepack + pnpm + typecheck + test + build
+# RC3-05: Uses Corepack frozen install, no npm/webpack.
+# Reference: 05_RC_TOOLCHAIN_TEST_VERSION_FIX.md §4
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    strategy:
+      matrix:
+        node-version: [22, 24]
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify artifact
+        run: node dist/index.js --version

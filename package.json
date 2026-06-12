@@ -1,8 +1,16 @@
 {
   "name": "harness-os",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.0-rc.2",
+  "description": "Harness OS - Codex-first Project Operating System",
+  "type": "module",
+  "packageManager": "pnpm@11.5.3",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.5.3",
+      "onFail": "download"
+    }
+  },
   "scripts": {
     "build": "tsup src/cli/index.ts --format esm --dts --clean --out-dir dist",
     "dev": "tsx src/cli/index.ts",
@@ -17,17 +25,9 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test:coverage": "vitest run --coverage"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.5.3",
-      "onFail": "download"
-    }
+  "bin": {
+    "harness": "./dist/index.js"
   },
-  "type": "module",
   "dependencies": {
     "better-sqlite3": "^12.10.0",
     "commander": "^15.0.0",
@@ -43,7 +43,7 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
-  "bin": {
-    "harness": "./dist/index.js"
-  }
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

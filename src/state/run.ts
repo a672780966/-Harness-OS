@@ -172,7 +172,13 @@ export function listRunStates(projectPath?: string): RunState[] {
       }
     })
     .filter((r): r is RunState => r !== null)
-    .sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || ''));
+    .sort((a, b) => {
+      // Primary sort: by startedAt descending
+      const timeCmp = (b.startedAt || '').localeCompare(a.startedAt || '');
+      if (timeCmp !== 0) return timeCmp;
+      // Tie-breaker: by runId descending (monotonic sequence, RC3-02)
+      return (b.runId || '').localeCompare(a.runId || '');
+    });
 }
 
 /**
