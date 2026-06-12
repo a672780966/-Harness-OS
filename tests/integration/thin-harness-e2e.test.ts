@@ -41,6 +41,11 @@ import { redactText, isProtectedFile } from '../../src/governance/redactor.js';
 import { detectCommands } from '../../src/verification/commands.js';
 import { buildPlan } from '../../src/verification/plan.js';
 import { generateReport, saveReport } from '../../src/verification/report.js';
+import {
+  loadVerificationResult,
+  computeIntegrity,
+  saveVerificationResult,
+} from '../../src/verification/result.js';
 
 // Delivery
 import { runGuard } from '../../src/delivery/guard.js';
@@ -213,12 +218,33 @@ describe('E2E: Task Execution Flow', () => {
     state.status = 'running';
     writeFileSync(jsonPath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
 
-    // Complete task
+    // Complete task — requires passed verification result on disk (VER3-02)
+    const verSteps = [
+      { name: 'test', command: 'echo ok', type: 'test' as const, required: true, timeoutMs: 30000,
+        source: 'agents-md', uncertain: false, status: 'passed' as const,
+        exitCode: 0, stdout: '', stderr: '', durationMs: 1000 },
+    ];
+    const verResult = { total: 1, passed: 1, failed: 0, skipped: 0, status: 'passed' as const, durationMs: 1000 };
+    const verReport = generateReport('ver_e2e_pass', verSteps, verResult, {
+      taskId: record.state.taskId,
+      projectPath,
+    });
+    saveReport(verReport);
+
+    // Patch projectId
+    const manifest = JSON.parse(readFileSync(join(projectPath, '.project/state/manifest.json'), 'utf-8'));
+    const loaded = loadVerificationResult(projectPath, 'ver_e2e_pass');
+    if (loaded) {
+      loaded.projectId = manifest.projectId;
+      loaded.integrity = computeIntegrity(loaded);
+      saveVerificationResult(loaded, projectPath);
+    }
+
     const result = await completeTask({
       projectPath,
       taskId: record.state.taskId,
       changedFiles: ['src/test.ts'],
-      verificationStatus: 'passed',
+      verificationId: 'ver_e2e_pass',
     });
 
     expect(result.finalStatus).toBe('completed');

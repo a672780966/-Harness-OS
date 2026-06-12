@@ -16,23 +16,47 @@ export { detectCommands, type CommandType, type DetectedCommand } from './comman
 export { buildPlan, formatPlan, type VerificationPlan, type VerificationStep } from './plan.js';
 export { runVerification, formatResults, type RunResult } from './runner.js';
 export { generateReport, saveReport, type VerificationReport } from './report.js';
+export {
+  saveVerificationResult,
+  loadVerificationResult,
+  checkVerificationBinding,
+  computeIntegrity,
+  getCurrentCommit,
+  getCurrentTree,
+  VERIFICATION_RESULT_SCHEMA_VERSION,
+  type VerificationResult,
+  type BindingCheckResult,
+} from './result.js';
 
 // ============================================================
 // CLI Entry Point
 // ============================================================
 
-export async function runVerificationPipeline(options?: {
-  task?: string;
-  run?: string;
+export interface VerificationPipelineOptions {
+  taskId?: string;
+  runId?: string;
+  projectId?: string;
   projectPath?: string;
-}): Promise<RunResult> {
+}
+
+/**
+ * Run the full verification pipeline and return structured results.
+ *
+ * Returns both the RunResult and the verificationId for binding.
+ */
+export async function runVerificationPipeline(
+  options?: VerificationPipelineOptions,
+): Promise<{ result: RunResult; verificationId: string }> {
   const projectPath = options?.projectPath ?? process.cwd();
 
   // 1. Detect commands
   const commands = detectCommands(projectPath);
   if (commands.length === 0) {
     console.log('No verification commands detected');
-    return { total: 0, passed: 0, failed: 0, skipped: 0, status: 'skipped', durationMs: 0 };
+    return {
+      result: { total: 0, passed: 0, failed: 0, skipped: 0, status: 'skipped', durationMs: 0 },
+      verificationId: '',
+    };
   }
 
   // 2. Build plan
@@ -42,20 +66,33 @@ export async function runVerificationPipeline(options?: {
 
   // 3. Run
   console.log('Running verification...\n');
-  const result = await runVerification(plan);
+  const runResult = await runVerification(plan);
 
   // 4. Format results
-  console.log(formatResults(plan.steps, result));
+  console.log(formatResults(plan.steps, runResult));
 
-  // 5. Save report
-  const runId = options?.run ?? `ver_${Date.now().toString(36)}`;
-  const report = generateReport(runId, plan.steps, result, {
-    taskId: options?.task,
+  // 5. Save report (Markdown + structured JSON with binding info)
+  const verificationId = options?.runId ?? `ver_${Date.now().toString(36)}`;
+  const report = generateReport(verificationId, plan.steps, runResult, {
+    taskId: options?.taskId,
     projectPath,
     risks: [],
   });
-  const reportPath = saveReport(report);
-  console.log(`\nReport saved: ${reportPath}`);
+  const paths = saveReport(report);
 
-  return result;
+  // Override the projectId in the structured result if provided
+  if (options?.projectId && report.runId) {
+    const { loadVerificationResult, saveVerificationResult, computeIntegrity } = await import('./result.js');
+    const loaded = loadVerificationResult(projectPath, verificationId);
+    if (loaded) {
+      loaded.projectId = options.projectId;
+      loaded.integrity = computeIntegrity(loaded);
+      saveVerificationResult(loaded, projectPath);
+    }
+  }
+
+  console.log(`\nReport saved: ${paths.mdPath}`);
+  console.log(`Structured result: ${paths.jsonPath}`);
+
+  return { result: runResult, verificationId };
 }

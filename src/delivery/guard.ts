@@ -3,17 +3,29 @@
  *
  * Phase 8.1: Check preconditions before delivery.
  *
+ * VER3-04/VER3-05: Delivery requires an explicit verificationId.
+ * - No more directory scanning for "latest" Markdown reports
+ * - No more Markdown parsing for security decisions
+ * - Structured verification JSON is the only binding source of truth
+ * - project/task/run/commit/tree must all match
+ *
  * Checks:
- *   1. Verification status — must exist and not be "failed"
+ *   1. Verification result — explicit verId, loaded from disk, bindings validated
  *   2. Run report — must exist
  *   3. Governance — push main / deploy / release require approval
+ *   4. Git status — changes must exist
  *
  * Reference: 10_DELIVERY_PIPELINE.md §6, §14
+ *            03_VERIFICATION_DELIVERY_STRONG_BINDING_FIX.md §4
  */
 
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { join, resolve } from 'path';
+import {
+  loadVerificationResult,
+  checkVerificationBinding,
+} from '../verification/result.js';
 
 // ============================================================
 // Types
@@ -33,103 +45,76 @@ export interface GuardResult {
   warnings: string[];
 }
 
-/**
- * Load a verification report JSON (if exists) or parse structured status.
- * The structured path looks for a .verification.json alongside the .md report.
- */
-function loadVerificationReport(
-  verDir: string,
-  verId?: string,
-): { status: string; runId: string; taskId?: string; sourceCommit?: string } | undefined {
-  if (verId) {
-    const jsonPath = join(verDir, `${verId}.verification.json`);
-    if (existsSync(jsonPath)) {
-      try {
-        return JSON.parse(readFileSync(jsonPath, 'utf-8'));
-      } catch { /* fall through to Markdown */ }
-    }
-  }
-  return undefined;
-}
-
 // ============================================================
 // Guard Checks
 // ============================================================
 
 /**
- * Check verification result exists and is "passed".
- * Uses structured verification result if available; falls back to Markdown text
- * only for backward compatibility (VER-04).
+ * Check verification result exists, status=passed, and bindings match
+ * current project/task/run/commit/tree.
+ *
+ * VER3-04:
+ * - Requires explicit verId — no fallback to directory scan or Markdown parse.
+ * - Loads structured JSON from disk and validates all bindings.
  */
-function checkVerification(projectPath: string, taskId?: string, verId?: string): GuardCheck {
-  const verDir = join(projectPath, '.project/reports/verification');
-  if (!existsSync(verDir)) {
+function checkVerification(
+  projectPath: string,
+  verId: string,
+  taskId?: string,
+): GuardCheck {
+  if (!verId) {
     return {
-      check: 'Verification result exists',
+      check: 'Verification result exists and passed',
       passed: false,
-      reason: 'No verification reports directory found',
+      reason: 'No verification ID provided. Pass --ver-id or run "harness verify" first. [VER3-04]',
       severity: 'block',
     };
   }
 
-  // Prefer structured verification result (VER-04)
-  if (verId) {
-    const structured = loadVerificationReport(verDir, verId);
-    if (structured) {
-      if (structured.status === 'passed') {
-        return {
-          check: 'Verification passed',
-          passed: true,
-          reason: `Verification passed: ${structured.runId}${structured.sourceCommit ? ` @ ${structured.sourceCommit.slice(0, 8)}` : ''}`,
-          severity: 'warn',
-        };
-      }
-      return {
-        check: 'Verification passed',
-        passed: false,
-        reason: `Verification ${structured.status} — ${verId}${structured.taskId ? ` (task: ${structured.taskId})` : ''}`,
-        severity: 'block',
-      };
-    }
-  }
-
-  // Fallback: parse Markdown text (backward compatible, VER-04 discourages)
-  const files = readdirSync(verDir).filter(f => f.endsWith('.md'));
-  if (files.length === 0) {
+  const result = loadVerificationResult(projectPath, verId);
+  if (!result) {
     return {
-      check: 'Verification result exists',
+      check: 'Verification result exists and passed',
       passed: false,
-      reason: 'No verification reports found — run `harness verify` first',
+      reason: `Verification result "${verId}" not found on disk. Run "harness verify" first. [VER3-04: not found]`,
       severity: 'block',
     };
   }
 
-  // Check the latest report
-  const latest = files.sort().reverse()[0];
-  const content = readFileSync(join(verDir, latest), 'utf-8');
+  // Validate bindings against current state
+  const bindingCheck = checkVerificationBinding(result, {
+    projectId: result.projectId,
+    taskId,
+    projectPath,
+  });
 
-  if (content.includes('FAILED') || content.includes('failed')) {
+  if (!bindingCheck.valid) {
     return {
       check: 'Verification passed',
       passed: false,
-      reason: `Verification failed — check ${latest}`,
+      reason: [
+        `Verification ${verId} failed binding checks:`,
+        ...bindingCheck.reasons.map(r => `  - ${r}`),
+      ].join('\n'),
       severity: 'block',
     };
   }
 
-  if (content.includes('PASSED') || content.includes('Status: passed')) {
+  if (result.status !== 'passed') {
     return {
       check: 'Verification passed',
-      passed: true,
-      reason: `Verification passed — ${latest}`,
-      severity: 'warn',
+      passed: false,
+      reason: `Verification "${verId}" status is "${result.status}", not "passed". [VER3-04]`,
+      severity: 'block',
     };
   }
 
   return {
-    check: 'Verification status known',
+    check: 'Verification passed',
     passed: true,
-    reason: `Found verification report: ${latest}`,
+    reason: `Verification ${verId}: passed ${
+      result.sourceCommit ? `@ ${result.sourceCommit.slice(0, 8)}` : ''
+    }`,
     severity: 'warn',
   };
 }
@@ -153,7 +138,8 @@ function checkRunReport(projectPath: string, runId?: string): GuardCheck {
   // Check for any run report
   const runsDir = join(projectPath, '.project/reports/runs');
   if (existsSync(runsDir)) {
-    const files = readdirSync(runsDir).filter(f => f.endsWith('.md'));
+    const { readdirSync } = require('fs');
+    const files = readdirSync(runsDir).filter((f: string) => f.endsWith('.md'));
     if (files.length > 0) {
       return {
         check: 'Run report exists',
@@ -235,6 +221,8 @@ function checkGitStatus(projectPath: string): GuardCheck {
 
 /**
  * Run all delivery guard checks.
+ *
+ * VER3-04: verId is now REQUIRED — no fallback to Markdown scanning.
  */
 export async function runGuard(
   options: {
@@ -242,7 +230,8 @@ export async function runGuard(
     projectPath?: string;
     taskId?: string;
     runId?: string;
-    verId?: string;
+    /** VER3-04: Required — structured verification result ID. */
+    verId: string;
   },
 ): Promise<GuardResult> {
   const projectPath = resolve(options.projectPath || process.cwd());
@@ -251,8 +240,8 @@ export async function runGuard(
   // 1. Check git status
   checks.push(checkGitStatus(projectPath));
 
-  // 2. Check verification (with structured verification ID if available)
-  checks.push(checkVerification(projectPath, options.taskId, options.verId));
+  // 2. Check verification — REQUIRES verId, loads structured JSON from disk
+  checks.push(checkVerification(projectPath, options.verId, options.taskId));
 
   // 3. Check run report
   checks.push(checkRunReport(projectPath, options.runId));

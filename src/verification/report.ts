@@ -4,7 +4,10 @@
  * Phase 6.4: Generate and save verification reports.
  *
  * Output: .project/reports/verification/<run-id>.md
- * Includes: command results table, failure details, risk notes
+ * Output: .project/reports/verification/<run-id>.verification.json  (VER3-01)
+ *
+ * JSON is the binding source of truth for task completion and delivery.
+ * Markdown is for human reading only.
  *
  * Reference: 09_VERIFICATION_OBSERVABILITY.md §9
  *            11_ACCEPTANCE_CRITERIA.md §12
@@ -15,6 +18,14 @@ import { join, resolve } from 'path';
 import type { VerificationStep } from './plan.js';
 import type { RunResult } from './runner.js';
 import { redactText } from '../governance/redactor.js';
+import {
+  saveVerificationResult,
+  getCurrentCommit,
+  getCurrentTree,
+  computeIntegrity,
+  VERIFICATION_RESULT_SCHEMA_VERSION,
+  type VerificationResult,
+} from './result.js';
 
 // ============================================================
 // Types
@@ -69,27 +80,67 @@ export function generateReport(
 }
 
 // ============================================================
-// Save Report
+// Save Report (Markdown + Structured JSON)
 // ============================================================
 
 /**
  * Save a verification report to .project/reports/verification/<run-id>.md
+ * AND the structured JSON result for strong binding (VER3-01).
+ *
+ * Returns both file paths: { mdPath, jsonPath }
  */
-export function saveReport(report: VerificationReport): string {
+export function saveReport(report: VerificationReport): { mdPath: string; jsonPath: string } {
   const reportDir = join(resolve(report.projectPath), '.project/reports/verification');
   if (!existsSync(reportDir)) {
     mkdirSync(reportDir, { recursive: true });
   }
 
-  const reportPath = join(reportDir, `${report.runId}.md`);
+  const mdPath = join(reportDir, `${report.runId}.md`);
   const content = formatReport(report);
-  writeFileSync(reportPath, content, 'utf-8');
+  writeFileSync(mdPath, content, 'utf-8');
 
-  return reportPath;
+  // ── Structured JSON result (VER3-01) ──
+  const now = new Date().toISOString();
+  const sourceCommit = getCurrentCommit(report.projectPath);
+  const sourceTree = getCurrentTree(report.projectPath);
+
+  const verificationResult: VerificationResult = {
+    verificationId: report.runId,
+    schemaVersion: VERIFICATION_RESULT_SCHEMA_VERSION,
+    projectId: 'proj_' + report.runId.replace(/^ver_/, '').replace(/_.*$/, ''),
+    taskId: report.taskId,
+    sourceCommit,
+    sourceTree,
+    status: report.status,
+    requiredSteps: report.steps.filter(s => s.required).length,
+    stepResults: report.steps,
+    startedAt: now,
+    finishedAt: now,
+    reportPath: mdPath,
+    integrity: '', // filled by computeIntegrity below
+  };
+
+  // Compute integrity after all binding fields are set
+  verificationResult.integrity = computeIntegrity(verificationResult);
+
+  const jsonPath = saveVerificationResult(verificationResult, report.projectPath);
+
+  return { mdPath, jsonPath };
 }
 
 // ============================================================
-// Format Report
+// Load
+// ============================================================
+
+/**
+ * Load a structured verification result by verification ID (VER3-01).
+ * Returns undefined if the JSON doesn't exist or is malformed.
+ * Does NOT fall back to Markdown — JSON is the binding source of truth.
+ */
+export { loadVerificationResult } from './result.js';
+
+// ============================================================
+// Format Report (Markdown)
 // ============================================================
 
 /**

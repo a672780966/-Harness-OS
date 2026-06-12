@@ -293,19 +293,20 @@ program
     resetStartTime();
 
     try {
-      const result = await runVerificationPipeline(options);
+      const pipelineResult = await runVerificationPipeline(options);
+      const vResult = pipelineResult.result;
       if (mode === 'json') {
-        jsonOutput(buildJsonOutput({ command: 'verify', status: 'success', data: result }));
+        jsonOutput(buildJsonOutput({ command: 'verify', status: 'success', data: pipelineResult }));
       } else if (mode === 'quiet') {
-        console.log(result.status);
+        console.log(vResult.status);
       } else {
-        if (result.status === 'passed') {
+        if (vResult.status === 'passed') {
           console.log('\n✅ Verification passed');
         } else {
-          console.log(`\n❌ Verification ${result.status}`);
+          console.log(`\n❌ Verification ${vResult.status}`);
         }
       }
-      if (result.status !== 'passed') process.exit(70);
+      if (vResult.status !== 'passed') process.exit(70);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_VERIFY_FAILED', category: 'verification' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };

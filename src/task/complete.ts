@@ -10,33 +10,26 @@
  *   4. Move Markdown + JSON from active/ → completed/ or failed/
  *   5. Generate completion event data
  *
+ * VER3-02: completeTask() only accepts verificationId, which is loaded from
+ * disk and validated against current project/task/run/commit bindings.
+ * No caller-supplied string or in-memory object can override the persisted result.
+ *
  * Reference: 06_TASK_DECISION_PROJECT_MANAGER.md §7.7-7.8
+ *            03_VERIFICATION_DELIVERY_STRONG_BINDING_FIX.md §4
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import type { TaskState, TaskStatus } from '../types.js';
 import { transitionStatus } from './state-machine.js';
+import {
+  loadVerificationResult,
+  checkVerificationBinding,
+} from '../verification/result.js';
 
 // ============================================================
-// Verification Binding (VER-01/VER-03)
+// Verification Binding (VER3-01/VER3-02/VER3-03)
 // ============================================================
-
-/**
- * Structured reference to a verification result.
- * completeTask() uses this to validate that only a passed verification
- * allows task completion (VER-02).
- */
-export interface VerificationRef {
-  /** Verification run ID (e.g., "ver_abc123"). */
-  id: string;
-  /** Status — only "passed" allows task completion. */
-  status: 'passed' | 'failed' | 'partial' | 'skipped';
-  /** Path to the saved verification report. */
-  reportPath?: string;
-  /** Source commit/tree hash for binding (VER-01). */
-  sourceCommit?: string;
-}
 
 // ============================================================
 // Complete / Fail Types
@@ -45,12 +38,15 @@ export interface VerificationRef {
 export interface CompleteTaskParams {
   projectPath: string;
   taskId: string;
+  projectId?: string;
+  runId?: string;
   changedFiles?: string[];
-  /** Verification result reference. Completing requires status 'passed' (VER-02/VER-03). */
-  verification?: VerificationRef;
-  /** Legacy string-only verification status — use `verification` instead. */
-  verificationStatus?: string;
-  verificationReportPath?: string;
+  /**
+   * Verification result ID. Must reference a persisted structured result
+   * on disk. Only status='passed' with matching bindings allows completion.
+   * VER3-02: No more legacy verificationStatus string.
+   */
+  verificationId: string;
   risks?: string[];
   summary?: string;
 }
@@ -105,6 +101,13 @@ function ensureDir(dir: string): void {
 /**
  * Mark a task as completed.
  *
+ * VER3-02 Gate:
+ *   1. Load verification result JSON from disk (not caller memory)
+ *   2. Validate integrity hash
+ *   3. Validate projectId, taskId, runId match current bindings
+ *   4. Validate sourceCommit / sourceTree match HEAD
+ *   5. Only status=passed can complete the task
+ *
  * Steps:
  *   1. Read current task state
  *   2. Transition status: current → completed
@@ -125,18 +128,46 @@ export async function completeTask(
     throw new Error(`Task not found: ${params.taskId}`);
   }
 
-  // ---- Verification Gate (VER-02/VER-03) ----
-  // Resolve effective verification status from VerificationRef or legacy string.
-  const verRef = params.verification;
-  const effectiveStatus = verRef
-    ? verRef.status
-    : (params.verificationStatus ?? 'unknown');
-
-  if (effectiveStatus !== 'passed') {
+  // ---- VER3-02: Structured Verification Gate ----
+  // Load from disk — caller-provided verificationId must reference a real
+  // persisted JSON. In-memory objects or strings cannot form a passed.
+  if (!params.verificationId) {
     throw new Error(
-      `Cannot complete task: verification status is "${effectiveStatus}". ` +
-      `Only "passed" allows completion. Use failTask() for failed/partial/skipped tasks. ` +
-      `[VER-02 gate]`,
+      `Cannot complete task: verificationId is required. ` +
+      `[VER3-02 gate: missing verificationId]`,
+    );
+  }
+
+  const verResult = loadVerificationResult(projectPath, params.verificationId);
+  if (!verResult) {
+    throw new Error(
+      `Cannot complete task: verification result "${params.verificationId}" not found on disk. ` +
+      `Run verification first. [VER3-02 gate: result not found]`,
+    );
+  }
+
+  // Validate bindings: projectId, taskId, runId, sourceCommit, sourceTree
+  const bindingCheck = checkVerificationBinding(verResult, {
+    projectId: params.projectId ?? state.projectId,
+    taskId: params.taskId,
+    runId: params.runId,
+    projectPath,
+  });
+
+  if (!bindingCheck.valid) {
+    throw new Error(
+      `Cannot complete task: verification binding failed.\n` +
+      bindingCheck.reasons.map(r => `  - ${r}`).join('\n') +
+      `\n[VER3-02 gate: binding mismatch]`,
+    );
+  }
+
+  // Status gate: only "passed" allows completion
+  if (verResult.status !== 'passed') {
+    throw new Error(
+      `Cannot complete task: verification status is "${verResult.status}". ` +
+      `Only "passed" allows completion. Use failTask() for non-passed verifications. ` +
+      `[VER3-02 gate: status=${verResult.status}]`,
     );
   }
 
@@ -151,9 +182,9 @@ export async function completeTask(
   state.status = newStatus;
   state.changedFiles = params.changedFiles ?? state.changedFiles;
   state.verification = {
-    status: effectiveStatus,
-    reportPath: verRef?.reportPath ?? params.verificationReportPath,
-    id: verRef?.id,
+    status: 'passed',
+    reportPath: verResult.reportPath,
+    id: params.verificationId,
   } as any;
   state.risks = params.risks ?? state.risks;
   state.updatedAt = new Date().toISOString();
@@ -183,7 +214,7 @@ export async function completeTask(
     // Update verification section
     md = md.replace(
       /(Status: ).*/,
-      `Status: ${effectiveStatus}`,
+      `Status: passed`,
     );
 
     // Update changed files
@@ -215,14 +246,25 @@ export async function completeTask(
 // Fail Task
 // ============================================================
 
-export interface FailTaskParams extends CompleteTaskParams {
+export interface FailTaskParams {
+  projectPath: string;
+  taskId: string;
+  projectId?: string;
+  runId?: string;
+  changedFiles?: string[];
+  verificationId?: string;
   failureReason?: string;
   recoveryHint?: string;
+  risks?: string[];
+  summary?: string;
 }
 
 /**
  * Mark a task as failed.
  * Similar to completeTask but moves to failed/ instead of completed/.
+ *
+ * VER3-03: Failed/blocked tasks record verification status but don't validate
+ * bindings — the failure is recorded regardless.
  */
 export async function failTask(
   params: FailTaskParams,
@@ -240,10 +282,15 @@ export async function failTask(
   transitionStatus(state.status, newStatus);
 
   // 3. Resolve verification for state record
-  const verRef = params.verification;
-  const effectiveVerStatus = verRef
-    ? verRef.status
-    : (params.verificationStatus ?? 'failed');
+  let effectiveVerStatus = 'failed';
+  let verReportPath: string | undefined;
+  if (params.verificationId) {
+    const verResult = loadVerificationResult(projectPath, params.verificationId);
+    if (verResult) {
+      effectiveVerStatus = verResult.status;
+      verReportPath = verResult.reportPath;
+    }
+  }
 
   // 3. Prepare summary
   const failureMsg = params.failureReason ?? 'No failure reason recorded';
@@ -255,8 +302,8 @@ export async function failTask(
   state.changedFiles = params.changedFiles ?? state.changedFiles;
   state.verification = {
     status: effectiveVerStatus,
-    reportPath: verRef?.reportPath ?? params.verificationReportPath,
-    id: verRef?.id,
+    reportPath: verReportPath,
+    id: params.verificationId,
   } as any;
   state.risks = params.risks ?? state.risks;
   state.updatedAt = new Date().toISOString();
@@ -317,7 +364,7 @@ export interface UpdateTaskParams {
   checkpointId?: string;
   changedFiles?: string[];
   risks?: string[];
-  verificationStatus?: string;
+  verificationId?: string;
   verificationReportPath?: string;
 }
 
@@ -368,9 +415,9 @@ export function updateTaskState(params: UpdateTaskParams): TaskState | undefined
     state.risks = [...existing];
   }
 
-  // Update verification
-  if (params.verificationStatus) {
-    state.verification.status = params.verificationStatus;
+  // Update verification reference
+  if (params.verificationId) {
+    state.verification.id = params.verificationId;
   }
   if (params.verificationReportPath) {
     state.verification.reportPath = params.verificationReportPath;
@@ -391,8 +438,7 @@ function generateDefaultSummary(state: TaskState, params: CompleteTaskParams): s
   if (params.changedFiles && params.changedFiles.length > 0) {
     parts.push(`Files changed: ${params.changedFiles.length}`);
   }
-  const effStatus = params.verification?.status ?? params.verificationStatus ?? 'passed';
-  parts.push(`Verification: ${effStatus}`);
+  parts.push(`Verification: passed (${params.verificationId})`);
   if (params.risks && params.risks.length > 0) {
     parts.push(`\nRisks:\n${params.risks.map(r => `- ${r}`).join('\n')}`);
   }

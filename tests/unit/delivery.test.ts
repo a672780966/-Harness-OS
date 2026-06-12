@@ -195,20 +195,27 @@ describe('delivery report', () => {
 });
 
 // ============================================================
-// VER-04: Guard verId parameter
+// VER3-04: Guard verId requirement
 // ============================================================
 
-describe('VER-04: guard with verId', () => {
-  it('accepts verId parameter in runGuard options', async () => {
-    // The guard should accept verId even if no structured report file exists
-    // (it falls back to markdown search)
+describe('VER3-04: guard requires verId with structured result', () => {
+  it('rejects delivery when verId is empty', async () => {
+    // Guard should block when no verId is provided
     const guard = await runGuard({
       deliveryType: 'commit',
-      verId: 'ver_test_001',
+      verId: '',
     });
-    expect(guard.canProceed).toBeDefined();
-    // No project path → will block (no git repo)
-    expect(typeof guard.canProceed).toBe('boolean');
+    expect(guard.canProceed).toBe(false);
+    expect(guard.blockedBy.some(r => r.includes('No verification ID'))).toBe(true);
+  });
+
+  it('rejects delivery when verId does not exist on disk', async () => {
+    const guard = await runGuard({
+      deliveryType: 'commit',
+      verId: 'ver_nonexistent',
+    });
+    expect(guard.canProceed).toBe(false);
+    expect(guard.blockedBy.some(r => r.includes('not found on disk'))).toBe(true);
   });
 
   it('guard returns structured result with check list', async () => {
@@ -219,5 +226,17 @@ describe('VER-04: guard with verId', () => {
     expect(guard.checks.length).toBeGreaterThan(0);
     expect(guard.blockedBy).toBeDefined();
     expect(guard.warnings).toBeDefined();
+  });
+
+  it('guard blocks with no Markdown fallback for missing JSON', async () => {
+    // VER3-04: Even if a .md file exists, without structured JSON the guard blocks
+    const guard = await runGuard({
+      deliveryType: 'commit',
+      verId: 'ver_no_json',
+    });
+    expect(guard.canProceed).toBe(false);
+    // The reason should mention "not found on disk", not Markdown parsing
+    const verCheck = guard.checks.find(c => c.check.includes('Verification'));
+    expect(verCheck?.reason).not.toContain('.md'); // No Markdown fallback
   });
 });

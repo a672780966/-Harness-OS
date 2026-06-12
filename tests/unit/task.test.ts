@@ -37,13 +37,26 @@ import {
   updateTaskState,
 } from '../../src/task/complete.js';
 
+import {
+  generateReport,
+  saveReport,
+  loadVerificationResult,
+} from '../../src/verification/report.js';
+import {
+  computeIntegrity,
+  saveVerificationResult,
+} from '../../src/verification/result.js';
+
 let testDir: string;
 let projectPath: string;
+let projectId: string;
 
 beforeEach(async () => {
   testDir = mkdtempSync(join(tmpdir(), 'harness-task-test-'));
   projectPath = join(testDir, 'test-proj');
   await createProject({ name: 'test-proj', path: projectPath });
+  const manifest = JSON.parse(readFileSync(join(projectPath, '.project/state/manifest.json'), 'utf-8'));
+  projectId = manifest.projectId;
 });
 
 afterEach(() => {
@@ -62,6 +75,33 @@ async function createAndStart(instruction: string = 'Fix login bug'): Promise<st
   state.status = 'running';
   writeFileSync(jsonPath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
   return record.state.taskId;
+}
+
+/**
+ * Create a passed verification result on disk so completeTask() can load it.
+ */
+function createPassedVerification(verId: string, overrides?: {
+  taskId?: string;
+  runId?: string;
+}): string {
+  const steps = [
+    { name: 'test', command: 'echo ok', type: 'test' as const, required: true, timeoutMs: 30000,
+      source: 'agents-md', uncertain: false, status: 'passed' as const,
+      exitCode: 0, stdout: '', stderr: '', durationMs: 1000 },
+  ];
+  const result = { total: 1, passed: 1, failed: 0, skipped: 0, status: 'passed' as const, durationMs: 1000 };
+  const report = generateReport(verId, steps, result, { taskId: overrides?.taskId, projectPath });
+  saveReport(report);
+
+  // Patch projectId to match the real project (VER3-02 binding)
+  const loaded = loadVerificationResult(projectPath, verId);
+  if (loaded) {
+    loaded.projectId = projectId;
+    loaded.integrity = computeIntegrity(loaded);
+    saveVerificationResult(loaded, projectPath);
+  }
+
+  return verId;
 }
 
 // ============================================================
@@ -296,11 +336,12 @@ describe('extractExplicitRefs', () => {
 describe('completeTask', () => {
   it('completes a task and moves files to completed/', async () => {
     const taskId = await createAndStart();
+    const verId = createPassedVerification('ver_test_complete', { taskId });
     const result = await completeTask({
       projectPath,
       taskId,
       changedFiles: ['src/login.ts', 'tests/login.test.ts'],
-      verificationStatus: 'passed',
+      verificationId: verId,
     });
 
     expect(result.finalStatus).toBe('completed');
@@ -321,54 +362,83 @@ describe('completeTask', () => {
   });
 
   it('throws error for unknown task', async () => {
-    await expect(completeTask({ projectPath, taskId: 'task_nonexistent' })).rejects.toThrow('not found');
+    await expect(completeTask({ projectPath, taskId: 'task_nonexistent', verificationId: 'ver_test' })).rejects.toThrow('not found');
   });
 
   it('rejects invalid transition from created to completed', async () => {
     const record = await createTaskRecord({ projectPath, userInstruction: 'Fix bug' });
-    await expect(completeTask({ projectPath, taskId: record.state.taskId, verificationStatus: 'passed' })).rejects.toThrow(
+    // Create a passed ver with taskId. Binding check passes, then
+    // state transition (created → completed) fails.
+    const verId = createPassedVerification('ver_invalid_transition', { taskId: record.state.taskId });
+    await expect(completeTask({ projectPath, taskId: record.state.taskId, verificationId: verId })).rejects.toThrow(
       'Invalid task status transition',
     );
   });
 
-  // ---- VER-02/VER-03: Verification Gate ----
-  it('rejects completion with non-passed verification status', async () => {
+  // ---- VER3-02: Verification Gate ----
+  it('rejects completion without verificationId', async () => {
     const taskId = await createAndStart();
     await expect(completeTask({
       projectPath,
       taskId,
-      verificationStatus: 'failed',
-    })).rejects.toThrow('Cannot complete task');
+      verificationId: '',
+    })).rejects.toThrow('verificationId is required');
   });
 
-  it('rejects completion with partial verification status', async () => {
+  it('rejects completion with non-existent verificationId', async () => {
     const taskId = await createAndStart();
     await expect(completeTask({
       projectPath,
       taskId,
-      verification: { id: 'ver_001', status: 'partial' },
+      verificationId: 'ver_nonexistent',
+    })).rejects.toThrow('not found on disk');
+  });
+
+  it('rejects completion with failed verification on disk', async () => {
+    const taskId = await createAndStart();
+    // Create a failed verification result
+    const steps = [
+      { name: 'lint', command: 'eslint', type: 'lint' as const, required: true, timeoutMs: 30000,
+        source: 'agents-md', uncertain: false, status: 'failed' as const,
+        exitCode: 1, stdout: '', stderr: 'error', durationMs: 1000 },
+    ];
+    const result = { total: 1, passed: 0, failed: 1, skipped: 0, status: 'failed' as const, durationMs: 1000 };
+    const report = generateReport('ver_failed_test', steps, result, { projectPath });
+    saveReport(report);
+
+    await expect(completeTask({
+      projectPath,
+      taskId,
+      verificationId: 'ver_failed_test',
     })).rejects.toThrow('Cannot complete task');
   });
 
-  it('rejects completion with skipped verification status', async () => {
+  it('rejects completion with legacy verificationStatus string', async () => {
+    // VER3-02: The verificationStatus field no longer exists.
+    // Passing it as extra property should be ignored; verificationId is required.
     const taskId = await createAndStart();
     await expect(completeTask({
       projectPath,
       taskId,
-      verification: { id: 'ver_002', status: 'skipped' },
-    })).rejects.toThrow('Cannot complete task');
+      verificationId: '',
+    } as any)).rejects.toThrow('verificationId');
   });
 
-  it('accepts completion with VerificationRef passed status', async () => {
+  it('accepts completion with valid passed verification result on disk', async () => {
     const taskId = await createAndStart();
+    const verId = createPassedVerification('ver_valid_pass', { taskId });
     const result = await completeTask({
       projectPath,
       taskId,
       changedFiles: ['src/main.ts'],
-      verification: { id: 'ver_003', status: 'passed', reportPath: '.project/reports/verification/ver_003.md' },
+      verificationId: verId,
     });
     expect(result.finalStatus).toBe('completed');
     expect(result.changedFiles).toContain('src/main.ts');
+
+    // The task state should reference the verification ID
+    const json = JSON.parse(readFileSync(join(projectPath, '.project/tasks/completed', `${taskId}.json`), 'utf-8'));
+    expect(json.verification.id).toBe(verId);
   });
 });
 
@@ -427,7 +497,8 @@ describe('updateTaskState', () => {
 
   it('does not modify terminal tasks', async () => {
     const taskId = await createAndStart();
-    await completeTask({ projectPath, taskId, verificationStatus: 'passed' });
+    const verId = createPassedVerification('ver_terminal_test', { taskId });
+    await completeTask({ projectPath, taskId, verificationId: verId });
 
     const updated = updateTaskState({ projectPath, taskId, runId: 'run_new' });
     // Terminal tasks should not be modified

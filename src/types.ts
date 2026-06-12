@@ -138,7 +138,7 @@ export interface TaskState {
   contextPackIds: string[];
   checkpointIds: string[];
   changedFiles: string[];
-  verification: { status: string; reportPath?: string };
+  verification: { status: string; reportPath?: string; id?: string };
   risks: string[];
   createdAt: string;
   updatedAt: string;

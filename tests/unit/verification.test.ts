@@ -216,12 +216,21 @@ describe('report', () => {
     const result = { total: 1, passed: 1, failed: 0, skipped: 0, status: 'passed' as const, durationMs: 1000 };
     const report = generateReport('ver_save', steps, result, { projectPath });
 
-    const path = saveReport(report);
-    expect(existsSync(path)).toBe(true);
+    const paths = saveReport(report);
+    expect(existsSync(paths.mdPath)).toBe(true);
+    expect(existsSync(paths.jsonPath)).toBe(true);
 
-    const content = readFileSync(path, 'utf-8');
-    expect(content).toContain('Verification Report');
-    expect(content).toContain('ver_save');
-    expect(content).toContain('passed');
+    const mdContent = readFileSync(paths.mdPath, 'utf-8');
+    expect(mdContent).toContain('Verification Report');
+    expect(mdContent).toContain('ver_save');
+    expect(mdContent).toContain('passed');
+
+    // Structured JSON result exists with binding fields (VER3-01)
+    const jsonContent = readFileSync(paths.jsonPath, 'utf-8');
+    const parsed = JSON.parse(jsonContent);
+    expect(parsed.verificationId).toBe('ver_save');
+    expect(parsed.status).toBe('passed');
+    expect(parsed.schemaVersion).toBeDefined();
+    expect(parsed.integrity).toBeDefined();
   });
 });
