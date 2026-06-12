@@ -22,4 +22,9 @@ export type {
   CliConfig,
   LoadedConfig,
   ConfigSource,
+  ConfigFieldSource,
+  ConfigValidation,
+  SafetyFieldDef,
+  SafetyType,
 } from './types.js';
+export { SAFETY_FIELDS } from './types.js';
