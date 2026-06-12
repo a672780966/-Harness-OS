@@ -33,15 +33,35 @@ export interface GuardResult {
   warnings: string[];
 }
 
+/**
+ * Load a verification report JSON (if exists) or parse structured status.
+ * The structured path looks for a .verification.json alongside the .md report.
+ */
+function loadVerificationReport(
+  verDir: string,
+  verId?: string,
+): { status: string; runId: string; taskId?: string; sourceCommit?: string } | undefined {
+  if (verId) {
+    const jsonPath = join(verDir, `${verId}.verification.json`);
+    if (existsSync(jsonPath)) {
+      try {
+        return JSON.parse(readFileSync(jsonPath, 'utf-8'));
+      } catch { /* fall through to Markdown */ }
+    }
+  }
+  return undefined;
+}
+
 // ============================================================
 // Guard Checks
 // ============================================================
 
 /**
- * Check verification result exists and is not "failed".
+ * Check verification result exists and is "passed".
+ * Uses structured verification result if available; falls back to Markdown text
+ * only for backward compatibility (VER-04).
  */
-function checkVerification(projectPath: string, taskId?: string): GuardCheck {
-  // Look for verification reports in .project/reports/verification/
+function checkVerification(projectPath: string, taskId?: string, verId?: string): GuardCheck {
   const verDir = join(projectPath, '.project/reports/verification');
   if (!existsSync(verDir)) {
     return {
@@ -52,6 +72,28 @@ function checkVerification(projectPath: string, taskId?: string): GuardCheck {
     };
   }
 
+  // Prefer structured verification result (VER-04)
+  if (verId) {
+    const structured = loadVerificationReport(verDir, verId);
+    if (structured) {
+      if (structured.status === 'passed') {
+        return {
+          check: 'Verification passed',
+          passed: true,
+          reason: `Verification passed: ${structured.runId}${structured.sourceCommit ? ` @ ${structured.sourceCommit.slice(0, 8)}` : ''}`,
+          severity: 'warn',
+        };
+      }
+      return {
+        check: 'Verification passed',
+        passed: false,
+        reason: `Verification ${structured.status} — ${verId}${structured.taskId ? ` (task: ${structured.taskId})` : ''}`,
+        severity: 'block',
+      };
+    }
+  }
+
+  // Fallback: parse Markdown text (backward compatible, VER-04 discourages)
   const files = readdirSync(verDir).filter(f => f.endsWith('.md'));
   if (files.length === 0) {
     return {
@@ -200,6 +242,7 @@ export async function runGuard(
     projectPath?: string;
     taskId?: string;
     runId?: string;
+    verId?: string;
   },
 ): Promise<GuardResult> {
   const projectPath = resolve(options.projectPath || process.cwd());
@@ -208,8 +251,8 @@ export async function runGuard(
   // 1. Check git status
   checks.push(checkGitStatus(projectPath));
 
-  // 2. Check verification
-  checks.push(checkVerification(projectPath, options.taskId));
+  // 2. Check verification (with structured verification ID if available)
+  checks.push(checkVerification(projectPath, options.taskId, options.verId));
 
   // 3. Check run report
   checks.push(checkRunReport(projectPath, options.runId));

@@ -10,10 +10,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { join } from 'path';
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
 
 import { generateCommitMessage, generateCommitFromTask, taskTypeToCommitType } from '../../src/delivery/commit.js';
 import { generatePrBody } from '../../src/delivery/pr.js';
 import { generateDeliveryReport } from '../../src/delivery/report.js';
+import { runGuard } from '../../src/delivery/guard.js';
 
 // ============================================================
 // Commit Message Tests
@@ -186,5 +191,33 @@ describe('delivery report', () => {
     });
 
     expect(report.status).toBe('blocked');
+  });
+});
+
+// ============================================================
+// VER-04: Guard verId parameter
+// ============================================================
+
+describe('VER-04: guard with verId', () => {
+  it('accepts verId parameter in runGuard options', async () => {
+    // The guard should accept verId even if no structured report file exists
+    // (it falls back to markdown search)
+    const guard = await runGuard({
+      deliveryType: 'commit',
+      verId: 'ver_test_001',
+    });
+    expect(guard.canProceed).toBeDefined();
+    // No project path → will block (no git repo)
+    expect(typeof guard.canProceed).toBe('boolean');
+  });
+
+  it('guard returns structured result with check list', async () => {
+    const guard = await runGuard({
+      deliveryType: 'deploy',
+      verId: 'ver_test_002',
+    });
+    expect(guard.checks.length).toBeGreaterThan(0);
+    expect(guard.blockedBy).toBeDefined();
+    expect(guard.warnings).toBeDefined();
   });
 });

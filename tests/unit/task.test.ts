@@ -326,9 +326,49 @@ describe('completeTask', () => {
 
   it('rejects invalid transition from created to completed', async () => {
     const record = await createTaskRecord({ projectPath, userInstruction: 'Fix bug' });
-    await expect(completeTask({ projectPath, taskId: record.state.taskId })).rejects.toThrow(
+    await expect(completeTask({ projectPath, taskId: record.state.taskId, verificationStatus: 'passed' })).rejects.toThrow(
       'Invalid task status transition',
     );
+  });
+
+  // ---- VER-02/VER-03: Verification Gate ----
+  it('rejects completion with non-passed verification status', async () => {
+    const taskId = await createAndStart();
+    await expect(completeTask({
+      projectPath,
+      taskId,
+      verificationStatus: 'failed',
+    })).rejects.toThrow('Cannot complete task');
+  });
+
+  it('rejects completion with partial verification status', async () => {
+    const taskId = await createAndStart();
+    await expect(completeTask({
+      projectPath,
+      taskId,
+      verification: { id: 'ver_001', status: 'partial' },
+    })).rejects.toThrow('Cannot complete task');
+  });
+
+  it('rejects completion with skipped verification status', async () => {
+    const taskId = await createAndStart();
+    await expect(completeTask({
+      projectPath,
+      taskId,
+      verification: { id: 'ver_002', status: 'skipped' },
+    })).rejects.toThrow('Cannot complete task');
+  });
+
+  it('accepts completion with VerificationRef passed status', async () => {
+    const taskId = await createAndStart();
+    const result = await completeTask({
+      projectPath,
+      taskId,
+      changedFiles: ['src/main.ts'],
+      verification: { id: 'ver_003', status: 'passed', reportPath: '.project/reports/verification/ver_003.md' },
+    });
+    expect(result.finalStatus).toBe('completed');
+    expect(result.changedFiles).toContain('src/main.ts');
   });
 });
 
