@@ -38,14 +38,14 @@ afterEach(() => {
 
 describe('registry executor', () => {
   it('has executors for core skills', () => {
-    expect(registry.getExecutor('filesystem')).toBeDefined();
-    expect(registry.getExecutor('shell')).toBeDefined();
-    expect(registry.getExecutor('git')).toBeDefined();
-    expect(registry.getExecutor('repo-scanner')).toBeDefined();
+    expect(registry._getExecutor('filesystem')).toBeDefined();
+    expect(registry._getExecutor('shell')).toBeDefined();
+    expect(registry._getExecutor('git')).toBeDefined();
+    expect(registry._getExecutor('repo-scanner')).toBeDefined();
   });
 
   it('returns undefined for unknown executor', () => {
-    expect(registry.getExecutor('nonexistent')).toBeUndefined();
+    expect(registry._getExecutor('nonexistent')).toBeUndefined();
   });
 
   it('returns failed result for unknown skill', async () => {
@@ -156,13 +156,13 @@ describe('git executor', () => {
     expect(result.status).toBe('success');
   });
 
-  it('creates a commit', async () => {
+  it('requires approval for commit (GOV3-06)', async () => {
     writeFileSync(join(testDir, 'change.txt'), 'change', 'utf-8');
     const git = simpleGit(testDir);
     await git.add('.');
     const result = await registry.execute('git', 'git_commit', { message: 'test commit' }, context);
-    expect(result.status).toBe('success');
-    expect((result.output as any).hash).toBeTruthy();
+    expect(result.status).toBe('requires-approval');
+    expect((result.output as any)?.approvalId).toBeDefined();
   });
 
   it('blocks git_push', async () => {
@@ -288,10 +288,76 @@ describe('GOV-01: registry.execute() policy integration', () => {
     expect(result.status).toBe('success');
   });
 
-  // ---- getExecutor() documented bypass ----
-  it('getExecutor still returns raw executor (documented bypass)', () => {
-    const exec = registry.getExecutor('filesystem');
+  // ---- _getExecutor() internal access ----
+  it('_getExecutor returns raw executor (internal use only)', () => {
+    const exec = registry._getExecutor('filesystem');
     expect(exec).toBeDefined();
     expect(typeof exec).toBe('function');
+  });
+});
+
+// ============================================================
+// AUD3-P0-001 Regression Tests: Governance Execution Boundary
+//
+// GOV3-01: No public raw executor access
+// GOV3-02: Policy decision validation, AGENTS.md/adr writes needs_approval
+// GOV3-04: Path escape protection (sibling-prefix, ../, symlink)
+// GOV3-05: PowerShell dangerous patterns blocked
+// GOV3-06: Git commit requires approval
+// GOV3-07: Policy error fail-closed
+// ============================================================
+
+describe('AUD3-P0-001: governance execution boundary', () => {
+  // ---- GOV3-01: raw executor access ----
+  it('raw executor not importable from barrel export', async () => {
+    // The barrel export (skills/index.ts) should NOT expose raw _execute
+    const mod = await import('../../src/skills/index.js');
+    expect((mod as any)._execute).toBeUndefined();
+    expect((mod as any).execute).toBeUndefined();
+  });
+
+  // ---- GOV3-02: AGENTS.md / ADR writes ----
+  it('requires approval for AGENTS.md writes', async () => {
+    const result = await registry.execute('filesystem', 'write_file', { path: 'AGENTS.md', content: 'test' }, context);
+    expect(result.status).toBe('requires-approval');
+  });
+
+  it('requires approval for ADR writes', async () => {
+    const result = await registry.execute('filesystem', 'write_file', { path: 'decisions/001-something.md', content: 'test' }, context);
+    expect(result.status).toBe('requires-approval');
+  });
+
+  // ---- GOV3-04: Path escape ----
+  it('blocks ../ path escape', async () => {
+    const result = await registry.execute('filesystem', 'read_file', { path: '../../../etc/passwd' }, context);
+    expect(result.status).toBe('failed');
+    expect(result.summary).toContain('escape');
+  });
+
+  it('blocks absolute path', async () => {
+    const result = await registry.execute('filesystem', 'read_file', { path: '/etc/passwd' }, context);
+    expect(result.status).toBe('failed');
+    expect(result.summary).toContain('absolute');
+  });
+
+  // ---- GOV3-05: PowerShell patterns ----
+  it('blocks PowerShell Remove-Item via policy', async () => {
+    const result = await registry.execute('shell', 'run_command', { command: 'Remove-Item -Path C:\\test -Recurse' }, context);
+    expect(result.status).toBe('requires-approval');
+  });
+
+  it('blocks PowerShell Invoke-Expression via policy', async () => {
+    const result = await registry.execute('shell', 'run_command', { command: 'Invoke-Expression "malicious"' }, context);
+    expect(result.status).toBe('requires-approval');
+  });
+
+  // ---- GOV3-06: Git commit (already covered by existing test above) ----
+
+  // ---- GOV3-07: Policy validation ----
+  it('policy returns non-allow decision for blocked operations', async () => {
+    // Credential write is denied by policy
+    const result = await registry.execute('filesystem', 'write_file', { path: 'credentials.json', content: 'secret' }, context);
+    expect(result.status).toBe('blocked');
+    expect(result.summary).not.toContain('executor');
   });
 });

@@ -17,6 +17,9 @@ import {
   listAllApprovals,
   approvalToDecision,
   __test_clearStore,
+  computeInputDigest,
+  consumeApproval,
+  validateApprovalBinding,
 } from '../../src/governance/approval-gate.js';
 import { mergeHookDecisions, type HookDecision } from '../../src/types.js';
 
@@ -355,5 +358,87 @@ describe('mergeHookDecisions', () => {
     const result = mergeHookDecisions([]);
     expect(result.final.decision).toBe('needs_approval');
     expect(result.final.reason).toContain('no matching rule');
+  });
+});
+
+// ============================================================
+// GOV3-03: Approval Strong Binding Tests
+// ============================================================
+
+describe('GOV3-03: approval binding', () => {
+  beforeEach(() => {
+    __test_clearStore();
+  });
+
+  it('computeInputDigest produces stable hash', () => {
+    const d1 = computeInputDigest({ path: 'test.txt', content: 'hello' });
+    const d2 = computeInputDigest({ content: 'hello', path: 'test.txt' });
+    expect(d1).toBe(d2);
+    expect(d1.length).toBe(64); // SHA-256 hex
+  });
+
+  it('submitApproval with binding fields sets inputDigest', () => {
+    const app = submitApproval({
+      id: 'bind-1', action: 'Write: test.txt', reason: 'test',
+      riskLevel: 'medium', skillName: 'filesystem', toolName: 'write_file',
+      input: { path: 'test.txt', content: 'data' },
+    });
+    expect(app.skillName).toBe('filesystem');
+    expect(app.toolName).toBe('write_file');
+    expect(app.inputDigest).toBeDefined();
+    expect(app.inputDigest!.length).toBe(64);
+  });
+
+  it('consumeApproval succeeds on approved approval', () => {
+    submitApproval({ id: 'c-1', action: 'Bash', reason: 'test', riskLevel: 'high' });
+    resolveApproval('c-1', { approved: true, resolvedBy: 'op' });
+    const consumed = consumeApproval('c-1');
+    expect(consumed).toBeDefined();
+    expect(consumed!.consumed).toBe(true);
+  });
+
+  it('consumeApproval returns undefined on pending (not yet approved)', () => {
+    submitApproval({ id: 'c-2', action: 'Bash', reason: 'test', riskLevel: 'high' });
+    const consumed = consumeApproval('c-2');
+    expect(consumed).toBeUndefined();
+  });
+
+  it('consumeApproval returns undefined on already consumed (single-use)', () => {
+    submitApproval({ id: 'c-3', action: 'Bash', reason: 'test', riskLevel: 'high' });
+    resolveApproval('c-3', { approved: true, resolvedBy: 'op' });
+    consumeApproval('c-3');
+    const second = consumeApproval('c-3');
+    expect(second).toBeUndefined();
+  });
+
+  it('validateApprovalBinding rejects cross-tool usage', () => {
+    const app = submitApproval({
+      id: 'bind-2', action: 'Write', reason: 'test', riskLevel: 'low',
+      skillName: 'filesystem', toolName: 'write_file',
+    });
+    const err = validateApprovalBinding(app, { skillName: 'shell', toolName: 'run_command' });
+    expect(err).toContain('filesystem');
+  });
+
+  it('validateApprovalBinding rejects changed input', () => {
+    const app = submitApproval({
+      id: 'bind-3', action: 'Write: test.txt', reason: 'test', riskLevel: 'low',
+      input: { path: 'test.txt', content: 'original' },
+    });
+    const err = validateApprovalBinding(app, { input: { path: 'test.txt', content: 'modified' } });
+    expect(err).toContain('digest mismatch');
+  });
+
+  it('validateApprovalBinding returns null for matching context', () => {
+    const app = submitApproval({
+      id: 'bind-4', action: 'Write', reason: 'test', riskLevel: 'low',
+      skillName: 'filesystem', toolName: 'write_file',
+      input: { path: 'test.txt', content: 'data' },
+    });
+    const err = validateApprovalBinding(app, {
+      skillName: 'filesystem', toolName: 'write_file',
+      input: { path: 'test.txt', content: 'data' },
+    });
+    expect(err).toBeNull();
   });
 });

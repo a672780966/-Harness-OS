@@ -21,7 +21,7 @@ export const manifest: SkillManifest = {
   ],
 };
 
-export async function execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+export async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
   const git = simpleGit(context.projectPath);
 

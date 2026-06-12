@@ -2,6 +2,7 @@ import { SkillManifest } from '../../types.js';
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync, realpathSync } from 'fs';
 import { join, resolve, relative } from 'path';
 import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult, blockedResult } from '../executor.js';
+import { redactText } from '../../governance/redactor.js';
 
 // ============================================================
 // JSON Schemas
@@ -38,26 +39,77 @@ export const manifest: SkillManifest = {
 // ============================================================
 
 function safeResolve(inputPath: string, basePath: string): string {
-  // Resolve the full path
-  const resolved = resolve(basePath, inputPath);
-
-  // Real path for symlink detection (if path exists)
-  let realPath: string | undefined;
-  try {
-    realPath = realpathSync(resolved);
-  } catch {
-    realPath = resolved; // path doesn't exist yet, use logical path
+  // Reject empty and absolute input paths (relative paths only)
+  if (!inputPath || !inputPath.trim()) {
+    throw new Error(`Path is empty`);
   }
 
-  // Check: resolved path must start with basePath (workspace boundary)
-  if (!realPath.startsWith(basePath) && !resolved.startsWith(basePath)) {
-    throw new Error(`Path escape detected: ${inputPath} resolves outside workspace`);
+  // Normalize path separators
+  const normalizedInput = inputPath.replace(/\\/g, '/');
+
+  // Reject UNC paths and absolute paths
+  if (normalizedInput.startsWith('//') || normalizedInput.startsWith('\\\\') ||
+      normalizedInput.match(/^[A-Za-z]:\\/) || normalizedInput.match(/^[A-Za-z]:\//) ||
+      normalizedInput.startsWith('/')) {
+    throw new Error(`Path escape detected: absolute/UNC path not allowed: ${redactText(inputPath)}`);
+  }
+
+  // Resolve the full path
+  const base = resolve(basePath);
+  const resolved = resolve(basePath, normalizedInput);
+
+  // --- Symlink-aware boundary check ---
+  // To handle symlink/junction escapes, we need to check the realpath
+  // of the resolved path (if it exists) or its nearest existing parent.
+
+  function isWithinBase(target: string, baseCanonical: string): boolean {
+    const rel = relative(baseCanonical, target);
+    // relative() returns '' if target === base, or starts with '..' if outside
+    return rel === '' || !rel.startsWith('..');
+  }
+
+  // Check logical resolved path first
+  if (!isWithinBase(resolved, base)) {
+    throw new Error(`Path escape detected: ${redactText(inputPath)} resolves outside workspace`);
+  }
+
+  // For existing paths, verify realpath
+  let resolvedReal: string | undefined;
+  try {
+    resolvedReal = realpathSync(resolved);
+  } catch {
+    // Path doesn't exist yet — check parent directory's realpath to prevent
+    // symlink/junction escape via parent.
+    // Skip when the path resolves to base itself ('./' or '.')
+    if (resolved !== base) {
+      try {
+        const parentDir = resolve(resolved, '..');
+        const parentReal = realpathSync(parentDir);
+        const newFilePath = join(parentReal, relative(base, resolved));
+        if (!isWithinBase(newFilePath, base)) {
+          throw new Error(`Path escape detected via parent symlink: ${redactText(inputPath)}`);
+        }
+      } catch (pathErr) {
+        if (pathErr instanceof Error && pathErr.message.includes('Path escape')) {
+          throw pathErr;
+        }
+        // Parent doesn't exist either — use logical path (already checked above)
+      }
+    }
+  }
+
+  // If realpath resolved and differs from logical path, verify realpath is within base
+  if (resolvedReal && resolvedReal !== resolved) {
+    if (!isWithinBase(resolvedReal, base)) {
+      throw new Error(`Path escape detected via symlink: ${redactText(inputPath)} resolves to ${redactText(resolvedReal)}`);
+    }
+    return resolvedReal;
   }
 
   return resolved;
 }
 
-export async function execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+export async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
   const base = context.projectPath;
 

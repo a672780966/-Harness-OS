@@ -6,17 +6,18 @@
  *
  * Source: CLAUDE.md §7 (Approval Gate constraints).
  *
- * Design:
- * - In-memory pending queue (Thin Harness). Replace with DB-backed store for Thick.
- * - submitApproval() creates a pending entry.
- * - resolveApproval() accepts or rejects by an operator.
- * - Default TTL: 5 minutes — expired entries are auto-rejected on resolve attempt.
+ * GOV3-03: Approval strong binding.
+ * - approval binds to skill, tool, input digest, project, task, run, session
+ * - approved can only be consumed once
+ * - rejected/expired/consumed approvals cannot be replayed
+ * - modifiedInput must be re-validated before execution
  */
 
 import {
   type PermissionDecision,
   type RiskLevel,
 } from '../types.js';
+import { createHash } from 'crypto';
 
 // ============================================================
 // Types
@@ -35,14 +36,31 @@ export interface PendingApproval {
   riskLevel: RiskLevel;
   /** Affected file paths, if any. */
   affectedPaths: string[];
+
+  // ---- Strong binding fields (GOV3-03) ----
+  /** Skill name that originated this request. */
+  skillName?: string;
+  /** Tool name that originated this request. */
+  toolName?: string;
+  /** Project ID binding. */
+  projectId?: string;
+  /** Task ID binding. */
+  taskId?: string;
+  /** Run ID binding. */
+  runId?: string;
   /** The session that originated this request. */
   sessionId?: string;
   /** The turn that originated this request. */
   turnId?: string;
   /** The agent that originated this request. */
   agentId?: string;
+  /** SHA-256 digest of the normalized input (for binding verification). */
+  inputDigest?: string;
+
   /** Current status. */
   status: ApprovalStatus;
+  /** Whether this approval has been consumed (single-use, GOV3-03). */
+  consumed?: boolean;
   /** ISO-8601 submission timestamp. */
   createdAt: string;
   /** ISO-8601 expiration timestamp (createdAt + TTL). */
@@ -130,6 +148,14 @@ const store = new ApprovalStore();
 // ============================================================
 
 /**
+ * Compute a SHA-256 digest of normalized tool input for binding (GOV3-03).
+ */
+export function computeInputDigest(input: Record<string, unknown>): string {
+  const normalized = JSON.stringify(input, Object.keys(input).sort());
+  return createHash('sha256').update(normalized).digest('hex');
+}
+
+/**
  * Submit a new approval request.
  *
  * @param params - The approval request parameters
@@ -141,9 +167,16 @@ export function submitApproval(params: {
   reason: string;
   riskLevel: RiskLevel;
   affectedPaths?: string[];
+  // Strong binding fields (GOV3-03)
+  skillName?: string;
+  toolName?: string;
+  projectId?: string;
+  taskId?: string;
+  runId?: string;
   sessionId?: string;
   turnId?: string;
   agentId?: string;
+  input?: Record<string, unknown>;
   ttlMs?: number;
 }): PendingApproval {
   const now = new Date();
@@ -155,10 +188,18 @@ export function submitApproval(params: {
     reason: params.reason,
     riskLevel: params.riskLevel,
     affectedPaths: params.affectedPaths ?? [],
+    // Strong binding (GOV3-03)
+    skillName: params.skillName,
+    toolName: params.toolName,
+    projectId: params.projectId,
+    taskId: params.taskId,
+    runId: params.runId,
     sessionId: params.sessionId,
     turnId: params.turnId,
     agentId: params.agentId,
+    inputDigest: params.input ? computeInputDigest(params.input) : undefined,
     status: 'pending',
+    consumed: false,
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + ttl).toISOString(),
   };
@@ -207,6 +248,73 @@ export function resolveApproval(
     resolvedBy: resolution.resolvedBy,
     modifiedInput: resolution.approved ? resolution.modifiedInput : undefined,
   });
+}
+
+/**
+ * Consume an approved approval (single-use, GOV3-03).
+ * Marks it as consumed so it cannot be reused.
+ * Returns the approval with modifiedInput if provided, or undefined if
+ * the approval cannot be consumed (not found, not approved, already consumed, expired).
+ */
+export function consumeApproval(id: string): PendingApproval | undefined {
+  const approval = store.get(id);
+  if (!approval) return undefined;
+
+  // Reject if not approved
+  if (approval.status !== 'approved') return undefined;
+
+  // Reject if already consumed (single-use enforcement)
+  if (approval.consumed) return undefined;
+
+  // Reject if expired
+  const now = new Date();
+  if (approval.expiresAt < now.toISOString()) {
+    store.update(id, { status: 'expired', resolvedAt: now.toISOString() });
+    return undefined;
+  }
+
+  // Mark consumed and return
+  return store.update(id, { consumed: true, resolvedAt: now.toISOString() });
+}
+
+/**
+ * Validate that an approval matches the expected binding context (GOV3-03).
+ * Returns null if valid, or an error message string if binding mismatch.
+ */
+export function validateApprovalBinding(
+  approval: PendingApproval,
+  expected: {
+    skillName?: string;
+    toolName?: string;
+    projectId?: string;
+    taskId?: string;
+    sessionId?: string;
+    input?: Record<string, unknown>;
+  },
+): string | null {
+  // Cross-tool binding check
+  if (approval.skillName && expected.skillName && approval.skillName !== expected.skillName) {
+    return `Approval bound to skill "${approval.skillName}", cannot use for "${expected.skillName}"`;
+  }
+  if (approval.toolName && expected.toolName && approval.toolName !== expected.toolName) {
+    return `Approval bound to tool "${approval.toolName}", cannot use for "${expected.toolName}"`;
+  }
+  // Cross-project binding check
+  if (approval.projectId && expected.projectId && approval.projectId !== expected.projectId) {
+    return `Approval bound to project "${approval.projectId}", cannot use for "${expected.projectId}"`;
+  }
+  // Cross-session binding check
+  if (approval.sessionId && expected.sessionId && approval.sessionId !== expected.sessionId) {
+    return `Approval bound to session "${approval.sessionId}", cannot use for "${expected.sessionId}"`;
+  }
+  // Input digest check (if both have input)
+  if (expected.input && approval.inputDigest) {
+    const digest = computeInputDigest(expected.input);
+    if (approval.inputDigest !== digest) {
+      return `Approval input digest mismatch — input has changed since approval was granted`;
+    }
+  }
+  return null;
 }
 
 /**

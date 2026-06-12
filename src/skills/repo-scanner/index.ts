@@ -56,7 +56,7 @@ function detectScripts(projectPath: string): Record<string, string> {
   } catch { return {}; }
 }
 
-export async function execute(toolName: string, _input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+export async function _execute(toolName: string, _input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
   const start = Date.now();
 
   try {

@@ -66,6 +66,24 @@ function hasDangerousPattern(command: string): boolean {
     'kubectl delete',
     'terraform apply',
     'terraform destroy',
+    // PowerShell dangerous patterns (GOV3-05)
+    'remove-item',
+    'ri ',
+    'del ',
+    'net user',
+    'net localgroup',
+    'stop-process',
+    'kill ',
+    'start-process',
+    'invoke-expression',
+    'iex ',
+    'invoke-webrequest',
+    'iwr ',
+    'wget ',
+    'curl ',
+    'new-item -type',
+    'set-content',
+    'add-content',
   ];
   const normalized = command.toLowerCase();
   return dangerous.some(d => normalized.includes(d));
@@ -78,16 +96,57 @@ function touchesProtectedPath(paths: string[]): boolean {
     '.env.production',
     'secrets',
     '.git',
+    'credentials',
+    'id_rsa',
+    'id_ed25519',
+    '.pem',
+    '.key',
+    '.token',
   ];
   return paths.some(p => protectedPaths.some(pp => p.includes(pp)));
 }
 
+function isSensitiveFileRead(paths: string[]): boolean {
+  // Sensitive files that must go through policy even for reads (GOV3-02)
+  const sensitive = [
+    '.env',
+    '.env.local',
+    '.env.production',
+    'credentials',
+    'id_rsa',
+    'id_ed25519',
+    '.pem',
+    '.key',
+    '.token',
+    'secrets',
+  ];
+  return paths.some(p => sensitive.some(s => {
+    const basename = p.split(/[/\\]/).pop() || '';
+    return basename.startsWith(s.replace(/^\./, '')) && (p.includes(s) || basename.startsWith(s.replace(/^\./, '')));
+  }));
+}
+
+function touchesGovernancePaths(paths: string[]): boolean {
+  // AGENTS.md, accepted ADRs, governance/config policy files (GOV3-02)
+  return paths.some(p => {
+    const name = p.split(/[/\\]/).pop() || '';
+    return name === 'AGENTS.md' || (name.endsWith('.md') && p.includes('decisions/')) || name === 'policy.json';
+  });
+}
+
 const DEFAULT_RULES: PolicyRule[] = [
-  // Read-only tools are always allowed
+  // Read-only tools are always allowed (unless reading sensitive files — GOV3-02)
   {
     name: 'read-only-tools',
-    description: 'Read-only tools are always allowed',
-    match: (action) => ['Read', 'Glob', 'Grep', 'LS', 'List'].includes(action),
+    description: 'Read-only tools are allowed for non-sensitive files',
+    match: (action, ctx) => {
+      if (!['Read', 'Glob', 'Grep', 'LS', 'List'].includes(action)) return false;
+      // Block reads of sensitive files like .env, credentials (GOV3-02)
+      if (ctx.affectedPaths && ctx.affectedPaths.length > 0 && isSensitiveFileRead(ctx.affectedPaths)) {
+        return false;
+      }
+      return true;
+    },
     decision: 'allow',
     reason: 'Read-only tool: ${action}',
   },
@@ -119,6 +178,14 @@ const DEFAULT_RULES: PolicyRule[] = [
     decision: 'needs_approval',
     reason: 'Protected path modification requires human approval',
   },
+  // AGENTS.md and ADR writes require approval (GOV3-02)
+  {
+    name: 'governance-files-write',
+    description: 'AGENTS.md, ADR, and policy files require human approval',
+    match: (_, ctx) => !!ctx.affectedPaths && ctx.affectedPaths.length > 0 && touchesGovernancePaths(ctx.affectedPaths),
+    decision: 'needs_approval',
+    reason: 'Governance file modification requires human approval',
+  },
   // Non-sensitive write operations (after credential/protected checks above)
   {
     name: 'write-default-allow',
@@ -143,13 +210,13 @@ const DEFAULT_RULES: PolicyRule[] = [
     decision: 'allow',
     reason: 'Read-only git operation is allowed',
   },
-  // Git commit
+  // Git commit requires approval (GOV3-06: no default allow)
   {
-    name: 'git-commit-allow',
-    description: 'Git commit is allowed by default',
+    name: 'git-commit-approval',
+    description: 'Git commit requires human approval',
     match: (action) => action === 'GitCommit',
-    decision: 'allow',
-    reason: 'Git commit is allowed',
+    decision: 'needs_approval',
+    reason: 'Git commit requires human approval per governance policy',
   },
   // Git push denied by default (must be explicitly approved in policy)
   {

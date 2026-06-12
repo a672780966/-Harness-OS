@@ -6,9 +6,9 @@
  *
  * Reference: 07_MCP_SKILLS_SPEC.md §6
  *
- * Governance: GOV-01 (AUD-P0-001)
+ * Governance: GOV-01 (AUD-P0-001), GOV3-01 (AUD3-P0-001)
  * All skill executions pass through the Policy Engine before reaching the executor.
- * - getExecutor() is available but bypasses policy — use execute() for production paths.
+ * - _getExecutor() is internal-only and bypasses policy — do not call from production code.
  */
 
 import type { SkillManifest, SkillCategory } from '../types.js';
@@ -134,8 +134,10 @@ class SkillRegistry {
 
   /**
    * Get a skill executor by name.
+   * @internal — bypasses policy engine. Use execute() for production paths.
+   * Only for internal registration use.
    */
-  getExecutor(name: string): SkillExecutor | undefined {
+  _getExecutor(name: string): SkillExecutor | undefined {
     return this.executors.get(name);
   }
 
@@ -193,6 +195,17 @@ class SkillRegistry {
       );
     }
 
+    // Validate policy result structure (GOV3-02): must be allow|deny|needs_approval
+    const validDecisions = ['allow', 'deny', 'needs_approval'];
+    if (!policyResult || typeof policyResult.decision !== 'string' || !validDecisions.includes(policyResult.decision)) {
+      return blockExec(
+        skillName,
+        toolName,
+        `Policy returned invalid decision "${String(policyResult?.decision)}" for "${action}" — blocked (fail closed)`,
+        0,
+      );
+    }
+
     // Handle policy decision
     switch (policyResult.decision) {
       case 'deny':
@@ -204,6 +217,11 @@ class SkillRegistry {
           reason: policyResult.reason,
           riskLevel: policyResult.riskLevel,
           affectedPaths: policyResult.affectedPaths,
+          // Strong binding (GOV3-03)
+          skillName,
+          toolName,
+          input,
+          sessionId: context.sessionId,
         });
         return reqApprovalExec(skillName, toolName, policyResult.reason, approval.id);
       }
@@ -277,10 +295,10 @@ import { manifest as filesystem } from '../skills/filesystem/index.js';
 import { manifest as shell } from '../skills/shell/index.js';
 import { manifest as git } from '../skills/git/index.js';
 import { manifest as repoScanner } from '../skills/repo-scanner/index.js';
-import { execute as fsExec } from '../skills/filesystem/index.js';
-import { execute as shellExec } from '../skills/shell/index.js';
-import { execute as gitExec } from '../skills/git/index.js';
-import { execute as scannerExec } from '../skills/repo-scanner/index.js';
+import { _execute as fsExec } from '../skills/filesystem/index.js';
+import { _execute as shellExec } from '../skills/shell/index.js';
+import { _execute as gitExec } from '../skills/git/index.js';
+import { _execute as scannerExec } from '../skills/repo-scanner/index.js';
 
 registry.registerAll([
   filesystem,
