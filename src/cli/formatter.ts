@@ -15,6 +15,7 @@
 
 import type { OutputMode, CliJsonOutput, CliOutputMeta, HarnessError } from '../types.js';
 import { redactText, redactObject } from '../governance/redactor.js';
+import { HarnessExitCode } from '../types.js';
 
 // ============================================================
 // Output Mode Detection
@@ -232,4 +233,81 @@ export function quietSuccess(message?: string): void {
  */
 export function quietError(code: string, message: string): void {
   process.stderr.write(`${code}: ${redactText(message)}\n`);
+}
+
+// ============================================================
+// Unified CLI Command Output (CLI-01/03/05/06)
+//
+// runCliCommand handles the common pattern:
+//   1. JSON output with envelope
+//   2. Pretty output via callback
+//   3. Quiet output via callback
+//   4. Error output with exit code
+//
+// Ensures every command has consistent JSON, exit code, and error handling.
+// ============================================================
+
+export interface CliCommandHandlers<T> {
+  /** Build data payload for JSON mode. */
+  jsonData: () => T;
+  /** Pretty mode output (stdout). */
+  pretty: () => void;
+  /** Quiet mode output — return a short string or undefined. */
+  quiet?: () => string | undefined;
+}
+
+export interface CliCommandResult {
+  exitCode: number;
+}
+
+/**
+ * Run a CLI command with consistent output routing, JSON envelope, and exit code.
+ *
+ * @param commandName - Command name for JSON envelope (e.g. "config", "check")
+ * @param mode - Detected output mode
+ * @param handlers - Per-mode callbacks (supports both sync and async)
+ * @param errorHandler - Optional custom error handler (default: prettyError/json)
+ */
+export async function runCliCommand<T>(
+  commandName: string,
+  mode: OutputMode,
+  handlers: CliCommandHandlers<T>,
+): Promise<CliCommandResult> {
+  try {
+    if (mode === 'json') {
+      const data = await handlers.jsonData();
+      jsonOutput(buildJsonOutput({
+        command: commandName,
+        status: 'success',
+        data,
+      }));
+    } else if (mode === 'quiet') {
+      const msg = await handlers.quiet?.();
+      if (msg) quietSuccess(msg);
+    } else {
+      await handlers.pretty();
+    }
+    return { exitCode: 0 };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const error: HarnessError = {
+      code: 'ERR_INTERNAL',
+      category: 'cli',
+      severity: 'error',
+      message,
+      recoveryHint: 'Check the error and try again',
+      recoverable: true,
+      retryable: false,
+      userActionRequired: true,
+      createdAt: new Date().toISOString(),
+    };
+    if (mode === 'json') {
+      jsonOutput(buildJsonOutput({ command: commandName, status: 'failed', error }));
+    } else if (mode === 'quiet') {
+      quietError(error.code, error.message);
+    } else {
+      prettyError(error.code, error.message, error.recoveryHint);
+    }
+    return { exitCode: HarnessExitCode.INTERNAL_ERROR };
+  }
 }

@@ -14,6 +14,8 @@ import {
   isNonInteractive,
   buildMeta,
   buildJsonOutput,
+  jsonOutput,
+  runCliCommand,
 } from '../../src/cli/formatter.js';
 
 import {
@@ -163,5 +165,105 @@ describe('error factories', () => {
   it('createCliInvalidArgumentError has cli category', () => {
     const err = createCliInvalidArgumentError('Unknown option --foobar');
     expect(err.category).toBe('cli');
+  });
+});
+
+// ============================================================
+// CLI-03/05/06: JSON Envelope Contract + Exit Codes
+//
+// Covers:
+//   CLI-03: JSON envelope has ok, command, status, data/error, meta
+//   CLI-05: runCliCommand returns correct exit codes
+//   CLI-06: Key commands produce valid JSON output
+// ============================================================
+
+describe('CLI-03: JSON envelope contract', () => {
+  it('buildJsonOutput produces standard envelope', () => {
+    const output = buildJsonOutput({ command: 'test', status: 'success', data: { key: 'val' } });
+    expect(output).toHaveProperty('ok');
+    expect(output).toHaveProperty('command');
+    expect(output).toHaveProperty('status');
+    expect(output).toHaveProperty('data');
+    expect(output).toHaveProperty('meta');
+    expect(output.meta).toHaveProperty('version');
+    expect(output.meta).toHaveProperty('outputMode');
+    expect(output.meta).toHaveProperty('generatedAt');
+    expect(output.meta).toHaveProperty('durationMs');
+    expect(output.ok).toBe(true);
+    expect(output.command).toBe('test');
+    expect(output.status).toBe('success');
+  });
+
+  it('JSON envelope sets ok=false for errors', () => {
+    const output = buildJsonOutput({
+      command: 'test', status: 'failed',
+      error: { code: 'ERR_TEST', category: 'cli', severity: 'error', message: 'fail', recoverable: true, retryable: false, createdAt: new Date().toISOString() },
+    });
+    expect(output.ok).toBe(false);
+  });
+
+  it('JSON envelope data is seralizable', () => {
+    const output = buildJsonOutput({ command: 'test', status: 'success', data: { nested: { arr: [1, 2, 3] } } });
+    const json = JSON.stringify(output);
+    const parsed = JSON.parse(json);
+    expect(parsed.data.nested.arr).toEqual([1, 2, 3]);
+  });
+
+  it('JSON output includes redaction metadata', () => {
+    const output = buildJsonOutput({ command: 'test', status: 'success' });
+    expect(output.meta.redacted).toBe(true);
+  });
+});
+
+describe('CLI-05: runCliCommand exit codes', () => {
+  it('returns exitCode 0 on success', async () => {
+    const result = await runCliCommand('test', 'json', {
+      jsonData: () => ({ ok: true }),
+      pretty: () => {},
+    });
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('returns error exit code on handler throw', async () => {
+    const result = await runCliCommand('test', 'json', {
+      jsonData: () => { throw new Error('fail'); },
+      pretty: () => {},
+    });
+    expect(result.exitCode).toBeGreaterThan(0);
+  });
+
+  it('quiet mode calls quiet callback', async () => {
+    let called = false;
+    await runCliCommand('test', 'quiet', {
+      jsonData: () => ({}),
+      pretty: () => {},
+      quiet: () => { called = true; return 'ok'; },
+    });
+    expect(called).toBe(true);
+  });
+});
+
+describe('CLI-06: Key command output modes', () => {
+  // Verify each command mode is recognized
+  it('detectOutputMode recognizes global --json', () => {
+    expect(detectOutputMode({ json: true })).toBe('json');
+  });
+
+  it('detectOutputMode recognizes global --quiet', () => {
+    expect(detectOutputMode({ quiet: true })).toBe('quiet');
+  });
+
+  it('detectOutputMode defaults to pretty', () => {
+    expect(detectOutputMode({})).toBe('pretty');
+  });
+
+  it('CI env sets quiet mode', () => {
+    const orig = process.env.CI;
+    process.env.CI = 'true';
+    try {
+      expect(detectOutputMode({})).toBe('quiet');
+    } finally {
+      process.env.CI = orig;
+    }
   });
 });

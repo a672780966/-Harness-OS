@@ -64,76 +64,166 @@ program
 program
   .command('open <repo-path>')
   .description('Open an existing project')
-  .action(async (path) => {
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
+  .action(async (path, options) => {
     const { openProject } = await import('../project/index.js');
-    const result = await openProject(path);
-    if (!result.ready) {
-      console.log(`\nProject opened with issues:`);
-    } else {
-      console.log(`\nProject opened: ${result.name}`);
-    }
-    console.log(`Path: ${result.path}`);
-    console.log(`Branch: ${result.branch}`);
-    console.log(`Ready: ${result.ready ? 'yes' : 'no'}`);
-    console.log(`Uncommitted changes: ${result.hasUserChanges ? 'yes' : 'no'}`);
-    if (result.warnings.length > 0) {
-      console.log(`\nWarnings:`);
-      for (const w of result.warnings) console.log(`  - ${w}`);
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime, runCliCommand } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      const result = await openProject(path);
+
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({
+          command: 'open', status: 'success',
+          data: {
+            path: result.path, name: result.name, branch: result.branch,
+            ready: result.ready, hasUserChanges: result.hasUserChanges,
+            warnings: result.warnings,
+          },
+        }));
+      } else if (mode === 'quiet') {
+        console.log(result.path);
+      } else {
+        if (!result.ready) {
+          console.log(`\nProject opened with issues:`);
+        } else {
+          console.log(`\nProject opened: ${result.name}`);
+        }
+        console.log(`Path: ${result.path}`);
+        console.log(`Branch: ${result.branch}`);
+        console.log(`Ready: ${result.ready ? 'yes' : 'no'}`);
+        console.log(`Uncommitted changes: ${result.hasUserChanges ? 'yes' : 'no'}`);
+        if (result.warnings.length > 0) {
+          console.log(`\nWarnings:`);
+          for (const w of result.warnings) console.log(`  - ${w}`);
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_OPEN_FAILED', category: 'project' as const, severity: 'error' as const, message, recoveryHint: 'Check the path and try again', recoverable: true, retryable: false, userActionRequired: true, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'open', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message, error.recoveryHint);
+      }
+      process.exit(1);
     }
   });
 
 program
   .command('init')
   .description('Initialize Harness OS in an existing project')
-  .action(async () => {
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
+  .action(async (options) => {
     const { initProject } = await import('../project/index.js');
-    const result = await initProject();
-    console.log(`\nInit ${result.path}`);
-    console.log(`Directories created: ${result.dirsCreated.length}`);
-    console.log(`Manifest: ${result.manifestCreated ? 'created' : 'already exists'}`);
-    console.log(`AGENTS.md: ${result.agentsMdCreated ? 'created' : 'already exists'}`);
-    if (result.agentsMdMissingSections.length > 0) {
-      console.log(`Missing AGENTS.md sections: ${result.agentsMdMissingSections.join(', ')}`);
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      const result = await initProject();
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'init', status: 'success', data: result }));
+      } else if (mode === 'quiet') {
+        console.log(result.path);
+      } else {
+        console.log(`\nInit ${result.path}`);
+        console.log(`Directories created: ${result.dirsCreated.length}`);
+        console.log(`Manifest: ${result.manifestCreated ? 'created' : 'already exists'}`);
+        console.log(`AGENTS.md: ${result.agentsMdCreated ? 'created' : 'already exists'}`);
+        if (result.agentsMdMissingSections.length > 0) {
+          console.log(`Missing AGENTS.md sections: ${result.agentsMdMissingSections.join(', ')}`);
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_INIT_FAILED', category: 'project' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'init', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message, error.recoveryHint);
+      }
+      process.exit(1);
     }
   });
 
 program
   .command('repair')
   .description('Repair missing or invalid project structure')
-  .action(async () => {
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
+  .action(async (options) => {
     const { repairProject } = await import('../project/index.js');
-    const result = await repairProject();
-    console.log(`\nRepair ${result.path}`);
-    console.log(`Directories created: ${result.dirsCreated.length}`);
-    console.log(`Manifest: ${result.manifestCreated ? 'created' : result.manifestUpdated ? 'updated' : 'ok'}`);
-    if (result.agentsMdMissingSections.length > 0) {
-      console.log(`Missing AGENTS.md sections (${result.agentsMdMissingSections.length}):`);
-      for (const s of result.agentsMdMissingSections) console.log(`  - ${s}`);
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      const result = await repairProject();
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'repair', status: 'success', data: result }));
+      } else if (mode === 'quiet') {
+        console.log(result.path);
+      } else {
+        console.log(`\nRepair ${result.path}`);
+        console.log(`Directories created: ${result.dirsCreated.length}`);
+        console.log(`Manifest: ${result.manifestCreated ? 'created' : result.manifestUpdated ? 'updated' : 'ok'}`);
+        if (result.agentsMdMissingSections.length > 0) {
+          console.log(`Missing AGENTS.md sections (${result.agentsMdMissingSections.length}):`);
+          for (const s of result.agentsMdMissingSections) console.log(`  - ${s}`);
+        }
+        console.log(`Tech stack: ${result.techStackWritten ? 'refreshed' : 'ok'}`);
+        console.log(`Repository map: ${result.repoMapWritten ? 'refreshed' : 'ok'}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_REPAIR_FAILED', category: 'project' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'repair', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message);
+      }
+      process.exit(1);
     }
-    console.log(`Tech stack: ${result.techStackWritten ? 'refreshed' : 'ok'}`);
-    console.log(`Repository map: ${result.repoMapWritten ? 'refreshed' : 'ok'}`);
   });
 
 program
   .command('check')
   .description('Check AGENTS.md validity')
-  .action(async () => {
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
+  .action(async (options) => {
     const { validateAgentsMd } = await import('../project/index.js');
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
     const result = validateAgentsMd(process.cwd());
-    console.log(`\nAGENTS.md check: ${result.fileExists ? 'found' : 'missing'}`);
-    console.log(`Valid: ${result.isValid ? 'yes' : 'no'}`);
 
-    const present = result.sections.filter(s => s.present).length;
-    const missing = result.sections.filter(s => !s.present).length;
-    console.log(`Sections: ${present} present, ${missing} missing`);
+    if (mode === 'json') {
+      jsonOutput(buildJsonOutput({ command: 'check', status: 'success', data: result }));
+    } else if (mode === 'quiet') {
+      console.log(result.isValid ? 'valid' : 'invalid');
+    } else {
+      console.log(`\nAGENTS.md check: ${result.fileExists ? 'found' : 'missing'}`);
+      console.log(`Valid: ${result.isValid ? 'yes' : 'no'}`);
 
-    if (result.missingCore.length > 0) {
-      console.log(`\nBLOCKING — core sections missing:`);
-      for (const s of result.missingCore) console.log(`  - ${s}`);
-    }
-    if (result.missingRequired.length > 0) {
-      console.log(`\nWarnings — non-core sections missing:`);
-      for (const s of result.missingRequired) console.log(`  - ${s}`);
+      const present = result.sections.filter(s => s.present).length;
+      const missing = result.sections.filter(s => !s.present).length;
+      console.log(`Sections: ${present} present, ${missing} missing`);
+
+      if (result.missingCore.length > 0) {
+        console.log(`\nBLOCKING — core sections missing:`);
+        for (const s of result.missingCore) console.log(`  - ${s}`);
+      }
+      if (result.missingRequired.length > 0) {
+        console.log(`\nWarnings — non-core sections missing:`);
+        for (const s of result.missingRequired) console.log(`  - ${s}`);
+      }
     }
   });
 
@@ -151,9 +241,32 @@ program
 program
   .command('resume <run-id>')
   .description('Resume a paused or interrupted run')
-  .action(async (runId) => {
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
+  .action(async (runId, options) => {
     const { resumeRun } = await import('../task/index.js');
-    await resumeRun(runId);
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      await resumeRun(runId);
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'resume', status: 'success', data: { runId } }));
+      } else if (mode === 'quiet') {
+        console.log(runId);
+      }
+      // else: resumeRun already prints its own output
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_RESUME_FAILED', category: 'task' as const, severity: 'error' as const, message, recoveryHint: 'Check the run ID and try again', recoverable: true, retryable: false, userActionRequired: true, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'resume', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message, error.recoveryHint);
+      }
+      process.exit(1);
+    }
   });
 
 program
@@ -170,14 +283,37 @@ program
   .description('Run verification pipeline (lint → typecheck → test → build)')
   .option('--task <task-id>', 'Task to verify')
   .option('--run <run-id>', 'Run to verify')
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { runVerificationPipeline } = await import('../verification/index.js');
-    const result = await runVerificationPipeline(options);
-    if (result.status === 'passed') {
-      console.log('\n✅ Verification passed');
-    } else {
-      console.log(`\n❌ Verification ${result.status}`);
-      process.exit(70); // verification error exit code
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      const result = await runVerificationPipeline(options);
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'verify', status: 'success', data: result }));
+      } else if (mode === 'quiet') {
+        console.log(result.status);
+      } else {
+        if (result.status === 'passed') {
+          console.log('\n✅ Verification passed');
+        } else {
+          console.log(`\n❌ Verification ${result.status}`);
+        }
+      }
+      if (result.status !== 'passed') process.exit(70);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_VERIFY_FAILED', category: 'verification' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'verify', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message);
+      }
+      process.exit(70);
     }
   });
 
@@ -252,26 +388,43 @@ program
       .option('--supersedes <adr-id>', 'ADR ID this supersedes')
       .action(async (options) => {
         const { proposeDecision } = await import('../decision/index.js');
-        const { prettySuccess } = await import('./formatter.js');
+        const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } = await import('./formatter.js');
+        const mode = detectOutputMode({ ...program.opts(), ...options });
+        resetStartTime();
 
-        const result = proposeDecision({
-          projectPath: process.cwd(),
-          title: options.title,
-          type: options.type,
-          summary: options.summary,
-          context: options.context,
-          decision: options.decision,
-          consequences: options.consequences?.split(',').map((s: string) => s.trim()) ?? [],
-          risks: options.risks?.split(',').map((s: string) => s.trim()) ?? [],
-          supersedes: options.supersedes,
-        });
+        try {
+          const result = proposeDecision({
+            projectPath: process.cwd(),
+            title: options.title,
+            type: options.type,
+            summary: options.summary,
+            context: options.context,
+            decision: options.decision,
+            consequences: options.consequences?.split(',').map((s: string) => s.trim()) ?? [],
+            risks: options.risks?.split(',').map((s: string) => s.trim()) ?? [],
+            supersedes: options.supersedes,
+          });
 
-        prettySuccess('ADR proposed', {
-          ID: result.id,
-          Title: result.title,
-          Status: result.status,
-          Type: result.type,
-        });
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision propose', status: 'success', data: result }));
+          } else if (mode === 'quiet') {
+            console.log(result.id);
+          } else {
+            prettySuccess('ADR proposed', {
+              ID: result.id, Title: result.title,
+              Status: result.status, Type: result.type,
+            });
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const error = { code: 'ERR_PROPOSE_FAILED', category: 'decision' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision propose', status: 'failed', error }));
+          } else {
+            prettyError(error.code, error.message);
+          }
+          process.exit(1);
+        }
       })
   )
   .addCommand(
@@ -280,24 +433,68 @@ program
       .option('-b, --by <name>', 'Who approved this decision')
       .action(async (id, options) => {
         const { acceptDecision } = await import('../decision/index.js');
-        const result = acceptDecision(process.cwd(), id, options.by);
-        if (result) {
-          console.log(`\nAccepted: ${result.id} — ${result.title}`);
-        } else {
-          console.error(`Decision not found or not in proposed state: ${id}`);
+        const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+        const mode = detectOutputMode({ ...program.opts(), ...options });
+        resetStartTime();
+
+        try {
+          const result = acceptDecision(process.cwd(), id, options.by);
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision accept', status: result ? 'success' : 'failed', data: result ? { id: result.id, title: result.title, status: result.status } : undefined }));
+          } else if (mode === 'quiet') {
+            console.log(result ? result.id : 'not_found');
+          } else {
+            if (result) {
+              console.log(`\nAccepted: ${result.id} — ${result.title}`);
+            } else {
+              console.error(`Decision not found or not in proposed state: ${id}`);
+            }
+          }
+          if (!result) process.exit(1);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const error = { code: 'ERR_ACCEPT_FAILED', category: 'decision' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: false, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision accept', status: 'failed', error }));
+          } else {
+            prettyError(error.code, error.message);
+          }
+          process.exit(1);
         }
       })
   )
   .addCommand(
     new Command('reject <decision-id>')
       .description('Reject a proposed decision')
-      .action(async (id) => {
+      .action(async (id, options) => {
         const { rejectDecision } = await import('../decision/index.js');
-        const result = rejectDecision(process.cwd(), id);
-        if (result) {
-          console.log(`\nRejected: ${result.id} — ${result.title}`);
-        } else {
-          console.error(`Decision not found or not in proposed state: ${id}`);
+        const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+        const mode = detectOutputMode({ ...program.opts(), ...options });
+        resetStartTime();
+
+        try {
+          const result = rejectDecision(process.cwd(), id);
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision reject', status: result ? 'success' : 'failed', data: result ? { id: result.id, title: result.title, status: result.status } : undefined }));
+          } else if (mode === 'quiet') {
+            console.log(result ? result.id : 'not_found');
+          } else {
+            if (result) {
+              console.log(`\nRejected: ${result.id} — ${result.title}`);
+            } else {
+              console.error(`Decision not found or not in proposed state: ${id}`);
+            }
+          }
+          if (!result) process.exit(1);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const error = { code: 'ERR_REJECT_FAILED', category: 'decision' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: false, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision reject', status: 'failed', error }));
+          } else {
+            prettyError(error.code, error.message);
+          }
+          process.exit(1);
         }
       })
   )
@@ -307,11 +504,33 @@ program
       .requiredOption('-b, --by <adr-id>', 'New ADR ID that supersedes this one')
       .action(async (id, options) => {
         const { supersedeDecision } = await import('../decision/index.js');
-        const result = supersedeDecision(process.cwd(), id, options.by);
-        if (result) {
-          console.log(`\nSuperseded: ${result.id} → ${result.supersededBy}`);
-        } else {
-          console.error(`Decision not found: ${id}`);
+        const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+        const mode = detectOutputMode({ ...program.opts(), ...options });
+        resetStartTime();
+
+        try {
+          const result = supersedeDecision(process.cwd(), id, options.by);
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision supersede', status: result ? 'success' : 'failed', data: result ? { id: result.id, supersededBy: result.supersededBy } : undefined }));
+          } else if (mode === 'quiet') {
+            console.log(result ? result.id : 'not_found');
+          } else {
+            if (result) {
+              console.log(`\nSuperseded: ${result.id} → ${result.supersededBy}`);
+            } else {
+              console.error(`Decision not found: ${id}`);
+            }
+          }
+          if (!result) process.exit(1);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          const error = { code: 'ERR_SUPERSEDE_FAILED', category: 'decision' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: false, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+          if (mode === 'json') {
+            jsonOutput(buildJsonOutput({ command: 'decision supersede', status: 'failed', error }));
+          } else {
+            prettyError(error.code, error.message);
+          }
+          process.exit(1);
         }
       })
   );
@@ -335,32 +554,77 @@ program
   .description('Create a checkpoint capturing git and task state')
   .option('--task <task-id>', 'Task ID')
   .option('--run <run-id>', 'Run ID')
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { createCheckpoint } = await import('../state/index.js');
-    const cp = await createCheckpoint({
-      taskId: options.task,
-      runId: options.run,
-    });
-    console.log(`\nCheckpoint created: ${cp.id}`);
-    console.log(`Branch: ${cp.currentBranch}`);
-    console.log(`Changed files: ${cp.changedFiles.length}`);
-    console.log(`Created: ${cp.createdAt}`);
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      const cp = await createCheckpoint({ taskId: options.task, runId: options.run });
+
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'checkpoint', status: 'success', data: cp }));
+      } else if (mode === 'quiet') {
+        console.log(cp.id);
+      } else {
+        console.log(`\nCheckpoint created: ${cp.id}`);
+        console.log(`Branch: ${cp.currentBranch}`);
+        console.log(`Changed files: ${cp.changedFiles.length}`);
+        console.log(`Created: ${cp.createdAt}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_CHECKPOINT_FAILED', category: 'state' as const, severity: 'error' as const, message, recoveryHint: null as any, recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'checkpoint', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message);
+      }
+      process.exit(1);
+    }
   });
 
 program
   .command('rollback <checkpoint-id>')
   .description('Show checkpoint rollback information (requires separate approval)')
-  .action(async (id) => {
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
+  .action(async (id, options) => {
     const { rollbackToCheckpoint } = await import('../state/index.js');
-    const result = await rollbackToCheckpoint(id);
-    console.log(`\nRollback analysis for: ${result.checkpointId}`);
-    console.log(`Current branch: ${result.branch}`);
-    console.log(`Can rollback: ${result.success ? 'yes' : 'no'}`);
-    if (result.warnings.length > 0) {
-      console.log(`\nWarnings:`);
-      for (const w of result.warnings) console.log(`  - ${w}`);
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode({ ...program.opts(), ...options });
+    resetStartTime();
+
+    try {
+      const result = await rollbackToCheckpoint(id);
+
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'rollback', status: 'success', data: result }));
+      } else if (mode === 'quiet') {
+        console.log(result.success ? 'rollback_possible' : 'rollback_blocked');
+      } else {
+        console.log(`\nRollback analysis for: ${result.checkpointId}`);
+        console.log(`Current branch: ${result.branch}`);
+        console.log(`Can rollback: ${result.success ? 'yes' : 'no'}`);
+        if (result.warnings.length > 0) {
+          console.log(`\nWarnings:`);
+          for (const w of result.warnings) console.log(`  - ${w}`);
+        }
+        console.log(`\nNote: git reset requires explicit human approval.`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const error = { code: 'ERR_ROLLBACK_FAILED', category: 'state' as const, severity: 'error' as const, message, recoveryHint: 'Check the checkpoint ID and try again', recoverable: true, retryable: false, userActionRequired: true, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'rollback', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message, error.recoveryHint);
+      }
+      process.exit(1);
     }
-    console.log(`\nNote: git reset requires explicit human approval.`);
   });
 
 // Config command
