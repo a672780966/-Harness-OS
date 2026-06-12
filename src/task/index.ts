@@ -155,23 +155,14 @@ export async function runTask(
       const result = await runVerification(plan);
       verificationId = `ver_${Date.now().toString(36)}`;
       const report = generateReport(verificationId, plan.steps, result, {
+        projectId,
         taskId,
         projectPath,
         risks: [],
       });
 
-      // Save both Markdown and structured JSON with binding
+      // Save both Markdown and structured JSON with binding (VER4-01/VER4-04)
       const paths = saveReport(report);
-
-      // Patch the projectId into the structured result
-      const loaded = loadVerificationResult(projectPath, verificationId);
-      if (loaded) {
-        loaded.projectId = projectId;
-        const { computeIntegrity } = await import('../verification/result.js');
-        loaded.integrity = computeIntegrity(loaded);
-        const { saveVerificationResult } = await import('../verification/result.js');
-        saveVerificationResult(loaded, projectPath);
-      }
 
       verificationStatus = result.status === 'passed' ? 'passed' : result.status === 'failed' ? 'failed' : 'skipped';
 

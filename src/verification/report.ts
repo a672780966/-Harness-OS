@@ -23,6 +23,8 @@ import {
   getCurrentCommit,
   getCurrentTree,
   computeIntegrity,
+  computeWorktreeDigest,
+  computeStagedDigest,
   VERIFICATION_RESULT_SCHEMA_VERSION,
   type VerificationResult,
 } from './result.js';
@@ -33,6 +35,7 @@ import {
 
 export interface VerificationReport {
   runId: string;
+  projectId: string;
   taskId?: string;
   projectPath: string;
   createdAt: string;
@@ -54,6 +57,7 @@ export function generateReport(
   steps: VerificationStep[],
   result: RunResult,
   options?: {
+    projectId?: string;
     taskId?: string;
     projectPath?: string;
     risks?: string[];
@@ -69,6 +73,7 @@ export function generateReport(
 
   return {
     runId,
+    projectId: options?.projectId ?? 'unknown',
     taskId: options?.taskId,
     projectPath: options?.projectPath ?? process.cwd(),
     createdAt: new Date().toISOString(),
@@ -103,14 +108,18 @@ export function saveReport(report: VerificationReport): { mdPath: string; jsonPa
   const now = new Date().toISOString();
   const sourceCommit = getCurrentCommit(report.projectPath);
   const sourceTree = getCurrentTree(report.projectPath);
+  const worktreeDigest = computeWorktreeDigest(report.projectPath);
+  const stagedDigest = computeStagedDigest(report.projectPath);
 
   const verificationResult: VerificationResult = {
     verificationId: report.runId,
     schemaVersion: VERIFICATION_RESULT_SCHEMA_VERSION,
-    projectId: 'proj_' + report.runId.replace(/^ver_/, '').replace(/_.*$/, ''),
+    projectId: report.projectId,
     taskId: report.taskId,
     sourceCommit,
     sourceTree,
+    sourceWorktreeDigest: worktreeDigest,
+    sourceStagedDigest: stagedDigest,
     status: report.status,
     requiredSteps: report.steps.filter(s => s.required).length,
     stepResults: report.steps,

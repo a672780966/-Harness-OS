@@ -72,24 +72,15 @@ export async function runVerificationPipeline(
   console.log(formatResults(plan.steps, runResult));
 
   // 5. Save report (Markdown + structured JSON with binding info)
+  // VER4-01/VER4-04: projectId is set at generation time, not patched after.
   const verificationId = options?.runId ?? `ver_${Date.now().toString(36)}`;
   const report = generateReport(verificationId, plan.steps, runResult, {
+    projectId: options?.projectId,
     taskId: options?.taskId,
     projectPath,
     risks: [],
   });
   const paths = saveReport(report);
-
-  // Override the projectId in the structured result if provided
-  if (options?.projectId && report.runId) {
-    const { loadVerificationResult, saveVerificationResult, computeIntegrity } = await import('./result.js');
-    const loaded = loadVerificationResult(projectPath, verificationId);
-    if (loaded) {
-      loaded.projectId = options.projectId;
-      loaded.integrity = computeIntegrity(loaded);
-      saveVerificationResult(loaded, projectPath);
-    }
-  }
 
   console.log(`\nReport saved: ${paths.mdPath}`);
   console.log(`Structured result: ${paths.jsonPath}`);
