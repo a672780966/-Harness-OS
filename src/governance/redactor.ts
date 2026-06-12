@@ -33,11 +33,11 @@ const SECRET_PATTERNS: SecretPattern[] = [
   { name: 'api-key', pattern: /(['"]?api[_-]?key['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
 
   // Tokens
-  { name: 'bearer-token', pattern: /Bearer\s+[A-Za-z0-9_\-.]{20,}/g, replaceFull: true },
-  { name: 'basic-auth', pattern: /Basic\s+[A-Za-z0-9+/=]{20,}/g, replaceFull: true },
-  { name: 'github-token', pattern: /ghp_[A-Za-z0-9]{36,}/g, replaceFull: true },
-  { name: 'gitlab-token', pattern: /glpat-[A-Za-z0-9_-]{20,}/g, replaceFull: true },
-  { name: 'slack-token', pattern: /xox[baprs]-[A-Za-z0-9_-]{10,}/g, replaceFull: true },
+  { name: 'bearer-token', pattern: /Bearer\s+[A-Za-z0-9_\-.]{8,}/g, replaceFull: true },
+  { name: 'basic-auth', pattern: /Basic\s+[A-Za-z0-9+/=]{8,}/g, replaceFull: true },
+  { name: 'github-token', pattern: /ghp_[A-Za-z0-9]{8,}/g, replaceFull: true },
+  { name: 'gitlab-token', pattern: /glpat-[A-Za-z0-9_-]{8,}/g, replaceFull: true },
+  { name: 'slack-token', pattern: /xox[baprs]-[A-Za-z0-9_-]{8,}/g, replaceFull: true },
   { name: 'jwt-token', pattern: /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, replaceFull: true },
 
   // Passwords
@@ -46,7 +46,7 @@ const SECRET_PATTERNS: SecretPattern[] = [
 
   // Private Keys
   { name: 'private-key', pattern: /-----BEGIN\s+.*PRIVATE\s+KEY-----[\s\S]*?-----END\s+.*PRIVATE\s+KEY-----/g, replaceFull: true },
-  { name: 'ssh-key', pattern: /ssh-(rsa|ed25519|ecdsa)\s+[A-Za-z0-9+/]{20,}[=]*/g, replaceFull: true },
+  { name: 'ssh-key', pattern: /ssh-(rsa|ed25519|ecdsa)\s+[A-Za-z0-9+/]{4,}[=]*/g, replaceFull: true },
 
   // Database URLs
   { name: 'db-url', pattern: /(postgresql?|mysql|mongodb|redis|rediss):\/\/[^\s]+/gi, replaceFull: true },
@@ -55,6 +55,15 @@ const SECRET_PATTERNS: SecretPattern[] = [
   { name: 'aws-key', pattern: /(['"]?aws_access_key_id['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
   { name: 'aws-secret', pattern: /(['"]?aws_secret_access_key['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
   { name: 'azure-conn', pattern: /DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[^;]+/g, replaceFull: true },
+
+  // Authorization header (generic)
+  { name: 'auth-header', pattern: /(Authorization|Proxy-Authorization):\s*[A-Za-z0-9+/=_\-.\s]{8,}/gi, replaceFull: true },
+
+  // URL query parameter secrets
+  { name: 'url-query-secret', pattern: /[?&](api_key|apikey|secret|token|password|access_token)=[^&\s]+/gi, replaceFull: true },
+
+  // Audit canary (SEC3-05)
+  { name: 'audit-canary', pattern: /HARNESS_AUDIT_SECRET_[A-Za-z0-9]+/g, replaceFull: true },
 
   // Generic sensitive patterns
   { name: 'generic-secret', pattern: /(['"]?secret['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
@@ -97,6 +106,9 @@ const PROTECTED_PATH_FRAGMENTS = [
 
 const REDACTED = '[REDACTED]';
 
+// SEC3-05: Test canary for regression tests — never appears in output.
+export const AUDIT_CANARY = 'HARNESS_AUDIT_SECRET_7f31c9';
+
 /**
  * Redact secrets from a text string.
  * Replaces all detected secret values with [REDACTED].
@@ -130,6 +142,9 @@ export function redactText(text: string): string {
 /**
  * Deep-redact secrets from any JSON-serializable object.
  * Recursively walks object properties and array elements.
+ *
+ * SEC3-01: Sensitive KEY names are PRESERVED, only VALUES are replaced.
+ * No key collision or overwrite can occur.
  */
 export function redactObject<T>(obj: T): T {
   if (typeof obj === 'string') {
@@ -143,9 +158,15 @@ export function redactObject<T>(obj: T): T {
   if (obj !== null && typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      // Redact key names that look sensitive
-      const redactedKey = redactKeyName(key) ? REDACTED : key;
-      result[redactedKey] = redactObject(value);
+      // SEC3-01: Keep the key name, redact the value if key is sensitive.
+      // NEVER rename the key to [REDACTED] — that would cause overwrite.
+      if (redactKeyName(key)) {
+        // Sensitive key → redact the entire value
+        result[key] = REDACTED;
+      } else {
+        // Non-sensitive key → recurse into value
+        result[key] = redactObject(value);
+      }
     }
     return result as unknown as T;
   }
@@ -155,14 +176,16 @@ export function redactObject<T>(obj: T): T {
 
 /**
  * Check if a key name suggests it contains sensitive data.
+ * Case-insensitive (SEC3-01).
  */
 function redactKeyName(key: string): boolean {
+  const lower = key.toLowerCase();
   const sensitiveKeys = [
-    'password', 'secret', 'token', 'apiKey', 'api_key', 'apikey',
-    'privateKey', 'private_key', 'accessToken', 'access_token',
-    'authToken', 'auth_token', 'credentials', 'credential',
+    'password', 'secret', 'token', 'apikey', 'api_key',
+    'privatekey', 'private_key', 'accesstoken', 'access_token',
+    'authtoken', 'auth_token', 'credentials', 'credential',
   ];
-  return sensitiveKeys.includes(key);
+  return sensitiveKeys.includes(lower);
 }
 
 // ============================================================

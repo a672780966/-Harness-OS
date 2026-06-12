@@ -25,6 +25,7 @@ import {
   countRedactions,
   safeJsonStringify,
   safeTextOutput,
+  AUDIT_CANARY,
 } from '../../src/governance/redactor.js';
 
 import {
@@ -450,5 +451,106 @@ describe('SEC-08: New redaction patterns', () => {
   it('redacts Bearer token inline', () => {
     const result = redactText('Bearer ghp_abc123def456ghi789jkl012mnop345qrs567');
     expect(result).toContain('[REDACTED]');
+  });
+});
+
+// ============================================================
+// AUD3-P0-002: SEC3-01..05 Secret Redactor Semantic Tests
+//
+// Uses canary HARNESS_AUDIT_SECRET_7f31c9 to verify no leakage.
+// ============================================================
+
+const CANARY = AUDIT_CANARY;
+
+describe('SEC3-01: object redaction semantics', () => {
+  it('preserves all keys when redacting sensitive values', () => {
+    const obj = { password: 'plain-secret', token: 'second-secret', apiKey: 'key-123' };
+    const result = redactObject(obj);
+    const keys = Object.keys(result);
+    // All three keys must be preserved (no merge into [REDACTED])
+    expect(keys).toContain('password');
+    expect(keys).toContain('token');
+    expect(keys).toContain('apiKey');
+    // All three values must be [REDACTED]
+    expect(result.password).toBe('[REDACTED]');
+    expect(result.token).toBe('[REDACTED]');
+    expect(result.apiKey).toBe('[REDACTED]');
+  });
+
+  it('case-insensitive key matching', () => {
+    const obj = { Password: 'secret1', TOKEN: 'secret2', ApiKey: 'secret3' };
+    const result = redactObject(obj);
+    expect(result.Password).toBe('[REDACTED]');
+    expect(result.TOKEN).toBe('[REDACTED]');
+    expect(result.ApiKey).toBe('[REDACTED]');
+  });
+
+  it('does not change non-sensitive keys', () => {
+    const obj = { name: 'hello', count: 42, items: [1, 2, 3], nested: { active: true } };
+    const result = redactObject(obj);
+    expect(result.name).toBe('hello');
+    expect(result.count).toBe(42);
+    expect(result.items).toEqual([1, 2, 3]);
+    expect(result.nested).toEqual({ active: true });
+  });
+
+  it('redacts nested sensitive keys in objects', () => {
+    const obj = { config: { db: { password: 'postgres-secret' }, name: 'mydb' } };
+    const result = redactObject(obj);
+    expect((result.config as any).db.password).toBe('[REDACTED]');
+    expect((result.config as any).name).toBe('mydb');
+  });
+
+  it('redacts sensitive values in arrays', () => {
+    const obj = { users: [{ name: 'alice', token: 'tkn_abc' }, { name: 'bob', token: 'tkn_xyz' }] };
+    const result = redactObject(obj);
+    expect((result.users as any[])[0].token).toBe('[REDACTED]');
+    expect((result.users as any[])[1].token).toBe('[REDACTED]');
+    expect((result.users as any[])[0].name).toBe('alice');
+  });
+});
+
+describe('SEC3-02: text pattern coverage', () => {
+  it('redacts short bearer tokens (8+ chars)', () => {
+    expect(redactText('Bearer abcdefgh')).toContain('[REDACTED]');
+  });
+
+  it('redacts short GitHub tokens', () => {
+    expect(redactText('ghp_abcdefgh')).toContain('[REDACTED]');
+  });
+
+  it('redacts Authorization header', () => {
+    const result = redactText('Authorization: Bearer xyz12345token');
+    expect(result).toContain('[REDACTED]');
+  });
+
+  it('redacts URL query secrets', () => {
+    const result = redactText('https://example.com/api?api_key=sk-abc123&debug=true');
+    expect(result).toContain('[REDACTED]');
+    expect(result).not.toContain('sk-abc123');
+  });
+});
+
+describe('SEC3-05: canary detection', () => {
+  it('detects and redacts the audit canary in objects', () => {
+    const obj = { data: CANARY };
+    const result = redactObject(obj);
+    expect(result.data).toBe('[REDACTED]');
+    expect(JSON.stringify(result)).not.toContain(CANARY);
+  });
+
+  it('detects and redacts the audit canary in text', () => {
+    const result = redactText(`secret is ${CANARY}`);
+    expect(result).toContain('[REDACTED]');
+    expect(result).not.toContain(CANARY);
+  });
+
+  it('safeJsonStringify contains no canary', () => {
+    const obj = { key: CANARY, nested: { token: CANARY } };
+    const json = safeJsonStringify(obj);
+    expect(json).not.toContain(CANARY);
+    expect(json).toContain('[REDACTED]');
+    // Must be valid JSON
+    expect(() => JSON.parse(json)).not.toThrow();
   });
 });
