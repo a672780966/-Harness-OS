@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-06-11T12:51:16.479723+00:00",
+  "timestamp": "2026-06-12T07:21:09.900815+00:00",
   "event": "SessionStart",
   "project_state": {
-    "git_status": "M .claude/hooks/post_tool_trace.py\n M .claude/hooks/pre_tool_guard.py\n M .claude/settings.json\n M src/cli/index.ts\n M src/governance/index.ts\n M src/observability/index.ts\n M src/skills/delivery/index.ts\n M src/skills/filesystem/index.ts\n M src/skills/git/index.ts\n M src/skills/github/index.ts\n M src/skills/index.ts\n M src/skills/repo-scanner/index.ts\n M src/skills/shell/index.ts\n M src/skills/test-runner/index.ts\n M src/types.ts\n M src/verification/index.ts\n?? .claude/hooks/pre_compact.py\n?? .claude/hooks/session_end.py\n?? .claude/hooks/session_start.py\n?? .claude/hooks/stop_check.py\n?? .claude/last-session-state.json\n?? .claude/observations.jsonl\n?? src/delivery/guard.ts\n?? src/governance/redactor.ts\n?? src/learning/\n?? src/observability/events.ts\n?? src/observability/report.ts\n?? src/observability/trace.ts\n?? src/skills/filesystem/SKILL.md\n?? src/skills/git/SKILL.md\n?? src/skills/registry.ts\n?? src/skills/repo-scanner/SKILL.md\n?? src/skills/shell/SKILL.md\n?? src/verification/commands.ts\n?? src/verification/plan.ts\n?? src/verification/report.ts\n?? src/verification/runner.ts\n?? tests/unit/observability.test.ts\n?? tests/unit/redactor-learning.test.ts\n?? tests/unit/verification.test.ts",
+    "git_status": "M .claude/observations.jsonl\n M src/cli/index.ts\n M src/decision/index.ts\n?? src/cli/formatter.ts\n?? src/config/\n?? src/errors/\n?? tests/unit/cli-errors.test.ts\n?? tests/unit/config.test.ts\n?? tests/unit/decision.test.ts",
     "active_tasks": [],
     "pending_approvals": []
   },

@@ -20,25 +20,43 @@ program
   .command('create <project-name>')
   .description('Create a new Harness OS project')
   .option('-p, --path <path>', 'Custom project path')
+  .option('-j, --json', 'JSON output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .option('-t, --type <type>', 'Project type (web-app, backend-service, cli, library, agent-harness)')
   .action(async (name, options) => {
     const { createProject } = await import('../project/index.js');
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } = await import('./formatter.js');
+    const mode = detectOutputMode(options);
+    resetStartTime();
+
     try {
-      const result = await createProject({
-        name,
-        path: options.path,
-        projectType: options.type,
-      });
-      console.log(`\nProject created: ${result.name}`);
-      console.log(`Path: ${result.path}`);
-      console.log(`AGENTS.md: ${result.agentsMdCreated ? 'created' : 'already exists'}`);
-      console.log(`Manifest: ${result.manifestPath}`);
-      console.log(`Checkpoint: ${result.checkpointId}`);
-      console.log(`\nNext:`);
-      console.log(`  cd ${result.path}`);
-      console.log(`  harness run "your task"`);
+      const result = await createProject({ name, path: options.path, projectType: options.type });
+
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({
+          command: 'create', status: 'success',
+          data: { projectId: result.projectId, name: result.name, path: result.path, agentsMdCreated: result.agentsMdCreated, manifestPath: result.manifestPath, checkpointId: result.checkpointId },
+        }));
+      } else if (mode === 'quiet') {
+        console.log(result.path);
+      } else {
+        prettySuccess('Project created', {
+          Name: result.name, Path: result.path,
+          'AGENTS.md': result.agentsMdCreated ? 'created' : 'already exists',
+          Manifest: result.manifestPath,
+          Checkpoint: result.checkpointId,
+        }, [`cd ${result.path}`, 'harness run "your task"']);
+      }
     } catch (err) {
-      console.error(`Error creating project: ${(err as Error).message}`);
+      const { createProjectNotFoundError } = await import('../errors/index.js');
+      const error = err instanceof Error
+        ? createProjectNotFoundError(err.message)
+        : { code: 'ERR_INTERNAL', category: 'project', severity: 'error' as const, message: String(err), recoveryHint: 'Check the error and try again', recoverable: true, retryable: false, userActionRequired: true, createdAt: new Date().toISOString() };
+      if (mode === 'json') {
+        jsonOutput(buildJsonOutput({ command: 'create', status: 'failed', error }));
+      } else {
+        prettyError(error.code, error.message, error.recoveryHint);
+      }
       process.exit(1);
     }
   });
@@ -192,25 +210,109 @@ program
   .addCommand(
     new Command('list')
       .description('List decisions')
-      .action(async () => {
-        const { listDecisions } = await import('../decision/index.js');
-        await listDecisions();
+      .option('-a, --active', 'Only show active (accepted) decisions')
+      .option('-j, --json', 'JSON output')
+      .action(async (options) => {
+        const { listDecisions, listActiveDecisions } = await import('../decision/index.js');
+        const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable } = await import('./formatter.js');
+        const mode = detectOutputMode(options);
+
+        const decisions = options.active
+          ? listActiveDecisions(process.cwd())
+          : listDecisions(process.cwd());
+
+        if (mode === 'json') {
+          jsonOutput(buildJsonOutput({
+            command: 'decision list', status: 'success',
+            data: { count: decisions.length, decisions },
+          }));
+        } else {
+          if (decisions.length === 0) {
+            console.log('No decisions found.');
+            return;
+          }
+          console.log(`\nDecisions (${decisions.length}):\n`);
+          prettyTable(
+            ['ID', 'Title', 'Status', 'Type'],
+            decisions.map(d => [d.id, d.title.slice(0, 40), d.status, d.type]),
+          );
+        }
       })
   )
   .addCommand(
     new Command('propose')
-      .description('Propose a new decision')
-      .action(async () => {
+      .description('Propose a new decision (ADR)')
+      .requiredOption('-t, --title <title>', 'Decision title')
+      .requiredOption('--type <type>', 'Type: architecture|product|technology|security|delivery|governance|process')
+      .requiredOption('-s, --summary <summary>', 'Decision summary')
+      .requiredOption('-c, --context <context>', 'Why this decision is needed')
+      .requiredOption('-d, --decision <decision>', 'What decision is being made')
+      .option('--consequences <items>', 'Comma-separated consequences')
+      .option('--risks <items>', 'Comma-separated risks')
+      .option('--supersedes <adr-id>', 'ADR ID this supersedes')
+      .action(async (options) => {
         const { proposeDecision } = await import('../decision/index.js');
-        await proposeDecision();
+        const { prettySuccess } = await import('./formatter.js');
+
+        const result = proposeDecision({
+          projectPath: process.cwd(),
+          title: options.title,
+          type: options.type,
+          summary: options.summary,
+          context: options.context,
+          decision: options.decision,
+          consequences: options.consequences?.split(',').map((s: string) => s.trim()) ?? [],
+          risks: options.risks?.split(',').map((s: string) => s.trim()) ?? [],
+          supersedes: options.supersedes,
+        });
+
+        prettySuccess('ADR proposed', {
+          ID: result.id,
+          Title: result.title,
+          Status: result.status,
+          Type: result.type,
+        });
       })
   )
   .addCommand(
     new Command('accept <decision-id>')
       .description('Accept a proposed decision')
-      .action(async (id) => {
+      .option('-b, --by <name>', 'Who approved this decision')
+      .action(async (id, options) => {
         const { acceptDecision } = await import('../decision/index.js');
-        await acceptDecision(id);
+        const result = acceptDecision(process.cwd(), id, options.by);
+        if (result) {
+          console.log(`\nAccepted: ${result.id} — ${result.title}`);
+        } else {
+          console.error(`Decision not found or not in proposed state: ${id}`);
+        }
+      })
+  )
+  .addCommand(
+    new Command('reject <decision-id>')
+      .description('Reject a proposed decision')
+      .action(async (id) => {
+        const { rejectDecision } = await import('../decision/index.js');
+        const result = rejectDecision(process.cwd(), id);
+        if (result) {
+          console.log(`\nRejected: ${result.id} — ${result.title}`);
+        } else {
+          console.error(`Decision not found or not in proposed state: ${id}`);
+        }
+      })
+  )
+  .addCommand(
+    new Command('supersede <decision-id>')
+      .description('Supersede an accepted ADR')
+      .requiredOption('-b, --by <adr-id>', 'New ADR ID that supersedes this one')
+      .action(async (id, options) => {
+        const { supersedeDecision } = await import('../decision/index.js');
+        const result = supersedeDecision(process.cwd(), id, options.by);
+        if (result) {
+          console.log(`\nSuperseded: ${result.id} → ${result.supersededBy}`);
+        } else {
+          console.error(`Decision not found: ${id}`);
+        }
       })
   );
 
@@ -266,9 +368,46 @@ program
   .command('config')
   .description('Show Harness OS configuration')
   .option('--json', 'JSON output')
+  .option('--show-source', 'Show config source for each value')
   .action(async (options) => {
-    const { showConfig } = await import('../runtime/index.js');
-    await showConfig(options);
+    const { loadConfig } = await import('../config/index.js');
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyTable } = await import('./formatter.js');
+    const mode = detectOutputMode(options);
+
+    const loaded = loadConfig(process.cwd());
+
+    if (mode === 'json') {
+      jsonOutput(buildJsonOutput({
+        command: 'config', status: 'success',
+        data: {
+          config: loaded.config,
+          sources: loaded.sources.map(s => ({ path: s.path, scope: s.scope, valid: s.valid })),
+          warnings: loaded.warnings,
+        },
+      }));
+    } else {
+      prettySuccess('Harness OS Configuration', {
+        Version: loaded.config.version,
+        'Output mode': loaded.config.cli?.defaultOutputMode ?? 'pretty',
+        'Secret redaction': loaded.config.governance?.redactSecrets ? 'enabled' : 'disabled',
+        'Deploy approval': loaded.config.governance?.requireApprovalForDeploy ? 'required' : 'not required',
+        'Push main approval': loaded.config.governance?.requireApprovalForPushMain ? 'required' : 'not required',
+        'Auto commit': loaded.config.project?.allowAutoCommit ? 'allowed' : 'not allowed',
+      });
+
+      if (options.showSource) {
+        console.log('\nConfig sources:');
+        prettyTable(
+          ['Scope', 'Path', 'Valid'],
+          loaded.sources.map(s => [s.scope, s.path, s.valid ? 'yes' : 'no']),
+        );
+      }
+
+      if (loaded.warnings.length > 0) {
+        console.log('\nWarnings:');
+        for (const w of loaded.warnings) console.log(`  - ${w}`);
+      }
+    }
   });
 
 // Global options

@@ -1,12 +1,19 @@
 /**
  * Harness OS — Task Manager Module
  *
- * Phase 3: Task lifecycle — create, start, pause, resume, block, complete, fail.
+ * Phase 3 + D: Task lifecycle and full run pipeline.
  *
- * Sub-modules:
- * - create.ts       — Task record creation, title normalization, type inference
- * - state-machine.ts — State transition validation
- * - complete.ts     — Task completion and failure flows
+ * Full run flow (Phase D):
+ *   1. Create task record
+ *   2. Transition to running
+ *   3. Build Context Pack
+ *   4. Create run state + trace
+ *   5. Record observability events
+ *   6. Create checkpoint
+ *   7. Run verification
+ *   8. Complete task
+ *   9. Generate delivery outputs
+ *   10. Save run report
  *
  * Reference: 06_TASK_DECISION_PROJECT_MANAGER.md §7
  */
@@ -44,29 +51,210 @@ export {
   type UpdateTaskParams,
 } from './complete.js';
 
-// Legacy CLI entry points
-import { type TaskStatus } from '../types.js';
+// ============================================================
+// CLI Entry Point — Full Run Pipeline
+// ============================================================
 
+import { readFileSync, writeFileSync } from 'fs';
+
+async function getProjectId(projectPath: string): Promise<string> {
+  try {
+    const { existsSync } = await import('fs');
+    const { join } = await import('path');
+    const manifestPath = join(projectPath, '.project/state/manifest.json');
+    if (existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+      return manifest.projectId || 'unknown';
+    }
+  } catch {}
+  return 'unknown';
+}
+
+/**
+ * Full run: create task → context pack → verify → complete → report.
+ */
 export async function runTask(
   task: string,
   options?: { json?: boolean; quiet?: boolean },
 ): Promise<void> {
-  const { createTaskRecord } = await import('./create.js');
-  const record = await createTaskRecord({
-    projectPath: process.cwd(),
-    userInstruction: task,
-  });
+  const projectPath = process.cwd();
+  const { detectOutputMode, jsonOutput, buildJsonOutput, prettySuccess, prettyError, prettyProgress, resetStartTime } = await import('../cli/formatter.js');
+  const mode = detectOutputMode(options);
+  resetStartTime();
 
-  console.log(`\nTask created: ${record.state.title}`);
-  console.log(`Task ID: ${record.state.taskId}`);
-  console.log(`Type: ${record.state.type}`);
-  console.log(`Status: ${record.state.status}`);
-  console.log(`\nRecord: ${record.mdPath}`);
-  console.log(`\nNext:`);
-  console.log(`  Context Pack will be built before execution.`);
+  try {
+    const projectId = await getProjectId(projectPath);
+    const runId = `run_${Date.now().toString(36)}`;
+
+    // ── 1. Create task record ──
+    const { createTaskRecord } = await import('./create.js');
+    const record = await createTaskRecord({ projectPath, userInstruction: task });
+    const taskId = record.state.taskId;
+
+    if (mode !== 'quiet') prettyProgress(`Task created: ${taskId} — ${record.state.title}`);
+
+    // ── 2. Build Context Pack ──
+    const { buildContextPack } = await import('../context/build.js');
+    if (mode !== 'quiet') prettyProgress('Building Context Pack...');
+    const pack = await buildContextPack({
+      projectId,
+      runId,
+      taskId,
+      userInstruction: task,
+      workspacePath: projectPath,
+    });
+
+    // ── 3. Create run state ──
+    const { createRunState, saveRunState, linkContextToRun } = await import('../state/run.js');
+    const runState = createRunState({ projectId, taskId, runId });
+    linkContextToRun(runState.runId, pack.id, projectPath);
+    saveRunState(runState, projectPath);
+
+    // ── 4. Create trace ──
+    const { createTrace, saveTrace, linkContextPack } = await import('../observability/trace.js');
+    const trace = createTrace({ runId, projectId, taskId, summary: record.state.title });
+    linkContextPack(trace, pack.id);
+    saveTrace(trace, projectPath);
+
+    // ── 5. Record events ──
+    const { logEvent, EventTypes } = await import('../observability/events.js');
+    logEvent({ projectId, type: EventTypes.runStarted, actor: 'harness', summary: `Run started: ${record.state.title}`, runId, taskId }, projectPath);
+    logEvent({ projectId, type: EventTypes.taskCreated, actor: 'harness', summary: `Task created: ${taskId}`, runId, taskId }, projectPath);
+    logEvent({ projectId, type: EventTypes.contextBuildCompleted, actor: 'harness', summary: `Context Pack built: ${pack.id}`, runId, taskId, payload: { files: pack.files.length, skills: pack.skills.length } }, projectPath);
+
+    // ── 6. Create checkpoint ──
+    const { createCheckpoint } = await import('../state/checkpoint.js');
+    const cp = await createCheckpoint({ projectPath, taskId, runId, contextSummary: record.state.title });
+    const { linkCheckpointToRun } = await import('../state/run.js');
+    linkCheckpointToRun(runId, cp.id, projectPath);
+
+    if (mode !== 'quiet') prettyProgress(`Checkpoint: ${cp.id}`);
+
+    // ── 7. Run verification ──
+    const { detectCommands } = await import('../verification/commands.js');
+    const { buildPlan } = await import('../verification/plan.js');
+    const { runVerification, formatResults } = await import('../verification/runner.js');
+    const { saveReport, generateReport } = await import('../verification/report.js');
+
+    if (mode !== 'quiet') prettyProgress('Running verification...');
+
+    let verificationStatus: 'passed' | 'failed' | 'skipped' = 'skipped';
+    const commands = detectCommands(projectPath);
+    if (commands.length > 0) {
+      logEvent({ projectId, type: EventTypes.verificationStarted, actor: 'harness', summary: `Verification: ${commands.length} commands`, runId, taskId }, projectPath);
+
+      const plan = buildPlan(projectPath, commands);
+      const result = await runVerification(plan);
+      const verRunId = `ver_${Date.now().toString(36)}`;
+      const report = generateReport(verRunId, plan.steps, result, { projectPath, risks: [] });
+      saveReport(report);
+
+      verificationStatus = result.status === 'passed' ? 'passed' : result.status === 'failed' ? 'failed' : 'skipped';
+
+      logEvent({
+        projectId, type: verificationStatus === 'passed' ? EventTypes.verificationCompleted : EventTypes.verificationFailed,
+        actor: 'harness', summary: `Verification ${verificationStatus}: ${result.passed}/${result.total} passed`,
+        runId, taskId, payload: { passed: result.passed, failed: result.failed, skipped: result.skipped },
+      }, projectPath);
+
+      if (mode !== 'quiet') console.log(formatResults(plan.steps, result));
+    }
+
+    // ── 8. Complete task ──
+    const { completeTask } = await import('./complete.js');
+    const completionResult = await completeTask({
+      projectPath,
+      taskId,
+      changedFiles: [],
+      verificationStatus,
+    });
+
+    logEvent({
+      projectId, type: EventTypes.taskCompleted, actor: 'harness',
+      summary: `Task completed: ${record.state.title} (verification: ${verificationStatus})`,
+      runId, taskId,
+    }, projectPath);
+
+    // ── 9. Generate run report ──
+    const { generateRunReport, saveRunReport } = await import('../observability/report.js');
+    const runReport = generateRunReport(trace, {
+      title: record.state.title,
+      verificationStatus,
+      // risks: completionResult.risks,
+    });
+    const reportPath = saveRunReport(runReport, projectPath);
+
+    // ── 10. Generate delivery outputs ──
+    const { generateCommitMessage } = await import('../delivery/commit.js');
+    const commitMsg = generateCommitMessage({
+      taskType: record.state.type,
+      taskSummary: record.state.title,
+      details: `Verification: ${verificationStatus}`,
+    });
+
+    // ── Output ──
+    if (mode === 'json') {
+      jsonOutput(buildJsonOutput({
+        command: 'run', status: 'success',
+        data: {
+          taskId, runId, title: record.state.title, type: record.state.type,
+          verificationStatus, checkpointId: cp.id, contextPackId: pack.id, reportPath,
+          commitMessage: commitMsg.full,
+        },
+      }));
+    } else if (mode === 'quiet') {
+      console.log(taskId);
+    } else {
+      prettySuccess('Run completed', {
+        Task: `${taskId} — ${record.state.title}`,
+        Type: record.state.type,
+        'Context Pack': pack.id,
+        Checkpoint: cp.id,
+        Verification: verificationStatus.toUpperCase(),
+        Report: reportPath,
+      }, [
+        `harness verify --task ${taskId}`,
+        `harness report ${runId}`,
+      ]);
+    }
+
+    // ── Complete trace ──
+    const { updateTraceStatus, saveTrace: saveTrace2 } = await import('../observability/trace.js');
+    updateTraceStatus(trace, 'completed', `Task ${verificationStatus}`);
+    saveTrace2(trace, projectPath);
+
+    logEvent({ projectId, type: EventTypes.runCompleted, actor: 'harness', summary: `Run completed: ${runId}`, runId, taskId }, projectPath);
+
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    if (mode === 'json') {
+      jsonOutput(buildJsonOutput({ command: 'run', status: 'failed', error: { code: 'ERR_RUN_FAILED', category: 'task', severity: 'error' as const, message: error, recoveryHint: 'Check the error and try again', recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() } }));
+    } else {
+      prettyError('ERR_RUN_FAILED', `Run failed: ${error}`, 'Check the error and try again');
+    }
+    process.exit(1);
+  }
 }
 
+/**
+ * Resume a run (read run state and continue).
+ */
 export async function resumeRun(runId: string): Promise<void> {
-  console.log(`Resuming run: ${runId}`);
-  // TODO: Read run state, restore checkpoint, continue execution
+  const { loadRunState } = await import('../state/run.js');
+  const { loadTrace } = await import('../observability/trace.js');
+
+  const state = loadRunState(runId);
+  if (!state) {
+    console.error(`Run not found: ${runId}`);
+    process.exit(1);
+  }
+
+  console.log(`\nResuming run: ${runId}`);
+  console.log(`Task: ${state.taskId}`);
+  console.log(`Status: ${state.status}`);
+  console.log(`Checkpoints: ${state.checkpointIds.length}`);
+  if (state.currentCheckpointId) {
+    console.log(`Last checkpoint: ${state.currentCheckpointId}`);
+  }
+  // TODO: Restore checkpoint and continue execution
 }
