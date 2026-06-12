@@ -54,8 +54,9 @@ export async function showStatus(): Promise<void> {
 }
 
 export async function showConfig(options?: { json?: boolean }): Promise<void> {
+  const { HARNESS_VERSION } = await import('../version.js');
   if (options?.json) {
-    console.log(JSON.stringify({ runtime: 'thin-harness', version: '1.0.0' }, null, 2));
+    console.log(JSON.stringify({ runtime: 'thin-harness', version: HARNESS_VERSION }, null, 2));
   } else {
     console.log('Harness OS Runtime — Thin Harness');
     console.log('Session store: in-memory');

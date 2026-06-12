@@ -16,6 +16,7 @@
 import type { OutputMode, CliJsonOutput, CliOutputMeta, HarnessError } from '../types.js';
 import { redactText, redactObject } from '../governance/redactor.js';
 import { HarnessExitCode } from '../types.js';
+import { HARNESS_VERSION } from '../version.js';
 
 // ============================================================
 // Output Mode Detection
@@ -61,7 +62,7 @@ export function buildMeta(
   overrides?: Partial<CliOutputMeta>,
 ): CliOutputMeta {
   return {
-    version: '1.0.0',
+    version: HARNESS_VERSION,
     outputMode,
     generatedAt: new Date().toISOString(),
     durationMs: Date.now() - _startTime,

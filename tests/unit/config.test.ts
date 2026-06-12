@@ -32,7 +32,7 @@ import { loadConfig, getConfigValue, SAFETY_FIELDS } from '../../src/config/inde
 describe('loadConfig', () => {
   it('returns defaults when no config files exist', () => {
     const result = loadConfig();
-    expect(result.config.version).toBe('1.0.0');
+    expect(result.config.version).toMatch(/^1\.0\.0/);
     expect(result.config.cli?.defaultOutputMode).toBe('pretty');
     expect(result.config.governance?.requireApprovalForDeploy).toBe(true);
     expect(result.config.governance?.requireApprovalForPushMain).toBe(true);

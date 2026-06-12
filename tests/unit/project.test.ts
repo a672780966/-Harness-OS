@@ -86,7 +86,7 @@ describe('createProject', () => {
     const manifest = JSON.parse(readFileSync(join(testDir, '.project/state/manifest.json'), 'utf-8'));
     expect(manifest.projectId).toBeTruthy();
     expect(manifest.projectName).toBe('demo');
-    expect(manifest.version).toBe('1.0.0');
+    expect(manifest.version).toMatch(/^1\.0\.0/);
     expect(manifest.commands).toBeDefined();
     expect(manifest.skills.enabled).toContain('filesystem');
   });

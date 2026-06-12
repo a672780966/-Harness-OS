@@ -7,13 +7,14 @@
  */
 
 import { Command } from 'commander';
+import { HARNESS_VERSION } from '../version.js';
 
 const program = new Command();
 
 program
   .name('harness')
   .description('Harness OS - Codex-first Project Operating System')
-  .version('1.0.0');
+  .version(HARNESS_VERSION);
 
 // Project commands
 program

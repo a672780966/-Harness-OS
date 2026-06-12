@@ -24,6 +24,7 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { simpleGit } from 'simple-git';
 import { type ProjectManifest } from '../types.js';
+import { HARNESS_VERSION } from '../version.js';
 
 // ============================================================
 // Constants
@@ -362,7 +363,7 @@ export async function createProject(
 
   // 8. Write manifest.json
   const manifest: ProjectManifest = {
-    version: '1.0.0',
+    version: HARNESS_VERSION,
     projectId,
     projectName,
     projectType: opts.projectType || 'unknown',

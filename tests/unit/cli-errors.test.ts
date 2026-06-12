@@ -56,7 +56,7 @@ describe('output mode detection', () => {
 describe('buildMeta', () => {
   it('includes version, mode, timestamp', () => {
     const meta = buildMeta('test', 'pretty');
-    expect(meta.version).toBe('1.0.0');
+    expect(meta.version).toMatch(/^1\.0\.0/);
     expect(meta.outputMode).toBe('pretty');
     expect(meta.generatedAt).toBeTruthy();
     expect(meta.redacted).toBe(true);

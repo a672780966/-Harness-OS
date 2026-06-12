@@ -33,6 +33,7 @@ import { join, resolve } from 'path';
 import { simpleGit } from 'simple-git';
 import type { ProjectManifest } from '../types.js';
 import { detectTechStack, buildRepositoryMap } from './create.js';
+import { HARNESS_VERSION } from '../version.js';
 
 // ============================================================
 // Required sections in AGENTS.md
@@ -185,7 +186,7 @@ export async function initProject(projectPath?: string): Promise<RepairResult> {
     const projectId = `proj_${Date.now().toString(36)}`;
     const projectName = resolvedPath.split(/[/\\]/).pop() || 'unnamed';
     const manifest: ProjectManifest = {
-      version: '1.0.0',
+      version: HARNESS_VERSION,
       projectId,
       projectName,
       projectType: 'unknown',
@@ -384,7 +385,7 @@ export async function repairProject(projectPath?: string): Promise<RepairResult>
     const projectId = `proj_${Date.now().toString(36)}`;
     const projectName = resolvedPath.split(/[/\\]/).pop() || 'unnamed';
     const manifest: ProjectManifest = {
-      version: '1.0.0',
+      version: HARNESS_VERSION,
       projectId,
       projectName,
       projectType: 'unknown',

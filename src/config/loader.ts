@@ -30,13 +30,14 @@ import type {
   ConfigValidation,
 } from './types.js';
 import { SAFETY_FIELDS } from './types.js';
+import { HARNESS_VERSION } from '../version.js';
 
 // ============================================================
 // Default Config
 // ============================================================
 
 const DEFAULT_CONFIG: HarnessConfig = {
-  version: '1.0.0',
+  version: HARNESS_VERSION,
   cli: { defaultOutputMode: 'pretty', colorEnabled: true, showProgress: true },
   governance: {
     requireApprovalForDeploy: true,
