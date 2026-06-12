@@ -11,6 +11,7 @@
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
+import { redactObject } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -82,7 +83,9 @@ export function saveTrace(trace: RunTrace, projectPath?: string): string {
   }
 
   const tracePath = join(tracesDir, `${trace.runId}.json`);
-  writeFileSync(tracePath, JSON.stringify(trace, null, 2) + '\n', 'utf-8');
+  // Redact trace before persisting (SEC-06)
+  const safeTrace = redactObject(trace) as RunTrace;
+  writeFileSync(tracePath, JSON.stringify(safeTrace, null, 2) + '\n', 'utf-8');
   return tracePath;
 }
 

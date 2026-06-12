@@ -23,7 +23,15 @@ import {
   isProtectedFile,
   hasProtectedFragment,
   countRedactions,
+  safeJsonStringify,
+  safeTextOutput,
 } from '../../src/governance/redactor.js';
+
+import {
+  buildJsonOutput,
+  quietSuccess,
+  quietError,
+} from '../../src/cli/formatter.js';
 
 import {
   ObservationStore,
@@ -314,5 +322,133 @@ describe('scoreConfidence', () => {
 
   it('scores unknown medium', () => {
     expect(scoreConfidence('something else')).toBe(0.5);
+  });
+});
+
+// ============================================================
+// SEC-01..08 Regression Tests: Secret Redaction Boundaries
+//
+// Coverage per requirement:
+//   SEC-01: safeJsonStringify / safeWriteJson / safeWriteText / safeTextOutput
+//   SEC-02: buildJsonOutput deep-redacts data/error/warnings
+//   SEC-03: quiet mode output is redacted
+//   SEC-08: Bearer token, Basic auth, new patterns
+// ============================================================
+
+describe('SEC-01: Safe serialization helpers', () => {
+  it('safeJsonStringify redacts secrets in objects', () => {
+    const obj = { key: 'sk-abc123def456ghi789jkl012', name: 'config' };
+    const result = safeJsonStringify(obj);
+    expect(result).toContain('[REDACTED]');
+    expect(result).not.toContain('sk-abc123');
+    expect(result).toContain('"name"');
+  });
+
+  it('safeJsonStringify returns valid JSON', () => {
+    const obj = { data: 'my-api-key: secret123' };
+    const result = safeJsonStringify(obj);
+    expect(() => JSON.parse(result)).not.toThrow();
+  });
+
+  it('safeTextOutput redacts text', () => {
+    const result = safeTextOutput('Token: ghp_abc123def456ghi789jkl012mnop345qrs567');
+    expect(result).toContain('[REDACTED]');
+    expect(result).not.toContain('ghp_abc123');
+  });
+});
+
+describe('SEC-02: buildJsonOutput deep-redaction', () => {
+  it('redacts data payload', () => {
+    const output = buildJsonOutput({
+      command: 'test',
+      status: 'success',
+      data: { apiKey: 'sk-abc123def456ghi789jkl012' },
+    });
+    const json = JSON.stringify(output);
+    expect(json).toContain('[REDACTED]');
+    expect(json).not.toContain('sk-abc123');
+  });
+
+  it('redacts error payload', () => {
+    const output = buildJsonOutput({
+      command: 'test',
+      status: 'error',
+      error: { code: 'ERR_TEST', message: 'DB: postgresql://user:pass@localhost/db', recoverable: true, retryable: false },
+    });
+    const json = JSON.stringify(output);
+    expect(json).toContain('[REDACTED]');
+    expect(json).not.toContain('postgresql://user:pass');
+  });
+
+  it('redacts warning messages', () => {
+    const output = buildJsonOutput({
+      command: 'test',
+      status: 'success',
+      warnings: [{ code: 'WARN', message: 'token=ghp_abc123def456ghi789jkl012mnop345qrs567', recoveryHint: 'use env var' }],
+    });
+    const json = JSON.stringify(output);
+    expect(json).toContain('[REDACTED]');
+    expect(json).not.toContain('ghp_abc123def456ghi789jkl012mnop345qrs567');
+  });
+
+  it('sets meta.redacted = true', () => {
+    const output = buildJsonOutput({
+      command: 'test',
+      status: 'success',
+    });
+    expect(output.meta.redacted).toBe(true);
+  });
+});
+
+describe('SEC-03: Quiet mode redaction', () => {
+  it('quietSuccess redacts message', () => {
+    // Capture stdout
+    const writeSpy = process.stdout.write;
+    const chunks: Buffer[] = [];
+    process.stdout.write = (chunk: any) => { chunks.push(Buffer.from(chunk)); return true; };
+
+    try {
+      quietSuccess('DB URL: postgresql://user:pass@localhost/db');
+      const output = Buffer.concat(chunks).toString();
+      expect(output).toContain('[REDACTED]');
+      expect(output).not.toContain('postgresql://user:pass');
+    } finally {
+      process.stdout.write = writeSpy;
+    }
+  });
+
+  it('quietError redacts message', () => {
+    const writeSpy = process.stderr.write;
+    const chunks: Buffer[] = [];
+    process.stderr.write = (chunk: any) => { chunks.push(Buffer.from(chunk)); return true; };
+
+    try {
+      quietError('ERR001', 'DB: postgresql://user:pass@localhost/db');
+      const output = Buffer.concat(chunks).toString();
+      expect(output).toContain('[REDACTED]');
+      expect(output).not.toContain('postgresql://user:pass');
+    } finally {
+      process.stderr.write = writeSpy;
+    }
+  });
+});
+
+describe('SEC-08: New redaction patterns', () => {
+  it('redacts Bearer tokens', () => {
+    const result = redactText('Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dkWGfG');
+    expect(result).toContain('[REDACTED]');
+    // JWT pattern will catch the token value part
+    expect(result).not.toContain('eyJhbGci');
+  });
+
+  it('redacts Basic auth tokens', () => {
+    const result = redactText('Authorization: Basic dXNlcjpwYXNzd29yZA==');
+    expect(result).toContain('[REDACTED]');
+    expect(result).not.toContain('dXNlcjpwYXNzd29yZA==');
+  });
+
+  it('redacts Bearer token inline', () => {
+    const result = redactText('Bearer ghp_abc123def456ghi789jkl012mnop345qrs567');
+    expect(result).toContain('[REDACTED]');
   });
 });

@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import type { VerificationStep } from './plan.js';
 import type { RunResult } from './runner.js';
+import { redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -129,10 +130,10 @@ function formatReport(report: VerificationReport): string {
   if (failures.length > 0) {
     lines.push('', '## Failures', '');
     for (const f of failures) {
-      lines.push(`### ${f.name} (${f.command})`);
+      lines.push(`### ${f.name} (${redactText(f.command)})`);
       lines.push('');
-      if (f.stdout.trim()) lines.push('```', f.stdout.slice(0, 1000), '```', '');
-      if (f.stderr.trim()) lines.push('```', f.stderr.slice(0, 1000), '```', '');
+      if (f.stdout.trim()) lines.push('```', redactText(f.stdout.slice(0, 1000)), '```', '');
+      if (f.stderr.trim()) lines.push('```', redactText(f.stderr.slice(0, 1000)), '```', '');
     }
   }
 
@@ -140,7 +141,7 @@ function formatReport(report: VerificationReport): string {
   if (report.risks.length > 0) {
     lines.push('', '## Risks', '');
     for (const r of report.risks) {
-      lines.push(`- ${r}`);
+      lines.push(`- ${redactText(r)}`);
     }
   }
 

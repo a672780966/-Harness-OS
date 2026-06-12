@@ -13,6 +13,7 @@ import { join, resolve } from 'path';
 import type { CommitMessage } from './commit.js';
 import type { PrBody } from './pr.js';
 import type { GuardResult } from './guard.js';
+import { redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -121,12 +122,12 @@ function formatDeliveryReport(report: DeliveryReport): string {
 
   // Commit message
   if (report.commitMessage) {
-    lines.push('## Commit Message', '', '```', report.commitMessage.full, '```', '');
+    lines.push('## Commit Message', '', '```', redactText(report.commitMessage.full), '```', '');
   }
 
   // PR body
   if (report.prBody) {
-    lines.push('## PR Body', '', report.prBody.body, '');
+    lines.push('## PR Body', '', redactText(report.prBody.body), '');
   }
 
   // Guard results
@@ -134,7 +135,7 @@ function formatDeliveryReport(report: DeliveryReport): string {
     lines.push('## Delivery Guard', '');
     for (const check of report.guardResult.checks) {
       const icon = check.passed ? '✅' : '❌';
-      lines.push(`${icon} ${check.check}: ${check.reason}`);
+      lines.push(`${icon} ${check.check}: ${redactText(check.reason)}`);
     }
     lines.push('');
   }
@@ -143,7 +144,7 @@ function formatDeliveryReport(report: DeliveryReport): string {
   if (report.status === 'blocked' && report.guardResult) {
     lines.push('## Blocked By', '');
     for (const b of report.guardResult.blockedBy) {
-      lines.push(`- ${b}`);
+      lines.push(`- ${redactText(b)}`);
     }
     lines.push('');
   }

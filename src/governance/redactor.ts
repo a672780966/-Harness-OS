@@ -13,6 +13,7 @@
  */
 
 import type { HarnessError } from '../types.js';
+import { writeFileSync } from 'fs';
 
 // ============================================================
 // Secret Patterns
@@ -32,6 +33,8 @@ const SECRET_PATTERNS: SecretPattern[] = [
   { name: 'api-key', pattern: /(['"]?api[_-]?key['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
 
   // Tokens
+  { name: 'bearer-token', pattern: /Bearer\s+[A-Za-z0-9_\-.]{20,}/g, replaceFull: true },
+  { name: 'basic-auth', pattern: /Basic\s+[A-Za-z0-9+/=]{20,}/g, replaceFull: true },
   { name: 'github-token', pattern: /ghp_[A-Za-z0-9]{36,}/g, replaceFull: true },
   { name: 'gitlab-token', pattern: /glpat-[A-Za-z0-9_-]{20,}/g, replaceFull: true },
   { name: 'slack-token', pattern: /xox[baprs]-[A-Za-z0-9_-]{10,}/g, replaceFull: true },
@@ -246,4 +249,48 @@ export function countRedactions(original: string, redacted: string): RedactionRe
   }
 
   return report;
+}
+
+// ============================================================
+// Safe Serialization Helpers (SEC-01)
+//
+// Unified redaction-gated output functions for all write boundaries.
+// All CLI and file write boundaries MUST use these, never raw:
+//   - JSON.stringify(untrustedData)
+//   - writeFileSync(...raw...)
+//   - console.log(untrustedData)
+// ============================================================
+
+/**
+ * Safely JSON-stringify a value with deep secret redaction.
+ * Returns the redacted JSON string. Never outputs raw secrets.
+ */
+export function safeJsonStringify(value: unknown, space?: number): string {
+  const redacted = redactObject(value);
+  return JSON.stringify(redacted, null, space) ?? '';
+}
+
+/**
+ * Safely write a JSON-serializable object to a file, with deep secret redaction.
+ * The file is written only after all secrets are redacted.
+ */
+export function safeWriteJson(path: string, value: unknown, space?: number): void {
+  const json = safeJsonStringify(value, space);
+  writeFileSync(path, json, 'utf-8');
+}
+
+/**
+ * Safely write text content to a file, with secret redaction.
+ * The file is written only after all secrets are redacted.
+ */
+export function safeWriteText(path: string, text: string): void {
+  const redacted = redactText(text);
+  writeFileSync(path, redacted, 'utf-8');
+}
+
+/**
+ * Safely format text for human-readable output with secret redaction.
+ */
+export function safeTextOutput(text: string): string {
+  return redactText(text);
 }

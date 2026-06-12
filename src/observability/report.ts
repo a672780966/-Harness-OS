@@ -11,6 +11,7 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import type { RunTrace } from './trace.js';
+import { redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Run Report Types
@@ -82,7 +83,7 @@ export function generateRunReport(
     startedAt: trace.startedAt,
     endedAt: trace.endedAt,
     durationMs,
-    summary: trace.summary,
+    summary: redactText(trace.summary || '(no summary)'),
     contextUsed: overrides?.contextUsed,
     contextExcluded: overrides?.contextExcluded,
     contextRisks: overrides?.contextRisks,
@@ -115,7 +116,23 @@ export function saveRunReport(
   }
 
   const reportPath = join(reportsDir, `${report.runId}.md`);
-  const content = formatRunReport(report);
+
+  // Redact sensitive fields before formatting (SEC-06)
+  const safeReport: RunReport = {
+    ...report,
+    summary: redactText(report.summary),
+    contextUsed: report.contextUsed?.map(c => redactText(c)),
+    contextExcluded: report.contextExcluded?.map(c => redactText(c)),
+    contextRisks: report.contextRisks?.map(c => redactText(c)),
+    risks: report.risks?.map(r => redactText(r)),
+    followUp: report.followUp?.map(f => redactText(f)),
+    approvals: report.approvals?.map(a => ({
+      action: redactText(a.action),
+      status: a.status,
+    })),
+  };
+
+  const content = formatRunReport(safeReport);
   writeFileSync(reportPath, content, 'utf-8');
 
   report.reportPath = reportPath;

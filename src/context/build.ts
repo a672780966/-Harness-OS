@@ -27,6 +27,7 @@ import type {
 import { collectAgentsMd, collectProject, collectGit, collectTask } from './sources.js';
 import { scoreFile, sortCandidates, extractKeywords } from './relevance.js';
 import { calculateBudget, availableContextTokens, trimToBudget } from './budget.js';
+import { redactObject, redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Build Input
@@ -173,13 +174,16 @@ function saveContextPack(pack: ContextPack, contextDir: string): void {
 
   const runId = pack.runId;
 
+  // Deep-redact before serialization (SEC-05)
+  const safePack: ContextPack = redactObject(pack) as ContextPack;
+
   // JSON snapshot
   const jsonPath = join(contextDir, `${runId}.json`);
-  writeFileSync(jsonPath, JSON.stringify(pack, null, 2) + '\n', 'utf-8');
+  writeFileSync(jsonPath, JSON.stringify(safePack, null, 2) + '\n', 'utf-8');
 
   // Markdown snapshot
   const mdPath = join(contextDir, `${runId}.md`);
-  const md = generateContextMarkdown(pack);
+  const md = generateContextMarkdown(safePack);
   writeFileSync(mdPath, md, 'utf-8');
 }
 

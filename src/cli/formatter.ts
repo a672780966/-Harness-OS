@@ -14,7 +14,7 @@
  */
 
 import type { OutputMode, CliJsonOutput, CliOutputMeta, HarnessError } from '../types.js';
-import { redactText } from '../governance/redactor.js';
+import { redactText, redactObject } from '../governance/redactor.js';
 
 // ============================================================
 // Output Mode Detection
@@ -89,9 +89,13 @@ export function buildJsonOutput<T>(params: {
     ok: params.status === 'success',
     command: params.command,
     status: params.status,
-    data: params.data,
-    error: params.error,
-    warnings: params.warnings ?? [],
+    data: params.data ? redactObject(params.data) : undefined,
+    error: params.error ? redactObject(params.error) as unknown as HarnessError : undefined,
+    warnings: params.warnings?.map(w => ({
+      ...w,
+      message: redactText(w.message),
+      recoveryHint: w.recoveryHint ? redactText(w.recoveryHint) : undefined,
+    })) ?? [],
     meta: buildMeta(params.command, 'json', params.metaOverrides),
   };
 }
@@ -195,8 +199,11 @@ export function prettyProgress(message: string): void {
  * JSON mode: stdout MUST contain ONLY valid JSON.
  */
 export function jsonOutput<T>(output: CliJsonOutput<T>): void {
-  // Ensure redacted
-  const redacted = { ...output, meta: { ...output.meta, redacted: true } };
+  // Deep-redact entire output before serialization (SEC-02)
+  const redacted = redactObject({
+    ...output,
+    meta: { ...output.meta, redacted: true },
+  });
   process.stdout.write(JSON.stringify(redacted, null, 2) + '\n');
 }
 
@@ -205,8 +212,8 @@ export function jsonOutput<T>(output: CliJsonOutput<T>): void {
  * Only for --stream mode.
  */
 export function jsonProgress(stage: string, message: string): void {
-  const event = JSON.stringify({ type: 'progress', stage, message }) + '\n';
-  process.stdout.write(event);
+  const event = redactObject({ type: 'progress', stage, message });
+  process.stdout.write(JSON.stringify(event) + '\n');
 }
 
 // ============================================================
@@ -217,12 +224,12 @@ export function jsonProgress(stage: string, message: string): void {
  * Quiet mode: success produces minimal output.
  */
 export function quietSuccess(message?: string): void {
-  if (message) process.stdout.write(message + '\n');
+  if (message) process.stdout.write(redactText(message) + '\n');
 }
 
 /**
  * Quiet mode: error outputs error code + message.
  */
 export function quietError(code: string, message: string): void {
-  process.stderr.write(`${code}: ${message}\n`);
+  process.stderr.write(`${code}: ${redactText(message)}\n`);
 }
