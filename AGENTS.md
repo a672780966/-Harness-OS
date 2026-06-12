@@ -12,6 +12,23 @@ Repository Role:
 This repository contains Harness OS itself — the Codex-first Project Operating System.
 Harness OS is built by Codex, for Codex.
 
+### Audit Constraints
+
+Current Phase: v1.0.0-rc.1 Thin Harness Release Candidate
+
+Do:
+  Read docs before changing code.
+  Run typecheck and tests before reporting readiness.
+  Use `docs/audit/` templates for audit output.
+  Treat governance, secrets, verification, delivery, and config as high-risk areas.
+
+Do Not:
+  Do not start Thick Harness.
+  Do not add new skills.
+  Do not modify accepted ADRs without explicit approval.
+  Do not commit runtime artifacts.
+  Do not push tags unless explicitly requested.
+
 ## 2. Project Goals
 
 This project exists to:
