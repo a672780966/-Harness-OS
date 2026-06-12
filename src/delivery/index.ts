@@ -9,6 +9,8 @@
  * - Delivery report status=blocked with guard reasons
  * - Non-zero exit code
  *
+ * CLI3-03: Delivery supports --json output via _outputMode parameter.
+ *
  * Reference: 10_DELIVERY_PIPELINE.md
  *            03_VERIFICATION_DELIVERY_STRONG_BINDING_FIX.md §4
  */
@@ -19,11 +21,31 @@ export { generatePrBody, type PrBody, type PrBodyInput } from './pr.js';
 export { generateDeliveryReport, saveDeliveryReport, type DeliveryReport, type DeliveryType, type DeliveryStatus } from './report.js';
 
 // ============================================================
-// CLI Entry Point
+// Types
 // ============================================================
 
 import type { DeliveryType } from './report.js';
 
+export interface DeliveryResult {
+  deliveryId: string;
+  type: DeliveryType;
+  status: 'ready' | 'blocked';
+  guardResult: import('./guard.js').GuardResult;
+  commitMessage?: import('./commit.js').CommitMessage;
+  prBody?: import('./pr.js').PrBody;
+  reportPath?: string;
+}
+
+// ============================================================
+// CLI Entry Point
+// ============================================================
+
+/**
+ * Run the delivery pipeline.
+ *
+ * @param options._outputMode - Internal: set by CLI layer for JSON routing.
+ *   When 'json', always outputs a JSON envelope via process.stdout.
+ */
 export async function runDelivery(options?: {
   commit?: boolean;
   pr?: boolean;
@@ -36,9 +58,12 @@ export async function runDelivery(options?: {
   taskType?: string;
   changedFiles?: string[];
   projectPath?: string;
-}): Promise<void> {
+  /** Internal: output mode from CLI layer. */
+  _outputMode?: 'json' | 'pretty' | 'quiet';
+}): Promise<DeliveryResult> {
   const projectPath = options?.projectPath ?? process.cwd();
   const projectId = 'proj_' + Date.now().toString(36);
+  const outputMode = options?._outputMode;
 
   // Determine delivery type
   let deliveryType: DeliveryType = 'commit';
@@ -55,12 +80,15 @@ export async function runDelivery(options?: {
     runId: options?.runId,
     verId: options?.verId ?? '',
   });
-  console.log(formatGuardResult(guard));
-  console.log('');
+
+  // Format guard output
+  if (outputMode !== 'json') {
+    console.log(formatGuardResult(guard));
+    console.log('');
+  }
 
   // VER3-05: Guard blocked → no commit message, no PR, no ready output
   if (!guard.canProceed) {
-    // Generate a blocked delivery report with guard reasons
     const { generateDeliveryReport, saveDeliveryReport } = await import('./report.js');
     const deliveryId = `del_${Date.now().toString(36)}`;
     const report = generateDeliveryReport({
@@ -73,10 +101,32 @@ export async function runDelivery(options?: {
       summary: `Delivery blocked by guard checks (verId: ${options?.verId ?? 'none'})`,
     });
     const reportPath = saveDeliveryReport(report, projectPath);
-    console.log(`Blocked delivery report saved: ${reportPath}`);
-    console.log('\n❌ Delivery blocked by guard checks.');
-    console.log('No commit message or PR body generated. [VER3-05]');
-    process.exit(1); // non-zero exit code (VER3-05)
+
+    if (outputMode !== 'json') {
+      console.log(`Blocked delivery report saved: ${reportPath}`);
+      console.log('\n❌ Delivery blocked by guard checks.');
+      console.log('No commit message or PR body generated. [VER3-05]');
+    }
+
+    // In JSON mode, return the result (CLI layer outputs the envelope)
+    if (outputMode === 'json') {
+      return {
+        deliveryId,
+        type: deliveryType,
+        status: 'blocked',
+        guardResult: guard,
+        reportPath,
+      };
+    }
+
+    process.exitCode = 1;
+    return {
+      deliveryId,
+      type: deliveryType,
+      status: 'blocked',
+      guardResult: guard,
+      reportPath,
+    };
   }
 
   // 2. Generate commit message
@@ -87,10 +137,13 @@ export async function runDelivery(options?: {
     changedFiles: options?.changedFiles,
     runId: options?.runId,
   });
-  console.log('Generated commit message:');
-  console.log('---');
-  console.log(commitMsg.full);
-  console.log('---\n');
+
+  if (outputMode !== 'json') {
+    console.log('Generated commit message:');
+    console.log('---');
+    console.log(commitMsg.full);
+    console.log('---\n');
+  }
 
   // 3. Generate PR body if requested
   let prBody;
@@ -102,10 +155,12 @@ export async function runDelivery(options?: {
       runId: options?.runId,
       changedFiles: options?.changedFiles,
     });
-    console.log('Generated PR body:');
-    console.log('---');
-    console.log(prBody.body);
-    console.log('---\n');
+    if (outputMode !== 'json') {
+      console.log('Generated PR body:');
+      console.log('---');
+      console.log(prBody.body);
+      console.log('---\n');
+    }
   }
 
   // 4. Save delivery report
@@ -123,8 +178,19 @@ export async function runDelivery(options?: {
     summary: `Delivery for ${options?.taskTitle || 'untitled task'}`,
   });
   const reportPath = saveDeliveryReport(report, projectPath);
-  console.log(`Delivery report saved: ${reportPath}`);
 
-  // 5. Final status
-  console.log('\n✅ Delivery guard passed. Ready to proceed.');
+  if (outputMode !== 'json') {
+    console.log(`Delivery report saved: ${reportPath}`);
+    console.log('\n✅ Delivery guard passed. Ready to proceed.');
+  }
+
+  return {
+    deliveryId,
+    type: deliveryType,
+    status: 'ready',
+    guardResult: guard,
+    commitMessage: commitMsg,
+    prBody,
+    reportPath,
+  };
 }

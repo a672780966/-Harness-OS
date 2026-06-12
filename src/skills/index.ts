@@ -13,14 +13,46 @@ export type { SkillExecutionContext, SkillExecutionResult, SkillExecutor } from 
 
 import registry from './registry.js';
 
+// ============================================================
+// Structured skill data (CLI3-01)
+// ============================================================
+
+export interface SkillListEntry {
+  name: string;
+  category: string;
+  description: string;
+  riskLevel: string;
+  defaultEnabled: boolean;
+  tools: string[];
+}
+
 /**
- * List all registered skills (formatted output).
+ * Get structured skill list — does NOT print (CLI3-01).
+ * The CLI layer formats and outputs via the formatter.
+ */
+export async function getSkillsList(): Promise<{ count: number; skills: SkillListEntry[] }> {
+  const skills = registry.list();
+  return {
+    count: skills.length,
+    skills: skills.map(s => ({
+      name: s.name,
+      category: s.category,
+      description: s.description,
+      riskLevel: s.riskLevel,
+      defaultEnabled: s.defaultEnabled,
+      tools: s.tools.map(t => t.name),
+    })),
+  };
+}
+
+/**
+ * Legacy CLI helper. Prefer getSkillsList() + formatter for JSON mode.
  */
 export async function listSkills(): Promise<void> {
-  const skills = registry.list();
-  console.log(`\nRegistered skills: ${skills.length}\n`);
-  for (const skill of skills) {
-    const tools = skill.tools.map(t => t.name).join(', ');
+  const data = await getSkillsList();
+  console.log(`\nRegistered skills: ${data.count}\n`);
+  for (const skill of data.skills) {
+    const tools = skill.tools.join(', ');
     console.log(`  ${skill.name} (${skill.category})`);
     console.log(`    ${skill.description}`);
     console.log(`    Risk: ${skill.riskLevel} | Enabled: ${skill.defaultEnabled} | Tools: ${tools}`);

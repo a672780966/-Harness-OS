@@ -43,12 +43,35 @@ export {
   type ToolCallVerdict,
 } from './pipeline.js';
 
-// CLI helpers (legacy — kept for backward compat)
-export async function showStatus(): Promise<void> {
+// ============================================================
+// Structured status data (CLI3-01)
+// ============================================================
+
+export interface StatusData {
+  activeSessions: number;
+  sessions: Array<{ session_id: string; turn_count: number }>;
+}
+
+/**
+ * Get structured status data — does NOT print (CLI3-01).
+ * The CLI layer formats and outputs via the formatter.
+ */
+export async function getStatus(): Promise<StatusData> {
   const { listActiveSessions } = await import('./session.js');
   const sessions = listActiveSessions();
-  console.log(`Active sessions: ${sessions.length}`);
-  for (const s of sessions) {
+  return {
+    activeSessions: sessions.length,
+    sessions: sessions.map(s => ({ session_id: s.session_id, turn_count: s.turn_count })),
+  };
+}
+
+/**
+ * Legacy CLI helper. Prefer getStatus() + formatter for JSON mode.
+ */
+export async function showStatus(): Promise<void> {
+  const data = await getStatus();
+  console.log(`Active sessions: ${data.activeSessions}`);
+  for (const s of data.sessions) {
     console.log(`  ${s.session_id} — turns: ${s.turn_count}`);
   }
 }
