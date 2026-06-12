@@ -28,6 +28,8 @@ export interface PolicyContext {
   affectedPaths?: string[];
   /** The tool name being invoked. */
   toolName?: string;
+  /** The skill name (for skill-based execution). */
+  skillName?: string;
 }
 
 export interface PolicyRule {
@@ -116,6 +118,54 @@ const DEFAULT_RULES: PolicyRule[] = [
     match: (_, ctx) => !!ctx.affectedPaths && ctx.affectedPaths.length > 0 && touchesProtectedPath(ctx.affectedPaths),
     decision: 'needs_approval',
     reason: 'Protected path modification requires human approval',
+  },
+  // Non-sensitive write operations (after credential/protected checks above)
+  {
+    name: 'write-default-allow',
+    description: 'Writing non-sensitive files is allowed by default',
+    match: (action) => action === 'Write',
+    decision: 'allow',
+    reason: 'Non-sensitive write operation is allowed',
+  },
+  // Non-dangerous shell commands (after high-risk check above)
+  {
+    name: 'bash-default-allow',
+    description: 'Non-dangerous shell commands are allowed by default',
+    match: (action) => action === 'Bash',
+    decision: 'allow',
+    reason: 'Non-dangerous shell command is allowed',
+  },
+  // Read-only git operations
+  {
+    name: 'git-read-allow',
+    description: 'Read-only git operations are allowed',
+    match: (action) => action === 'GitRead',
+    decision: 'allow',
+    reason: 'Read-only git operation is allowed',
+  },
+  // Git commit
+  {
+    name: 'git-commit-allow',
+    description: 'Git commit is allowed by default',
+    match: (action) => action === 'GitCommit',
+    decision: 'allow',
+    reason: 'Git commit is allowed',
+  },
+  // Git push denied by default (must be explicitly approved in policy)
+  {
+    name: 'git-push-deny',
+    description: 'Git push is denied by default policy',
+    match: (action) => action === 'GitPush',
+    decision: 'deny',
+    reason: 'Git push is denied by default policy',
+  },
+  // Delete operations denied by default
+  {
+    name: 'delete-default-deny',
+    description: 'Delete operations are denied by default',
+    match: (action) => action === 'Delete',
+    decision: 'deny',
+    reason: 'Delete operations are denied by default policy',
   },
 ];
 

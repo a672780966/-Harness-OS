@@ -5,10 +5,91 @@
  * Handles skill registration, manifest querying, and project-level enable/disable.
  *
  * Reference: 07_MCP_SKILLS_SPEC.md §6
+ *
+ * Governance: GOV-01 (AUD-P0-001)
+ * All skill executions pass through the Policy Engine before reaching the executor.
+ * - getExecutor() is available but bypasses policy — use execute() for production paths.
  */
 
 import type { SkillManifest, SkillCategory } from '../types.js';
 import type { SkillExecutor } from './executor.js';
+import { checkPolicy, type PolicyContext } from '../governance/policy.js';
+import { submitApproval } from '../governance/approval-gate.js';
+import {
+  failedResult as failExec,
+  blockedResult as blockExec,
+  requiresApprovalResult as reqApprovalExec,
+} from './executor.js';
+
+// ============================================================
+// Action Normalization
+// ============================================================
+
+/**
+ * Normalize a skill tool name to a well-known action category for policy matching.
+ *
+ * Read-only operations → "Read"/"GitRead"
+ * Write operations     → "Write"
+ * Shell operations     → "Bash"
+ * Git operations       → "GitCommit"/"GitPush"/"GitRead"
+ * Delete operations    → "Delete"
+ * Unknown operations   → "skillName:toolName" (no rule match → needs_approval)
+ */
+function normalizeSkillAction(skillName: string, toolName: string): string {
+  if (skillName === 'filesystem') {
+    if (['read_file', 'list_dir', 'read_file_range', 'search_text'].includes(toolName)) return 'Read';
+    if (['write_file', 'create_dir'].includes(toolName)) return 'Write';
+    if (['delete_file', 'delete_dir'].includes(toolName)) return 'Delete';
+  }
+  if (skillName === 'shell') {
+    if (['run_command', 'run_test', 'run_build'].includes(toolName)) return 'Bash';
+  }
+  if (skillName === 'git') {
+    if (['git_status', 'git_diff', 'git_log'].includes(toolName)) return 'GitRead';
+    if (toolName === 'git_commit') return 'GitCommit';
+    if (toolName === 'git_push') return 'GitPush';
+  }
+  if (skillName === 'repo-scanner') {
+    return 'Read';
+  }
+  // Unknown skill/tool: use qualified name — won't match any rule → default needs_approval
+  return `${skillName}:${toolName}`;
+}
+
+/**
+ * Build a PolicyContext from skill tool input.
+ * Extracts command (for shell) and file paths (for filesystem).
+ */
+function buildSkillPolicyContext(
+  skillName: string,
+  toolName: string,
+  input: Record<string, unknown>,
+): PolicyContext {
+  const ctx: PolicyContext = {
+    toolName,
+    skillName,
+  };
+
+  // Extract command for shell tools
+  if (typeof input.command === 'string') {
+    ctx.command = input.command;
+  }
+
+  // Extract paths from common path fields
+  const pathFields = ['path', 'file_path', 'filePath'];
+  const paths: string[] = [];
+  for (const field of pathFields) {
+    const val = input[field];
+    if (typeof val === 'string') {
+      paths.push(val);
+    }
+  }
+  if (paths.length > 0) {
+    ctx.affectedPaths = paths;
+  }
+
+  return ctx;
+}
 
 // ============================================================
 // Skill Registry
@@ -60,7 +141,15 @@ class SkillRegistry {
 
   /**
    * Execute a tool on a registered skill.
-   * Runs policy check first — blocked/needs_approval decisions prevent execution.
+   *
+   * Governance gate (GOV-01): Policy check runs BEFORE executor.
+   *   - allow           → executor is called
+   *   - deny            → blockedResult returned (executor NOT called)
+   *   - needs_approval  → approval submitted, requires-approval result returned
+   *   - policy error    → blockedResult (fail closed)
+   *
+   * All skill tool executions MUST go through this method for production use.
+   * getExecutor() bypasses governance — use only for internal or test paths.
    */
   async execute(
     skillName: string,
@@ -70,18 +159,56 @@ class SkillRegistry {
   ): Promise<import('./executor.js').SkillExecutionResult> {
     const executor = this.executors.get(skillName);
     if (!executor) {
-      const { failedResult } = await import('./executor.js');
-      return failedResult(skillName, toolName, new Error(`No executor registered for skill: ${skillName}`), 0);
+      return failExec(skillName, toolName, new Error(`No executor registered for skill: ${skillName}`), 0);
     }
 
-    // Policy check: only tools marked requiresApproval in manifest trigger this
+    // ---- Manifest Validation: unknown tool → blocked (GOV-01) ----
     const manifest = this.skills.get(skillName);
     if (manifest) {
-      const tool = manifest.tools.find(t => t.name === toolName);
-      if (tool && tool.requiresApproval) {
-        const { blockedResult } = await import('./executor.js');
-        return blockedResult(skillName, toolName, `${toolName} requires human approval per skill manifest`, 0);
+      const knownTool = manifest.tools.find(t => t.name === toolName);
+      if (!knownTool) {
+        return blockExec(
+          skillName,
+          toolName,
+          `Unknown tool "${toolName}" for skill "${skillName}" — blocked by governance`,
+          0,
+        );
       }
+    }
+
+    // ---- Policy Gate (GOV-01) ----
+    const action = normalizeSkillAction(skillName, toolName);
+    const policyCtx = buildSkillPolicyContext(skillName, toolName, input);
+
+    let policyResult: import('../types.js').PolicyCheckResult;
+    try {
+      policyResult = await checkPolicy(action, policyCtx);
+    } catch (err) {
+      // Fail closed: any policy error → blocked
+      return blockExec(
+        skillName,
+        toolName,
+        `Policy check failed for "${action}": ${err instanceof Error ? err.message : String(err)}`,
+        0,
+      );
+    }
+
+    // Handle policy decision
+    switch (policyResult.decision) {
+      case 'deny':
+        return blockExec(skillName, toolName, policyResult.reason, 0);
+      case 'needs_approval': {
+        const approval = submitApproval({
+          id: `app_${skillName}_${toolName}_${Date.now()}`,
+          action: `${action}${policyCtx.command ? `: ${policyCtx.command.slice(0, 80)}` : ''}`,
+          reason: policyResult.reason,
+          riskLevel: policyResult.riskLevel,
+          affectedPaths: policyResult.affectedPaths,
+        });
+        return reqApprovalExec(skillName, toolName, policyResult.reason, approval.id);
+      }
+      case 'allow':
+        break; // proceed to executor
     }
 
     return executor(toolName, input, context);

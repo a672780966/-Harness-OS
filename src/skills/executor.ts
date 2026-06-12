@@ -108,3 +108,25 @@ export function blockedResult(
     error: { code: 'BLOCKED', message: reason, recoverable: true },
   };
 }
+
+/**
+ * Result indicating that the tool requires human approval.
+ * Used when policy returns needs_approval — the caller must resolve
+ * the approval before the tool can be executed.
+ */
+export function requiresApprovalResult(
+  skillName: string,
+  toolName: string,
+  reason: string,
+  approvalId: string,
+): SkillExecutionResult {
+  return {
+    skillName,
+    toolName,
+    status: 'requires-approval',
+    summary: reason,
+    durationMs: 0,
+    output: { approvalId },
+    error: { code: 'APPROVAL_REQUIRED', message: reason, recoverable: true },
+  };
+}
