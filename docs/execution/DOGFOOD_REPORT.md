@@ -20,7 +20,7 @@
 | 2 | `harness repair` | ✅ | 创建 12 个 .project/ 子目录，生成 manifest |
 | 3 | `harness open .` | ✅ | Ready: yes |
 | 4 | `harness check` | ✅ | 发现 8 个缺失 AGENTS.md 章节（3 个核心，5 个非核心） |
-| 5 | `harness config --json` | ⚠️ | 输出为 pretty 而非 JSON（--json 未正确传递） |
+| 5 | `harness config --json` | ✅ | 合法 JSON 输出 (--json 已修复) |
 | 6 | `harness skills list` | ✅ | 列出 4 个核心技能执行器 |
 
 ## Results
