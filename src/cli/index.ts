@@ -12,6 +12,11 @@
  * CLI3-04: --json command and command --json behave identically.
  * CLI3-05: process.exitCode is set, never process.exit() in deep modules.
  *
+ * CLI4-01: Only the CLI output router writes stdout. Business modules
+ * return structured data; they never console.log() directly.
+ *
+ * CLI4-02: ok, status, and exit code are always consistent.
+ *
  * Codex-first Project Operating System
  * Version 1.0.0
  */
@@ -26,12 +31,42 @@ program
   .name('harness')
   .description('Harness OS - Codex-first Project Operating System');
 
-// Global options inherited by all subcommands (CLI3-04)
 program
   .option('--json', 'JSON output mode')
   .option('--quiet', 'Quiet output mode')
   .option('--no-color', 'Disable color output')
   .option('--log-level <level>', 'Log level (debug|info|warn|error)');
+
+// Handle --version before Commander's parse
+const idxVersion = process.argv.indexOf('--version');
+const idxV = process.argv.indexOf('-V');
+const idxJson = process.argv.indexOf('--json');
+const idxJ = process.argv.indexOf('-j');
+const hasVersion = idxVersion >= 0 || idxV >= 0;
+const hasJson = idxJson >= 0 || idxJ >= 0;
+
+if (hasVersion) {
+  if (hasJson) {
+    const envelope = {
+      ok: true,
+      command: 'version',
+      status: 'success' as const,
+      data: { version: HARNESS_VERSION },
+      warnings: [] as string[],
+      meta: {
+        version: HARNESS_VERSION,
+        outputMode: 'json' as const,
+        generatedAt: new Date().toISOString(),
+        durationMs: 0,
+        redacted: true,
+      },
+    };
+    process.stdout.write(JSON.stringify(envelope, null, 2) + '\n');
+  } else {
+    console.log(HARNESS_VERSION);
+  }
+  process.exit(0);
+}
 
 // ============================================================
 // Project commands
@@ -144,7 +179,7 @@ program
 program
   .command('init')
   .description('Initialize Harness OS in an existing project')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { initProject } = await import('../project/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } =
@@ -186,7 +221,7 @@ program
 program
   .command('repair')
   .description('Repair missing or invalid project structure')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { repairProject } = await import('../project/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } =
@@ -230,7 +265,7 @@ program
 program
   .command('check')
   .description('Check AGENTS.md validity')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { validateAgentsMd } = await import('../project/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable, prettyError, resetStartTime } =
@@ -254,24 +289,24 @@ program
       console.log(`Sections: ${present} present, ${missing} missing`);
 
       if (result.missingCore.length > 0) {
-        console.log(`\nBLOCKING ‚Ä?core sections missing:`);
+        console.log(`\nBLOCKING ‚Äî core sections missing:`);
         for (const s of result.missingCore) console.log(`  - ${s}`);
       }
       if (result.missingRequired.length > 0) {
-        console.log(`\nWarnings ‚Ä?non-core sections missing:`);
+        console.log(`\nWarnings ‚Äî non-core sections missing:`);
         for (const s of result.missingRequired) console.log(`  - ${s}`);
       }
     }
   });
 
 // ============================================================
-// Status command (CLI3-03: now supports --json)
+// Status command
 // ============================================================
 
 program
   .command('status')
   .description('Show current project status')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { getStatus } = await import('../runtime/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, resetStartTime } =
@@ -289,7 +324,7 @@ program
     } else {
       console.log(`\nActive sessions: ${data.activeSessions}`);
       for (const s of data.sessions) {
-        console.log(`  ${redactText(s.session_id)} ‚Ä?turns: ${s.turn_count}`);
+        console.log(`  ${redactText(s.session_id)} ‚Äî turns: ${s.turn_count}`);
       }
     }
   });
@@ -301,7 +336,7 @@ program
 program
   .command('run <task>')
   .description('Execute a task')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (task, options) => {
     const { runTask } = await import('../task/index.js');
     await runTask(task, { ...program.opts(), ...options });
@@ -310,7 +345,7 @@ program
 program
   .command('resume <run-id>')
   .description('Resume a paused or interrupted run')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (runId, options) => {
     const { resumeRun } = await import('../task/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
@@ -348,10 +383,10 @@ program
 
 program
   .command('verify')
-  .description('Run verification pipeline (lint ‚Ü?typecheck ‚Ü?test ‚Ü?build)')
+  .description('Run verification pipeline (lint, typecheck, test, build)')
   .option('--task <task-id>', 'Task to verify')
   .option('--run <run-id>', 'Run to verify')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { runVerificationPipeline } = await import('../verification/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
@@ -362,19 +397,41 @@ program
     try {
       const pipelineResult = await runVerificationPipeline(options);
       const vResult = pipelineResult.result;
+
+      // CLI4-02: Envelope status matches verification result.
+      // "passed" => success, otherwise => failed (includes skipped/partial)
+      const isSuccess = vResult.status === 'passed';
+      const envelopeStatus = isSuccess ? 'success' : 'failed';
+
       if (mode === 'json') {
-        jsonOutput(buildJsonOutput({ command: 'verify', status: 'success', data: pipelineResult,
-          metaOverrides: { redacted: true } }));
+        jsonOutput(buildJsonOutput({
+          command: 'verify',
+          status: envelopeStatus,
+          data: {
+            status: vResult.status,
+            verificationId: pipelineResult.verificationId,
+            passed: vResult.passed,
+            failed: vResult.failed,
+            skipped: vResult.skipped,
+            total: vResult.total,
+            durationMs: vResult.durationMs,
+            reportPaths: pipelineResult.reportPaths,
+          },
+          metaOverrides: { redacted: true },
+        }));
       } else if (mode === 'quiet') {
         console.log(vResult.status);
       } else {
+        if (pipelineResult.planText) console.log('\n' + pipelineResult.planText);
+        if (pipelineResult.resultsText) console.log('\n' + pipelineResult.resultsText);
         if (vResult.status === 'passed') {
-          console.log('\n‚ú?Verification passed');
+          console.log('\nVerification passed');
         } else {
-          console.log(`\n‚ù?Verification ${vResult.status}`);
+          console.log(`\nVerification ${vResult.status}`);
         }
       }
-      if (vResult.status !== 'passed') process.exitCode = 70;
+
+      if (!isSuccess) process.exitCode = 70;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_VERIFY_FAILED', category: 'verification' as const, severity: 'error' as const,
@@ -391,13 +448,13 @@ program
   });
 
 // ============================================================
-// Report command (CLI3-03: now supports --json)
+// Report command
 // ============================================================
 
 program
   .command('report <run-id>')
   .description('Show run report')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (runId, options) => {
     const { getReport } = await import('../observability/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
@@ -447,7 +504,7 @@ program
   });
 
 // ============================================================
-// Delivery command (CLI3-03: now supports --json)
+// Delivery command
 // ============================================================
 
 program
@@ -458,7 +515,7 @@ program
   .option('--release', 'Create a release')
   .option('--deploy <env>', 'Deploy to environment')
   .option('--ver-id <ver-id>', 'Verification result ID (required)')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { runDelivery } = await import('../delivery/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, resetStartTime } = await import('./formatter.js');
@@ -501,7 +558,8 @@ program
     new Command('list')
       .description('List decisions')
       .option('-a, --active', 'Only show active (accepted) decisions')
-            .action(async (options) => {
+      .option('-j, --json', 'JSON output')
+      .action(async (options) => {
         const { listDecisions, listActiveDecisions } = await import('../decision/index.js');
         const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable } =
           await import('./formatter.js');
@@ -610,7 +668,7 @@ program
             console.log(result ? result.id : 'not_found');
           } else {
             if (result) {
-              console.log(`\nAccepted: ${result.id} ‚Ä?${result.title}`);
+              console.log(`\nAccepted: ${result.id} ‚Äî ${result.title}`);
             } else {
               console.error(`Decision not found or not in proposed state: ${id}`);
             }
@@ -653,7 +711,7 @@ program
             console.log(result ? result.id : 'not_found');
           } else {
             if (result) {
-              console.log(`\nRejected: ${result.id} ‚Ä?${result.title}`);
+              console.log(`\nRejected: ${result.id} ‚Äî ${result.title}`);
             } else {
               console.error(`Decision not found or not in proposed state: ${id}`);
             }
@@ -697,7 +755,7 @@ program
             console.log(result ? result.id : 'not_found');
           } else {
             if (result) {
-              console.log(`\nSuperseded: ${result.id} ‚Ü?${result.supersededBy}`);
+              console.log(`\nSuperseded: ${result.id} ‚Üí ${result.supersededBy}`);
             } else {
               console.error(`Decision not found: ${id}`);
             }
@@ -720,7 +778,7 @@ program
   );
 
 // ============================================================
-// Skills commands (CLI3-03: now supports --json)
+// Skills commands
 // ============================================================
 
 program
@@ -729,7 +787,8 @@ program
   .addCommand(
     new Command('list')
       .description('List available skills')
-            .action(async (options) => {
+      .option('-j, --json', 'JSON output')
+      .action(async (options) => {
         const { getSkillsList } = await import('../skills/index.js');
         const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable } =
           await import('./formatter.js');
@@ -764,7 +823,7 @@ program
   .description('Create a checkpoint capturing git and task state')
   .option('--task <task-id>', 'Task ID')
   .option('--run <run-id>', 'Run ID')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { createCheckpoint } = await import('../state/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
@@ -804,7 +863,7 @@ program
 program
   .command('rollback <checkpoint-id>')
   .description('Show checkpoint rollback information (requires separate approval)')
-    .option('-q, --quiet', 'Quiet output mode')
+  .option('-q, --quiet', 'Quiet output mode')
   .action(async (id, options) => {
     const { rollbackToCheckpoint } = await import('../state/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
@@ -853,7 +912,7 @@ program
 program
   .command('config')
   .description('Show Harness OS configuration')
-    .option('--show-source', 'Show config source for each value')
+  .option('--show-source', 'Show config source for each value')
   .action(async (options) => {
     const { loadConfig } = await import('../config/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyTable } =
@@ -901,37 +960,5 @@ program
 // ============================================================
 // Parse
 // ============================================================
-
-// Handle --version before Commander's parse (CLI3-03: --version --json works).
-// We check raw argv so --json can trigger JSON output before Commander sees --version.
-const idxVersion = process.argv.indexOf('--version');
-const idxV = process.argv.indexOf('-V');
-const idxJson = process.argv.indexOf('--json');
-const idxJ = process.argv.indexOf('-j');
-const hasVersion = idxVersion >= 0 || idxV >= 0;
-const hasJson = idxJson >= 0 || idxJ >= 0;
-
-if (hasVersion) {
-  if (hasJson) {
-    const envelope = {
-      ok: true,
-      command: 'version',
-      status: 'success' as const,
-      data: { version: HARNESS_VERSION },
-      warnings: [] as string[],
-      meta: {
-        version: HARNESS_VERSION,
-        outputMode: 'json' as const,
-        generatedAt: new Date().toISOString(),
-        durationMs: 0,
-        redacted: true,
-      },
-    };
-    process.stdout.write(JSON.stringify(envelope, null, 2) + '\n');
-  } else {
-    console.log(HARNESS_VERSION);
-  }
-  process.exit(0);
-}
 
 program.parse();

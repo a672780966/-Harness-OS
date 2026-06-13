@@ -289,7 +289,7 @@ export async function runTask(
     } else {
       prettyError('ERR_RUN_FAILED', `Run failed: ${error}`, 'Check the error and try again');
     }
-    process.exit(1);
+    process.exitCode = 1;
   }
 }
 
@@ -303,7 +303,8 @@ export async function resumeRun(runId: string): Promise<void> {
   const state = loadRunState(runId);
   if (!state) {
     console.error(`Run not found: ${runId}`);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   console.log(`\nResuming run: ${runId}`);

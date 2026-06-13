@@ -3,6 +3,9 @@
  *
  * Phase 6: Verification Pipeline — detect commands, build plan, run, report.
  *
+ * CLI4-01: Business modules return structured data.
+ * NO console.log() here — CLI layer formats and outputs.
+ *
  * Reference: 09_VERIFICATION_OBSERVABILITY.md §6-10
  */
 
@@ -29,8 +32,19 @@ export {
 } from './result.js';
 
 // ============================================================
-// CLI Entry Point
+// Structured Pipeline Result (CLI4-01)
 // ============================================================
+
+export interface VerificationPipelineResult {
+  result: RunResult;
+  verificationId: string;
+  /** Human-readable plan text (for pretty mode). */
+  planText?: string;
+  /** Human-readable results text (for pretty mode). */
+  resultsText?: string;
+  /** Paths to saved reports. */
+  reportPaths?: { mdPath: string; jsonPath: string };
+}
 
 export interface VerificationPipelineOptions {
   taskId?: string;
@@ -42,37 +56,33 @@ export interface VerificationPipelineOptions {
 /**
  * Run the full verification pipeline and return structured results.
  *
- * Returns both the RunResult and the verificationId for binding.
+ * CLI4-01: Returns data only — NO console.log() calls.
+ * CLI layer decides how to format/output.
  */
 export async function runVerificationPipeline(
   options?: VerificationPipelineOptions,
-): Promise<{ result: RunResult; verificationId: string }> {
+): Promise<VerificationPipelineResult> {
   const projectPath = options?.projectPath ?? process.cwd();
 
   // 1. Detect commands
   const commands = detectCommands(projectPath);
   if (commands.length === 0) {
-    console.log('No verification commands detected');
     return {
       result: { total: 0, passed: 0, failed: 0, skipped: 0, status: 'skipped', durationMs: 0 },
       verificationId: '',
+      planText: 'No verification commands detected',
     };
   }
 
   // 2. Build plan
   const plan = buildPlan(projectPath, commands);
-  console.log(formatPlan(plan));
-  console.log('');
+  const planText = formatPlan(plan);
 
   // 3. Run
-  console.log('Running verification...\n');
   const runResult = await runVerification(plan);
+  const resultsText = formatResults(plan.steps, runResult);
 
-  // 4. Format results
-  console.log(formatResults(plan.steps, runResult));
-
-  // 5. Save report (Markdown + structured JSON with binding info)
-  // VER4-01/VER4-04: projectId is set at generation time, not patched after.
+  // 4. Save report (Markdown + structured JSON with binding info)
   const verificationId = options?.runId ?? `ver_${Date.now().toString(36)}`;
   const report = generateReport(verificationId, plan.steps, runResult, {
     projectId: options?.projectId,
@@ -82,8 +92,11 @@ export async function runVerificationPipeline(
   });
   const paths = saveReport(report);
 
-  console.log(`\nReport saved: ${paths.mdPath}`);
-  console.log(`Structured result: ${paths.jsonPath}`);
-
-  return { result: runResult, verificationId };
+  return {
+    result: runResult,
+    verificationId,
+    planText,
+    resultsText,
+    reportPaths: paths,
+  };
 }
