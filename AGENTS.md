@@ -14,7 +14,7 @@ Harness OS is built by Codex, for Codex.
 
 ### Audit Constraints
 
-Current Phase: v1.0.0-rc.1 Thin Harness Release Candidate
+Current Phase: v1.0.0-rc.2 Thin Harness Release Candidate
 
 Do:
   Read docs before changing code.

@@ -1,6 +1,6 @@
 # Harness OS CI — Corepack + pnpm + typecheck + test + build
-# RC3-05: Uses Corepack frozen install, no npm/webpack.
-# Reference: 05_RC_TOOLCHAIN_TEST_VERSION_FIX.md §4
+# RC4-01/RC4-02: pnpm/tsup toolchain only. No npm/webpack.
+# Reference: 05_RC_CI_VERSION_CONSISTENCY_FIX.md §4
 
 name: CI
 
@@ -29,6 +29,14 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -41,5 +49,5 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Verify artifact
+      - name: Verify CLI
         run: node dist/index.js --version
