@@ -6,6 +6,13 @@
   <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="Tests">
 </p>
 
+<p align="center">
+  <a href="README.md"><strong>🇬🇧 English</strong></a> ·
+  <a href="README.zh.md"><strong>🇨🇳 中文</strong></a> ·
+  <a href="README.ja.md"><strong>🇯🇵 日本語</strong></a> ·
+  <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
+</p>
+
 <h1 align="center">Harness OS</h1>
 <p align="center"><em>Codex‑first Project Operating System — Governed, Auditable, Reproducible Agent Engineering</em></p>
 

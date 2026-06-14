@@ -6,6 +6,13 @@
   <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="测试">
 </p>
 
+<p align="center">
+  <a href="README.md"><strong>🇬🇧 English</strong></a> ·
+  <a href="README.zh.md"><strong>🇨🇳 中文</strong></a> ·
+  <a href="README.ja.md"><strong>🇯🇵 日本語</strong></a> ·
+  <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
+</p>
+
 <h1 align="center">Harness OS</h1>
 <p align="center"><em>Codex‑first 项目操作系统 — 可治理、可审计、可复现的 Agent 工程平台</em></p>
 
