@@ -741,38 +741,22 @@ decision
 
 decision
   .command('accept <decision-id>')
-  .description('Accept a proposed decision')
-  .option('-b, --by <name>', 'Who approved this decision (audit metadata)')
+  .description('Accept a proposed decision (requires a pre-approved approval)')
+  .requiredOption('-a, --approval-id <id>', 'Approval ID from a previously resolved approval')
+  .option('-b, --by <name>', 'Who approved this decision (audit metadata only, not authorization)')
   .action(async (id, options) => {
     const { acceptDecision } = await import('../decision/index.js');
-    const { submitApproval, resolveApproval } = await import('../governance/approval-gate.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
 
     try {
-      // P0-003: Create approval, resolve it, then consume via acceptDecision
-      const approvalId = `aprv_${Date.now().toString(36)}`;
-      let projectId = 'unknown';
-      try {
-        const { existsSync, readFileSync } = await import('fs');
-        const { resolve } = await import('path');
-        const mp = resolve(process.cwd(), '.project/state/manifest.json');
-        if (existsSync(mp)) projectId = JSON.parse(readFileSync(mp, 'utf-8')).projectId || 'unknown';
-      } catch {}
-      const approval = submitApproval({
-        id: approvalId,
-        action: 'accept_adr',
-        reason: `Accept ADR ${id}`,
-        riskLevel: 'medium',
-        projectId,
-        toolName: 'decision',
-        input: { action: 'accept_adr', adrId: id },
-      });
-      resolveApproval(approvalId, { approved: true, resolvedBy: options.by || 'cli-operator' });
-
-      const result = acceptDecision(process.cwd(), id, approvalId, options.by);
+      // P0-003: Consume and validate an externally-approved approval
+      // The approval must be created via `approval create-adr` and resolved beforehand.
+      // acceptDecision() internally calls consumeApproval() for single-use enforcement,
+      // and validateApprovalBinding() to verify tool/project/input match.
+      const result = acceptDecision(process.cwd(), id, options.approvalId, options.by);
       if (mode === 'json') {
         jsonOutput(
           buildJsonOutput({
@@ -873,37 +857,19 @@ decision
 
 decision
   .command('supersede <decision-id>')
-  .description('Supersede an accepted ADR')
+  .description('Supersede an accepted ADR (requires a pre-approved approval)')
+  .requiredOption('-a, --approval-id <id>', 'Approval ID from a previously resolved approval')
   .requiredOption('-b, --by <adr-id>', 'New ADR ID that supersedes this one')
   .action(async (id, options) => {
     const { supersedeDecision } = await import('../decision/index.js');
-    const { submitApproval, resolveApproval } = await import('../governance/approval-gate.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
 
     try {
-      const approvalId = `aprv_${Date.now().toString(36)}`;
-      let projectId = 'unknown';
-      try {
-        const { existsSync, readFileSync } = await import('fs');
-        const { resolve } = await import('path');
-        const mp = resolve(process.cwd(), '.project/state/manifest.json');
-        if (existsSync(mp)) projectId = JSON.parse(readFileSync(mp, 'utf-8')).projectId || 'unknown';
-      } catch {}
-      const approval = submitApproval({
-        id: approvalId,
-        action: 'supersede_adr',
-        reason: `Supersede ADR ${id} with ${options.by}`,
-        riskLevel: 'medium',
-        projectId,
-        toolName: 'decision',
-        input: { action: 'supersede_adr', adrId: id, supersededBy: options.by },
-      });
-      resolveApproval(approvalId, { approved: true, resolvedBy: 'cli-operator' });
-
-      const result = supersedeDecision(process.cwd(), id, options.by, approvalId);
+      // P0-003: Consume and validate an externally-approved approval
+      const result = supersedeDecision(process.cwd(), id, options.by, options.approvalId);
       if (mode === 'json') {
         jsonOutput(
           buildJsonOutput({
