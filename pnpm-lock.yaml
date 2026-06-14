@@ -229,6 +229,9 @@ importers:
       '@types/node':
         specifier: ^25.9.2
         version: 25.9.2
+      prettier:
+        specifier: ^3.8.4
+        version: 3.8.4
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.15)(tsx@4.22.4)(typescript@6.0.3)
@@ -1233,6 +1236,11 @@ packages:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
     deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+    hasBin: true
+
+  prettier@3.8.4:
+    resolution: {integrity: sha512-N2MylSdi48+5N/6S5j+maeHbUSIzzZ5uOcX5Hm4QpV8Dkb1HFjfAKTKX6yNPJQD9AhcT3ifHNB66tWTTJDi11Q==}
+    engines: {node: '>=14'}
     hasBin: true
 
   process-warning@5.0.0:
@@ -2245,6 +2253,8 @@ snapshots:
       simple-get: 4.0.1
       tar-fs: 2.1.4
       tunnel-agent: 0.6.0
+
+  prettier@3.8.4: {}
 
   process-warning@5.0.0: {}
 

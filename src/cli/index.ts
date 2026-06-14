@@ -65,7 +65,7 @@ if (hasVersion) {
   } else {
     console.log(HARNESS_VERSION);
   }
-  process.exit(0);
+  process.exitCode = 0;
 }
 
 // ============================================================
@@ -206,7 +206,7 @@ program
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_INIT_FAILED', category: 'project' as const, severity: 'error' as const,
-        message, recoveryHint: null as any, recoverable: true, retryable: true,
+        message, recoveryHint: null as string | null, recoverable: true, retryable: true,
         userActionRequired: false, createdAt: new Date().toISOString() };
       if (mode === 'json') {
         jsonOutput(buildJsonOutput({ command: 'init', status: 'failed', error,
@@ -250,7 +250,7 @@ program
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_REPAIR_FAILED', category: 'project' as const, severity: 'error' as const,
-        message, recoveryHint: null as any, recoverable: true, retryable: true,
+        message, recoveryHint: null as string | null, recoverable: true, retryable: true,
         userActionRequired: false, createdAt: new Date().toISOString() };
       if (mode === 'json') {
         jsonOutput(buildJsonOutput({ command: 'repair', status: 'failed', error,
@@ -289,11 +289,11 @@ program
       console.log(`Sections: ${present} present, ${missing} missing`);
 
       if (result.missingCore.length > 0) {
-        console.log(`\nBLOCKING â€” core sections missing:`);
+        console.log(`\nBLOCKING â€?core sections missing:`);
         for (const s of result.missingCore) console.log(`  - ${s}`);
       }
       if (result.missingRequired.length > 0) {
-        console.log(`\nWarnings â€” non-core sections missing:`);
+        console.log(`\nWarnings â€?non-core sections missing:`);
         for (const s of result.missingRequired) console.log(`  - ${s}`);
       }
     }
@@ -324,7 +324,7 @@ program
     } else {
       console.log(`\nActive sessions: ${data.activeSessions}`);
       for (const s of data.sessions) {
-        console.log(`  ${redactText(s.session_id)} â€” turns: ${s.turn_count}`);
+        console.log(`  ${redactText(s.session_id)} â€?turns: ${s.turn_count}`);
       }
     }
   });
@@ -435,7 +435,7 @@ program
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_VERIFY_FAILED', category: 'verification' as const, severity: 'error' as const,
-        message, recoveryHint: null as any, recoverable: true, retryable: true,
+        message, recoveryHint: null as string | null, recoverable: true, retryable: true,
         userActionRequired: false, createdAt: new Date().toISOString() };
       if (mode === 'json') {
         jsonOutput(buildJsonOutput({ command: 'verify', status: 'failed', error,
@@ -491,7 +491,7 @@ program
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_REPORT_FAILED', category: 'observability' as const, severity: 'error' as const,
-        message, recoveryHint: null as any, recoverable: true, retryable: false,
+        message, recoveryHint: null as string | null, recoverable: true, retryable: false,
         userActionRequired: true, createdAt: new Date().toISOString() };
       if (mode === 'json') {
         jsonOutput(buildJsonOutput({ command: 'report', status: 'failed', error,
@@ -633,7 +633,7 @@ program
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           const error = { code: 'ERR_PROPOSE_FAILED', category: 'decision' as const, severity: 'error' as const,
-            message, recoveryHint: null as any, recoverable: true, retryable: true,
+            message, recoveryHint: null as string | null, recoverable: true, retryable: true,
             userActionRequired: false, createdAt: new Date().toISOString() };
           if (mode === 'json') {
             jsonOutput(buildJsonOutput({ command: 'decision propose', status: 'failed', error,
@@ -668,7 +668,7 @@ program
             console.log(result ? result.id : 'not_found');
           } else {
             if (result) {
-              console.log(`\nAccepted: ${result.id} â€” ${result.title}`);
+              console.log(`\nAccepted: ${result.id} â€?${result.title}`);
             } else {
               console.error(`Decision not found or not in proposed state: ${id}`);
             }
@@ -677,7 +677,7 @@ program
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           const error = { code: 'ERR_ACCEPT_FAILED', category: 'decision' as const, severity: 'error' as const,
-            message, recoveryHint: null as any, recoverable: false, retryable: true,
+            message, recoveryHint: null as string | null, recoverable: false, retryable: true,
             userActionRequired: false, createdAt: new Date().toISOString() };
           if (mode === 'json') {
             jsonOutput(buildJsonOutput({ command: 'decision accept', status: 'failed', error,
@@ -711,7 +711,7 @@ program
             console.log(result ? result.id : 'not_found');
           } else {
             if (result) {
-              console.log(`\nRejected: ${result.id} â€” ${result.title}`);
+              console.log(`\nRejected: ${result.id} â€?${result.title}`);
             } else {
               console.error(`Decision not found or not in proposed state: ${id}`);
             }
@@ -720,7 +720,7 @@ program
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           const error = { code: 'ERR_REJECT_FAILED', category: 'decision' as const, severity: 'error' as const,
-            message, recoveryHint: null as any, recoverable: false, retryable: true,
+            message, recoveryHint: null as string | null, recoverable: false, retryable: true,
             userActionRequired: false, createdAt: new Date().toISOString() };
           if (mode === 'json') {
             jsonOutput(buildJsonOutput({ command: 'decision reject', status: 'failed', error,
@@ -755,7 +755,7 @@ program
             console.log(result ? result.id : 'not_found');
           } else {
             if (result) {
-              console.log(`\nSuperseded: ${result.id} â†’ ${result.supersededBy}`);
+              console.log(`\nSuperseded: ${result.id} â†?${result.supersededBy}`);
             } else {
               console.error(`Decision not found: ${id}`);
             }
@@ -764,7 +764,7 @@ program
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           const error = { code: 'ERR_SUPERSEDE_FAILED', category: 'decision' as const, severity: 'error' as const,
-            message, recoveryHint: null as any, recoverable: false, retryable: true,
+            message, recoveryHint: null as string | null, recoverable: false, retryable: true,
             userActionRequired: false, createdAt: new Date().toISOString() };
           if (mode === 'json') {
             jsonOutput(buildJsonOutput({ command: 'decision supersede', status: 'failed', error,
@@ -848,7 +848,7 @@ program
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const error = { code: 'ERR_CHECKPOINT_FAILED', category: 'state' as const, severity: 'error' as const,
-        message, recoveryHint: null as any, recoverable: true, retryable: true,
+        message, recoveryHint: null as string | null, recoverable: true, retryable: true,
         userActionRequired: false, createdAt: new Date().toISOString() };
       if (mode === 'json') {
         jsonOutput(buildJsonOutput({ command: 'checkpoint', status: 'failed', error,

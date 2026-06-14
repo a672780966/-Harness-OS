@@ -127,7 +127,7 @@ export function prettySuccess(title: string, details: Record<string, string>, ne
  * Format error output in pretty mode.
  * Output goes to stderr.
  */
-export function prettyError(code: string, title: string, recovery?: string, details?: string): void {
+export function prettyError(code: string, title: string, recovery?: string | null, details?: string): void {
   const lines: string[] = [
     `Error: ${code}`,
     '',

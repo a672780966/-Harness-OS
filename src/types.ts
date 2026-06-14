@@ -34,7 +34,7 @@ export interface HarnessError {
   category: string;
   severity: ErrorSeverity;
   message: string;
-  recoveryHint: string;
+  recoveryHint: string | null;
   recoverable: boolean;
   retryable: boolean;
   userActionRequired: boolean;
@@ -47,7 +47,7 @@ export function createError(
   category: string,
   severity: ErrorSeverity,
   message: string,
-  recoveryHint: string,
+  recoveryHint: string | null,
   recoverable = true,
   retryable = false
 ): HarnessError {

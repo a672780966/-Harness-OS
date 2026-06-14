@@ -265,13 +265,13 @@ function readEnvVars(): Partial<HarnessConfig> {
 
   // CLI
   if (process.env.HARNESS_OUTPUT_MODE) {
-    config.cli = { ...config.cli, defaultOutputMode: process.env.HARNESS_OUTPUT_MODE as any };
+    config.cli = { ...config.cli, defaultOutputMode: process.env.HARNESS_OUTPUT_MODE as 'pretty' | 'json' | 'quiet' };
   }
   if (process.env.HARNESS_NON_INTERACTIVE) {
     config.runtime = { ...config.runtime, nonInteractive: true };
   }
   if (process.env.HARNESS_LOG_LEVEL) {
-    config.runtime = { ...config.runtime, logLevel: process.env.HARNESS_LOG_LEVEL as any };
+    config.runtime = { ...config.runtime, logLevel: process.env.HARNESS_LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error' };
   }
   if (process.env.NO_COLOR || process.env.HARNESS_NO_COLOR) {
     config.cli = { ...config.cli, colorEnabled: false };
@@ -308,7 +308,7 @@ function mergeConfig(
   warnings: string[],
   fieldSources: ConfigFieldSource[],
 ): HarnessConfig {
-  const result: Record<string, unknown> = { ...base as any };
+  const result: Record<string, unknown> = { ...base as unknown as Record<string, unknown> };
 
   // Walk safety fields first for type-specific enforcement
   for (const def of SAFETY_FIELDS) {
@@ -351,9 +351,9 @@ function mergeConfig(
 
     if (key === 'cli' || key === 'runtime' || key === 'project' || key === 'skills' ||
         key === 'verification' || key === 'observability' || key === 'delivery') {
-      const baseVal = (result as any)[key] || {};
+      const baseVal = result[key] || {};
       const overrideVal = ov || {};
-      (result as any)[key] = Object.assign({}, baseVal, overrideVal);
+      result[key] = Object.assign({}, baseVal, overrideVal);
     }
   }
 

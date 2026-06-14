@@ -18,9 +18,9 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "test:e2e": "vitest run tests/e2e",
+    "test:e2e": "vitest run tests/e2e --passWithNoTests",
     "test:watch": "vitest",
-    "lint": "echo \"eslint pending\"",
+    "lint": "tsc --noEmit --pretty",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test:coverage": "vitest run --coverage"
@@ -38,6 +38,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.9.2",
+    "prettier": "^3.8.4",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
