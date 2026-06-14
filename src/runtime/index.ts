@@ -65,25 +65,27 @@ export async function getStatus(): Promise<StatusData> {
   };
 }
 
+import { redactText } from '../governance/redactor.js';
+
 /**
  * Legacy CLI helper. Prefer getStatus() + formatter for JSON mode.
  */
 export async function showStatus(): Promise<void> {
   const data = await getStatus();
-  console.log(`Active sessions: ${data.activeSessions}`);
+  console.log(redactText(`Active sessions: ${data.activeSessions}`));
   for (const s of data.sessions) {
-    console.log(`  ${s.session_id} — turns: ${s.turn_count}`);
+    console.log(redactText(`  ${s.session_id} — turns: ${s.turn_count}`));
   }
 }
 
 export async function showConfig(options?: { json?: boolean }): Promise<void> {
   const { HARNESS_VERSION } = await import('../version.js');
   if (options?.json) {
-    console.log(JSON.stringify({ runtime: 'thin-harness', version: HARNESS_VERSION }, null, 2));
+    console.log(redactText(JSON.stringify({ runtime: 'thin-harness', version: HARNESS_VERSION }, null, 2)));
   } else {
-    console.log('Harness OS Runtime — Thin Harness');
-    console.log('Session store: in-memory');
-    console.log('Policy engine: built-in rules');
-    console.log('Approval gate: in-memory (TTL: 5 min)');
+    console.log(redactText('Harness OS Runtime — Thin Harness'));
+    console.log(redactText('Session store: in-memory'));
+    console.log(redactText('Policy engine: built-in rules'));
+    console.log(redactText('Approval gate: in-memory (TTL: 5 min)'));
   }
 }

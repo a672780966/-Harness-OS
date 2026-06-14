@@ -52,6 +52,8 @@ export {
   type UpdateTaskParams,
 } from './complete.js';
 
+import { redactText } from '../governance/redactor.js';
+
 // ============================================================
 // CLI Entry Point — Full Run Pipeline
 // ============================================================
@@ -303,17 +305,24 @@ export async function resumeRun(runId: string): Promise<void> {
 
   const state = loadRunState(runId);
   if (!state) {
-    console.error(`Run not found: ${runId}`);
-    process.exitCode = 1;
-    return;
+    throw new Error(`Run not found: ${runId}`);
   }
 
-  console.log(`\nResuming run: ${runId}`);
-  console.log(`Task: ${state.taskId}`);
-  console.log(`Status: ${state.status}`);
-  console.log(`Checkpoints: ${state.checkpointIds.length}`);
+  console.log(redactText(`\nResuming run: ${runId}`));
+  console.log(redactText(`Task: ${state.taskId}`));
+  console.log(redactText(`Status: ${state.status}`));
+  console.log(redactText(`Checkpoints: ${state.checkpointIds.length}`));
   if (state.currentCheckpointId) {
-    console.log(`Last checkpoint: ${state.currentCheckpointId}`);
+    console.log(redactText(`Last checkpoint: ${state.currentCheckpointId}`));
   }
-  // TODO: Restore checkpoint and continue execution
+  // TODO: Implement actual checkpoint restoration and execution continuation.
+  // The run state has checkpointIds[] for history-based recovery. The current
+  // checkpoint (currentCheckpointId) stores the last known good state.
+  // Restoration should:
+  //   1. Load the last checkpoint's saved state
+  //   2. Rebuild the Context Pack from checkpoint metadata
+  //   3. Re-attach the trace and observability events
+  //   4. Continue model invocation from the checkpoint's turn offset
+  console.log(redactText('\n⚠️  Resume is a stub — checkpoint restoration not yet implemented.'));
+  console.log(redactText('   No execution will be continued.'));
 }

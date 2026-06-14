@@ -25,6 +25,7 @@ export { generateDeliveryReport, saveDeliveryReport, type DeliveryReport, type D
 // ============================================================
 
 import type { DeliveryType } from './report.js';
+import { redactText } from '../governance/redactor.js';
 
 export interface DeliveryResult {
   deliveryId: string;
@@ -83,7 +84,7 @@ export async function runDelivery(options?: {
 
   // Format guard output
   if (outputMode !== 'json') {
-    console.log(formatGuardResult(guard));
+    console.log(redactText(formatGuardResult(guard)));
     console.log('');
   }
 
@@ -103,9 +104,9 @@ export async function runDelivery(options?: {
     const reportPath = saveDeliveryReport(report, projectPath);
 
     if (outputMode !== 'json') {
-      console.log(`Blocked delivery report saved: ${reportPath}`);
-      console.log('\n❌ Delivery blocked by guard checks.');
-      console.log('No commit message or PR body generated. [VER3-05]');
+      console.log(redactText(`Blocked delivery report saved: ${reportPath}`));
+      console.log(redactText('\n❌ Delivery blocked by guard checks.'));
+      console.log(redactText('No commit message or PR body generated. [VER3-05]'));
     }
 
     // In JSON mode, return the result (CLI layer outputs the envelope)
@@ -119,7 +120,6 @@ export async function runDelivery(options?: {
       };
     }
 
-    process.exitCode = 1;
     return {
       deliveryId,
       type: deliveryType,
@@ -139,9 +139,9 @@ export async function runDelivery(options?: {
   });
 
   if (outputMode !== 'json') {
-    console.log('Generated commit message:');
+    console.log(redactText('Generated commit message:'));
     console.log('---');
-    console.log(commitMsg.full);
+    console.log(redactText(commitMsg.full));
     console.log('---\n');
   }
 
@@ -156,9 +156,9 @@ export async function runDelivery(options?: {
       changedFiles: options?.changedFiles,
     });
     if (outputMode !== 'json') {
-      console.log('Generated PR body:');
+      console.log(redactText('Generated PR body:'));
       console.log('---');
-      console.log(prBody.body);
+      console.log(redactText(prBody.body));
       console.log('---\n');
     }
   }
@@ -180,8 +180,8 @@ export async function runDelivery(options?: {
   const reportPath = saveDeliveryReport(report, projectPath);
 
   if (outputMode !== 'json') {
-    console.log(`Delivery report saved: ${reportPath}`);
-    console.log('\n✅ Delivery guard passed. Ready to proceed.');
+    console.log(redactText(`Delivery report saved: ${reportPath}`));
+    console.log(redactText('\n✅ Delivery guard passed. Ready to proceed.'));
   }
 
   return {

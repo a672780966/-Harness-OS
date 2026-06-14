@@ -78,6 +78,8 @@ export async function getReport(runId: string): Promise<ReportData> {
   };
 }
 
+import { redactText } from '../governance/redactor.js';
+
 /**
  * Legacy CLI helper. Prefer getReport() + formatter for JSON mode.
  */
@@ -85,19 +87,19 @@ export async function showReport(runId: string): Promise<void> {
   const data = await getReport(runId);
 
   if (data.trace) {
-    console.log(`\nRun: ${data.runId}`);
-    console.log(`Status: ${data.trace.status}`);
-    console.log(`Started: ${data.trace.startedAt}`);
-    console.log(`Tool calls: ${data.trace.toolCallCount}`);
-    console.log(`Context packs: ${data.trace.contextPackCount}`);
-    console.log(`Checkpoints: ${data.trace.checkpointCount}`);
-    if (data.trace.endedAt) console.log(`Ended: ${data.trace.endedAt}`);
+    console.log(redactText(`\nRun: ${data.runId}`));
+    console.log(redactText(`Status: ${data.trace.status}`));
+    console.log(redactText(`Started: ${data.trace.startedAt}`));
+    console.log(redactText(`Tool calls: ${data.trace.toolCallCount}`));
+    console.log(redactText(`Context packs: ${data.trace.contextPackCount}`));
+    console.log(redactText(`Checkpoints: ${data.trace.checkpointCount}`));
+    if (data.trace.endedAt) console.log(redactText(`Ended: ${data.trace.endedAt}`));
     console.log('');
   }
 
   if (data.report) {
-    console.log(data.report);
+    console.log(redactText(data.report));
   } else {
-    console.log(`No run report found for: ${runId}`);
+    console.log(redactText(`No run report found for: ${runId}`));
   }
 }

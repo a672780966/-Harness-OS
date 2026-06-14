@@ -23,6 +23,7 @@ import {
   type PolicyCheckResult,
   type SessionId,
   type ToolCallTrace,
+  type TraceId,
   type TurnId,
 } from '../types.js';
 import {
@@ -87,7 +88,7 @@ function buildTrace(params: {
     permission_decision: params.permissionDecision,
     reason: params.reason,
     timestamp: new Date().toISOString(),
-    trace_id: `trc_${Date.now().toString(36)}_${counter.toString(36).padStart(4, '0')}` as any,
+    trace_id: `trc_${Date.now().toString(36)}_${counter.toString(36).padStart(4, '0')}` as TraceId,
   };
 }
 

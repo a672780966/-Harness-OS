@@ -12,6 +12,7 @@ export type { SkillManifest, SkillToolManifest, SkillCategory, SkillPermission }
 export type { SkillExecutionContext, SkillExecutionResult, SkillExecutor } from './executor.js';
 
 import registry from './registry.js';
+import { redactText } from '../governance/redactor.js';
 
 // ============================================================
 // Structured skill data (CLI3-01)
@@ -50,12 +51,12 @@ export async function getSkillsList(): Promise<{ count: number; skills: SkillLis
  */
 export async function listSkills(): Promise<void> {
   const data = await getSkillsList();
-  console.log(`\nRegistered skills: ${data.count}\n`);
+  console.log(redactText(`\nRegistered skills: ${data.count}\n`));
   for (const skill of data.skills) {
     const tools = skill.tools.join(', ');
-    console.log(`  ${skill.name} (${skill.category})`);
-    console.log(`    ${skill.description}`);
-    console.log(`    Risk: ${skill.riskLevel} | Enabled: ${skill.defaultEnabled} | Tools: ${tools}`);
+    console.log(redactText(`  ${skill.name} (${skill.category})`));
+    console.log(redactText(`    ${skill.description}`));
+    console.log(redactText(`    Risk: ${skill.riskLevel} | Enabled: ${skill.defaultEnabled} | Tools: ${tools}`));
     console.log();
   }
 }

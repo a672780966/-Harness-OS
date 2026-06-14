@@ -1,5 +1,5 @@
 /**
- * Harness OS — Config Loader
+ * Harness OS �?Config Loader
  *
  * Layered configuration loading with merge priority and safety field enforcement.
  *
@@ -74,7 +74,7 @@ function getProjectManifestPath(projectPath?: string): string | undefined {
 // Deep get/set helpers for dotted paths
 // ============================================================
 
-function getFieldAtPath(obj: Record<string, unknown>, path: string): unknown {
+function getFieldAtPath(obj: unknown, path: string): unknown {
   const parts = path.split('.');
   let current: unknown = obj;
   for (const part of parts) {
@@ -84,9 +84,9 @@ function getFieldAtPath(obj: Record<string, unknown>, path: string): unknown {
   return current;
 }
 
-function setFieldAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+function setFieldAtPath(obj: unknown, path: string, value: unknown): void {
   const parts = path.split('.');
-  let current = obj;
+  let current = obj as Record<string, unknown>;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
     if (!current[part] || typeof current[part] !== 'object') {
@@ -97,9 +97,9 @@ function setFieldAtPath(obj: Record<string, unknown>, path: string, value: unkno
   current[parts[parts.length - 1]] = value;
 }
 
-function deleteFieldAtPath(obj: Record<string, unknown>, path: string): void {
+function deleteFieldAtPath(obj: unknown, path: string): void {
   const parts = path.split('.');
-  let current = obj;
+  let current = obj as Record<string, unknown>;
   for (let i = 0; i < parts.length - 1; i++) {
     if (!current[parts[i]] || typeof current[parts[i]] !== 'object') return;
     current = current[parts[i]] as Record<string, unknown>;
@@ -125,24 +125,24 @@ function checkSafetyOverride(
 
   // CFG-08: Immutable fields cannot be changed at all
   if (def.immutable) {
-    return `Cannot change immutable field "${def.path}" — ${def.description ?? 'no override allowed'}`;
+    return `Cannot change immutable field "${def.path}" �?${def.description ?? 'no override allowed'}`;
   }
 
   switch (def.type) {
     case 'boolean': {
       // true = tight, false = loose.
-      // Override from true→false is weakening → reject (CFG-02)
+      // Override from true→false is weakening �?reject (CFG-02)
       if (currentValue === true && newValue === false) {
-        return `Cannot weaken "${def.path}" from true to false — ${def.description ?? 'approval requirement cannot be disabled'}`;
+        return `Cannot weaken "${def.path}" from true to false �?${def.description ?? 'approval requirement cannot be disabled'}`;
       }
       return null;
     }
 
     case 'boolean-allow': {
       // false = tight, true = loose.
-      // Override from false→true is weakening → reject (CFG-02)
+      // Override from false→true is weakening �?reject (CFG-02)
       if (currentValue === false && newValue === true) {
-        return `Cannot weaken "${def.path}" from false to true — ${def.description ?? 'allow setting cannot be enabled'}`;
+        return `Cannot weaken "${def.path}" from false to true �?${def.description ?? 'allow setting cannot be enabled'}`;
       }
       return null;
     }
@@ -150,14 +150,14 @@ function checkSafetyOverride(
     case 'enum': {
       // Validate against known values (CFG-03)
       if (def.validValues && !def.validValues.includes(String(newValue))) {
-        return `Invalid value "${String(newValue)}" for "${def.path}" — must be one of: ${def.validValues.join(', ')}`;
+        return `Invalid value "${String(newValue)}" for "${def.path}" �?must be one of: ${def.validValues.join(', ')}`;
       }
       // For enum with known tighten direction:
-      // "allowed" → "restricted" is tightening (ok)
-      // "restricted" → "allowed" is weakening (reject)
+      // "allowed" �?"restricted" is tightening (ok)
+      // "restricted" �?"allowed" is weakening (reject)
       if (def.path === 'governance.defaultNetwork') {
         if (currentValue === 'restricted' && newValue === 'allowed') {
-          return `Cannot weaken "${def.path}" from "restricted" to "allowed" — network restriction cannot be disabled`;
+          return `Cannot weaken "${def.path}" from "restricted" to "allowed" �?network restriction cannot be disabled`;
         }
       }
       return null;
@@ -168,10 +168,10 @@ function checkSafetyOverride(
       // The override is treated as additions to the current list.
       // Only reject if override is an explicit attempt to clear.
       if (!Array.isArray(currentValue) || !Array.isArray(newValue)) {
-        return `Cannot replace "${def.path}" — array fields use union merge (append only)`;
+        return `Cannot replace "${def.path}" �?array fields use union merge (append only)`;
       }
       if (newValue.length === 0) {
-        return `Cannot clear "${def.path}" — array fields use union merge (append only)`;
+        return `Cannot clear "${def.path}" �?array fields use union merge (append only)`;
       }
       return null;
     }
@@ -294,8 +294,8 @@ function readEnvVars(): Partial<HarnessConfig> {
  * For each safety field present in the override:
  *   1. Look up its SafetyFieldDef from the registry
  *   2. Check if the override attempts to weaken the field
- *   3. If weakening → reject with warning, keep current value
- *   4. If valid → apply (with union merge for arrays)
+ *   3. If weakening �?reject with warning, keep current value
+ *   4. If valid �?apply (with union merge for arrays)
  *   5. Track field-level source for auditability (CFG-07)
  *
  * For non-safety fields, fall through to shallow merge (original behavior).
@@ -312,8 +312,8 @@ function mergeConfig(
 
   // Walk safety fields first for type-specific enforcement
   for (const def of SAFETY_FIELDS) {
-    const currentValue = getFieldAtPath(base as any, def.path);
-    const overrideValue = getFieldAtPath(override as any, def.path);
+    const currentValue = getFieldAtPath(base, def.path);
+    const overrideValue = getFieldAtPath(override, def.path);
 
     if (overrideValue === undefined) continue; // not in override
 
@@ -341,7 +341,7 @@ function mergeConfig(
 
     // Remove processed safety fields from override so they don't
     // get double-processed by the shallow merge fallback below.
-    deleteFieldAtPath(override as any, def.path);
+    deleteFieldAtPath(override, def.path);
   }
 
   // For remaining non-safety fields: shallow merge (original behavior)
@@ -374,20 +374,20 @@ function validateConfig(config: HarnessConfig): ConfigValidation {
   // Validate enum fields against allowed values
   const enumFields = SAFETY_FIELDS.filter(f => f.type === 'enum');
   for (const def of enumFields) {
-    const value = getFieldAtPath(config as any, def.path);
+    const value = getFieldAtPath(config, def.path);
     if (value !== undefined && def.validValues && !def.validValues.includes(String(value))) {
-      errors.push(`Config validation: "${def.path}" has invalid value "${String(value)}" — must be one of: ${def.validValues.join(', ')}`);
+      errors.push(`Config validation: "${def.path}" has invalid value "${String(value)}" �?must be one of: ${def.validValues.join(', ')}`);
     }
   }
 
   // Validate dangerousCommands is always an array
-  const dangerous = getFieldAtPath(config as any, 'governance.dangerousCommands');
+  const dangerous = getFieldAtPath(config, 'governance.dangerousCommands');
   if (dangerous !== undefined && !Array.isArray(dangerous)) {
     errors.push('Config validation: "governance.dangerousCommands" must be an array');
   }
 
   // Validate protectedBranches contains main or master
-  const branches = getFieldAtPath(config as any, 'project.protectedBranches') as string[] | undefined;
+  const branches = getFieldAtPath(config, 'project.protectedBranches') as string[] | undefined;
   if (Array.isArray(branches) && !branches.some(b => b === 'main' || b === 'master')) {
     errors.push('Config validation: "project.protectedBranches" must include "main" or "master"');
   }
@@ -416,13 +416,13 @@ export function loadConfig(
   const sources: ConfigSource[] = [];
   const fieldSources: ConfigFieldSource[] = [];
 
-  // 1. Default config — all field sources start as "default"
+  // 1. Default config �?all field sources start as "default"
   sources.push({ path: '(defaults)', scope: 'default', valid: true });
   let config = { ...DEFAULT_CONFIG };
 
   // Record default values for safety fields
   for (const def of SAFETY_FIELDS) {
-    const val = getFieldAtPath(config as any, def.path);
+    const val = getFieldAtPath(config, def.path);
     fieldSources.push({
       path: def.path,
       value: val,
@@ -493,11 +493,10 @@ export function getConfigValue<T>(
   }
 
   const parts = path.split('.');
-  let current: any = config;
+  let current: unknown = config;
   for (const part of parts) {
     if (current === undefined || current === null) return defaultValue;
-    current = current[part];
+    current = (current as Record<string, unknown>)[part];
   }
-
-  return current ?? defaultValue;
+  return (current ?? defaultValue) as T | undefined;
 }

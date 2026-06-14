@@ -186,7 +186,7 @@ export async function completeTask(
     status: 'passed',
     reportPath: verResult.reportPath,
     id: params.verificationId,
-  } as any;
+  };
   state.risks = params.risks ?? state.risks;
   state.updatedAt = new Date().toISOString();
 
@@ -305,7 +305,7 @@ export async function failTask(
     status: effectiveVerStatus,
     reportPath: verReportPath,
     id: params.verificationId,
-  } as any;
+  };
   state.risks = params.risks ?? state.risks;
   state.updatedAt = new Date().toISOString();
 
