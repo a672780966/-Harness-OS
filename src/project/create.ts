@@ -25,34 +25,11 @@ import { join, resolve } from 'path';
 import { simpleGit } from 'simple-git';
 import { type ProjectManifest } from '../types.js';
 import { HARNESS_VERSION } from '../version.js';
+import { readAgentsMdTemplate } from './template-loader.js';
 
 // ============================================================
 // Constants
 // ============================================================
-
-/**
- * Find the templates directory regardless of runtime (source vs dist).
- *
- * When running via tsx (source):     import.meta.dirname = src/project/ → ../../templates
- * When running via node (built dist): import.meta.dirname = dist/       → ../templates
- */
-function findTemplatesDir(): string {
-  const candidates = [
-    resolve(import.meta.dirname, '../../templates'), // source:   src/project/../../templates
-    resolve(import.meta.dirname, '../templates'), // built:    dist/../templates
-    resolve(process.cwd(), 'templates'), // fallback: cwd/templates
-  ];
-  for (const dir of candidates) {
-    if (existsSync(dir)) return dir;
-  }
-  throw new Error(
-    `AGENTS.md template not found. Tried:\n  ${candidates.join('\n  ')}\n` +
-      `Ensure templates/ directory exists in the package root.`,
-  );
-}
-
-const TEMPLATES_DIR = findTemplatesDir();
-const AGENTS_MD_TEMPLATE_PATH = join(TEMPLATES_DIR, 'AGENTS.md');
 
 const PROJECT_DIRS = [
   '.project/state',
@@ -103,13 +80,6 @@ coverage/
 // ============================================================
 // Template Helpers
 // ============================================================
-
-function readAgentsMdTemplate(): string {
-  if (!existsSync(AGENTS_MD_TEMPLATE_PATH)) {
-    throw new Error(`AGENTS.md template not found at ${AGENTS_MD_TEMPLATE_PATH}`);
-  }
-  return readFileSync(AGENTS_MD_TEMPLATE_PATH, 'utf-8');
-}
 
 function fillTemplate(template: string, vars: Record<string, string>): string {
   let result = template;

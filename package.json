@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/cli/index.ts --format esm --dts --clean --out-dir dist",
+    "build": "tsup src/cli/index.ts --format esm --dts --clean --out-dir dist && node -e \"require('fs').cpSync('templates','dist/templates',{recursive:true})\"",
     "dev": "tsx src/cli/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

@@ -29,6 +29,7 @@ import { simpleGit } from 'simple-git';
 import type { ProjectManifest } from '../types.js';
 import { detectTechStack, buildRepositoryMap } from './create.js';
 import { HARNESS_VERSION } from '../version.js';
+import { readAgentsMdTemplate } from './template-loader.js';
 
 // ============================================================
 // Required sections in AGENTS.md
@@ -87,14 +88,6 @@ export interface RepairResult {
 // ============================================================
 // Helpers
 // ============================================================
-
-function readAgentsMdTemplate(): string {
-  const templatePath = resolve(import.meta.dirname, '../../templates/AGENTS.md');
-  if (!existsSync(templatePath)) {
-    throw new Error(`AGENTS.md template not found at ${templatePath}`);
-  }
-  return readFileSync(templatePath, 'utf-8');
-}
 
 function fillTemplate(template: string, vars: Record<string, string>): string {
   let result = template;
