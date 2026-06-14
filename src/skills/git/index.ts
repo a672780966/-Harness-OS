@@ -1,6 +1,12 @@
 import { SkillManifest } from '../../types.js';
 import { simpleGit } from 'simple-git';
-import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult, blockedResult } from '../executor.js';
+import {
+  type SkillExecutionContext,
+  type SkillExecutionResult,
+  successResult,
+  failedResult,
+  blockedResult,
+} from '../executor.js';
 import { type SkillRegistry } from '../registry.js';
 
 export const manifest: SkillManifest = {
@@ -15,15 +21,72 @@ export const manifest: SkillManifest = {
   docPath: 'src/skills/git/SKILL.md',
   permissions: [{ type: 'git-config', description: 'Read and modify git state' }],
   tools: [
-    { name: 'git_status', description: 'Show working tree status', inputSchema: { type: 'object', properties: {}, required: [] }, outputSchema: { type: 'object', properties: { branch: { type: 'string' }, files: { type: 'array', items: { type: 'string' } }, hasChanges: { type: 'boolean' } } }, riskLevel: 'low', requiresApproval: false, timeoutMs: 10000 },
-    { name: 'git_diff', description: 'Show changes', inputSchema: { type: 'object', properties: { path: { type: 'string' }, staged: { type: 'boolean' } }, required: [] }, outputSchema: { type: 'object', properties: { diff: { type: 'string' }, files: { type: 'array', items: { type: 'string' } } } }, riskLevel: 'low', requiresApproval: false, timeoutMs: 10000 },
-    { name: 'git_commit', description: 'Create a commit', inputSchema: { type: 'object', properties: { message: { type: 'string' } }, required: ['message'] }, outputSchema: { type: 'object', properties: { hash: { type: 'string' }, message: { type: 'string' } } }, riskLevel: 'medium', requiresApproval: false, timeoutMs: 10000 },
-    { name: 'git_push', description: 'Push to remote (requires approval)', inputSchema: { type: 'object', properties: { remote: { type: 'string' }, branch: { type: 'string' } }, required: [] }, outputSchema: { type: 'object', properties: { remote: { type: 'string' }, branch: { type: 'string' }, success: { type: 'boolean' } } }, riskLevel: 'high', requiresApproval: true, timeoutMs: 30000 },
+    {
+      name: 'git_status',
+      description: 'Show working tree status',
+      inputSchema: { type: 'object', properties: {}, required: [] },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          branch: { type: 'string' },
+          files: { type: 'array', items: { type: 'string' } },
+          hasChanges: { type: 'boolean' },
+        },
+      },
+      riskLevel: 'low',
+      requiresApproval: false,
+      timeoutMs: 10000,
+    },
+    {
+      name: 'git_diff',
+      description: 'Show changes',
+      inputSchema: {
+        type: 'object',
+        properties: { path: { type: 'string' }, staged: { type: 'boolean' } },
+        required: [],
+      },
+      outputSchema: {
+        type: 'object',
+        properties: { diff: { type: 'string' }, files: { type: 'array', items: { type: 'string' } } },
+      },
+      riskLevel: 'low',
+      requiresApproval: false,
+      timeoutMs: 10000,
+    },
+    {
+      name: 'git_commit',
+      description: 'Create a commit',
+      inputSchema: { type: 'object', properties: { message: { type: 'string' } }, required: ['message'] },
+      outputSchema: { type: 'object', properties: { hash: { type: 'string' }, message: { type: 'string' } } },
+      riskLevel: 'medium',
+      requiresApproval: false,
+      timeoutMs: 10000,
+    },
+    {
+      name: 'git_push',
+      description: 'Push to remote (requires approval)',
+      inputSchema: {
+        type: 'object',
+        properties: { remote: { type: 'string' }, branch: { type: 'string' } },
+        required: [],
+      },
+      outputSchema: {
+        type: 'object',
+        properties: { remote: { type: 'string' }, branch: { type: 'string' }, success: { type: 'boolean' } },
+      },
+      riskLevel: 'high',
+      requiresApproval: true,
+      timeoutMs: 30000,
+    },
   ],
 };
 
 // GOV4-01: _execute is NOT exported from barrel.
-async function _execute(toolName: string, input: Record<string, unknown>, context: SkillExecutionContext): Promise<SkillExecutionResult> {
+async function _execute(
+  toolName: string,
+  input: Record<string, unknown>,
+  context: SkillExecutionContext,
+): Promise<SkillExecutionResult> {
   const start = Date.now();
   const git = simpleGit(context.projectPath);
 
@@ -32,10 +95,13 @@ async function _execute(toolName: string, input: Record<string, unknown>, contex
       case 'git_status': {
         const status = await git.status();
         const branch = await git.branch();
-        return successResult('git', toolName,
-          { branch: branch.current, files: status.files.map(f => f.path), hasChanges: status.files.length > 0 },
+        return successResult(
+          'git',
+          toolName,
+          { branch: branch.current, files: status.files.map((f) => f.path), hasChanges: status.files.length > 0 },
           `Branch: ${branch.current}, ${status.files.length} file(s) changed`,
-          Date.now() - start);
+          Date.now() - start,
+        );
       }
       case 'git_diff': {
         const opts: string[] = [];
@@ -43,18 +109,24 @@ async function _execute(toolName: string, input: Record<string, unknown>, contex
         if (input.path) opts.push('--', String(input.path));
         const diff = await git.diff(opts);
         const status = await git.status();
-        return successResult('git', toolName,
-          { diff: diff.slice(0, 10000), files: status.files.map(f => f.path) },
+        return successResult(
+          'git',
+          toolName,
+          { diff: diff.slice(0, 10000), files: status.files.map((f) => f.path) },
           `Diff: ${diff.length} chars`,
-          Date.now() - start);
+          Date.now() - start,
+        );
       }
       case 'git_commit': {
         const message = String(input.message ?? 'commit');
         const result = await git.commit(message);
-        return successResult('git', toolName,
+        return successResult(
+          'git',
+          toolName,
           { hash: result.commit || 'unknown', message },
           `Committed: ${(result.commit || '').slice(0, 8)}`,
-          Date.now() - start);
+          Date.now() - start,
+        );
       }
       case 'git_push':
         return blockedResult('git', toolName, 'git_push requires human approval', Date.now() - start);

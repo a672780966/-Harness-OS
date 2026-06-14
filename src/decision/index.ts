@@ -12,13 +12,21 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { safeWriteJson, redactText } from '../governance/redactor.js';
+import { consumeApproval, validateApprovalBinding, type PendingApproval } from '../governance/approval-gate.js';
 
 // ============================================================
 // Types
 // ============================================================
 
 export type DecisionStatus = 'proposed' | 'accepted' | 'rejected' | 'superseded';
-export type DecisionType = 'architecture' | 'product' | 'technology' | 'security' | 'delivery' | 'governance' | 'process';
+export type DecisionType =
+  | 'architecture'
+  | 'product'
+  | 'technology'
+  | 'security'
+  | 'delivery'
+  | 'governance'
+  | 'process';
 
 export interface DecisionState {
   id: string;
@@ -51,6 +59,19 @@ function getDecisionsDir(projectPath: string): string {
   return dir;
 }
 
+function getProjectId(projectPath: string): string {
+  try {
+    const manifestPath = resolve(projectPath, '.project/state/manifest.json');
+    if (existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+      return manifest.projectId || 'unknown';
+    }
+  } catch {
+    /* fall through */
+  }
+  return 'unknown';
+}
+
 function getNextNumber(dir: string): number {
   if (!existsSync(dir)) return 1;
   let max = 0;
@@ -61,8 +82,16 @@ function getNextNumber(dir: string): number {
   return max + 1;
 }
 
-function fmtId(n: number): string { return `ADR-${String(n).padStart(4, '0')}`; }
-function fmtFile(title: string): string { return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60); }
+function fmtId(n: number): string {
+  return `ADR-${String(n).padStart(4, '0')}`;
+}
+function fmtFile(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+}
 
 // ============================================================
 // CRUD
@@ -88,10 +117,19 @@ export function proposeDecision(params: {
   const now = new Date().toISOString();
 
   const state: DecisionState = {
-    id, number: num, title: params.title, status: 'proposed', type: params.type,
-    summary: params.summary, context: params.context, decision: params.decision,
-    consequences: params.consequences ?? [], risks: params.risks ?? [],
-    supersedes: params.supersedes, createdAt: now, updatedAt: now,
+    id,
+    number: num,
+    title: params.title,
+    status: 'proposed',
+    type: params.type,
+    summary: params.summary,
+    context: params.context,
+    decision: params.decision,
+    consequences: params.consequences ?? [],
+    risks: params.risks ?? [],
+    supersedes: params.supersedes,
+    createdAt: now,
+    updatedAt: now,
   };
 
   // Update superseded ADR if applicable
@@ -114,8 +152,39 @@ export function proposeDecision(params: {
 
 /**
  * Accept a proposed ADR.
+ * Requires a valid, approved, unconsumed approval binding (GOV3-03/P0-003).
+ *
+ * @param projectPath - The project path
+ * @param adrId - The ADR ID to accept
+ * @param approvalId - The approval ID from the approval gate
+ * @param approvedBy - Audit metadata only (not authorization)
+ * @returns The updated DecisionState, or undefined if failed
  */
-export function acceptDecision(projectPath: string, adrId: string, approvedBy?: string): DecisionState | undefined {
+export function acceptDecision(
+  projectPath: string,
+  adrId: string,
+  approvalId: string,
+  approvedBy?: string,
+): DecisionState | undefined {
+  // GOV3-03/P0-003: Validate and consume the approval
+  const approval = consumeApproval(approvalId);
+  if (!approval) {
+    throw new Error(
+      `Cannot accept ADR ${adrId}: approval "${approvalId}" is missing, already consumed, expired, or not approved. ` +
+        `[P0-003: approval gate]`,
+    );
+  }
+
+  // Validate approval binding matches this action
+  const bindingError = validateApprovalBinding(approval, {
+    projectId: getProjectId(projectPath),
+    toolName: 'decision',
+    input: { action: 'accept_adr', adrId },
+  });
+  if (bindingError) {
+    throw new Error(`Cannot accept ADR ${adrId}: approval binding mismatch — ${bindingError}. [P0-003: binding fail]`);
+  }
+
   const state = loadDecision(projectPath, adrId);
   if (!state || state.status !== 'proposed') return undefined;
   const now = new Date().toISOString();
@@ -141,8 +210,33 @@ export function rejectDecision(projectPath: string, adrId: string): DecisionStat
 
 /**
  * Supersede an accepted ADR.
+ * Requires a valid, approved, unconsumed approval binding (P0-003).
  */
-export function supersedeDecision(projectPath: string, adrId: string, supersededBy: string): DecisionState | undefined {
+export function supersedeDecision(
+  projectPath: string,
+  adrId: string,
+  supersededBy: string,
+  approvalId: string,
+): DecisionState | undefined {
+  const approval = consumeApproval(approvalId);
+  if (!approval) {
+    throw new Error(
+      `Cannot supersede ADR ${adrId}: approval "${approvalId}" is missing, already consumed, expired, or not approved. ` +
+        `[P0-003: approval gate]`,
+    );
+  }
+
+  const bindingError = validateApprovalBinding(approval, {
+    projectId: getProjectId(projectPath),
+    toolName: 'decision',
+    input: { action: 'supersede_adr', adrId, supersededBy },
+  });
+  if (bindingError) {
+    throw new Error(
+      `Cannot supersede ADR ${adrId}: approval binding mismatch — ${bindingError}. [P0-003: binding fail]`,
+    );
+  }
+
   const state = loadDecision(projectPath, adrId);
   if (!state) return undefined;
   state.status = 'superseded';
@@ -159,8 +253,11 @@ export function loadDecision(projectPath: string, adrId: string): DecisionState 
   const dir = getDecisionsDir(projectPath);
   const jsonPath = join(dir, `${adrId}.json`);
   if (!existsSync(jsonPath)) return undefined;
-  try { return JSON.parse(readFileSync(jsonPath, 'utf-8')); }
-  catch { return undefined; }
+  try {
+    return JSON.parse(readFileSync(jsonPath, 'utf-8'));
+  } catch {
+    return undefined;
+  }
 }
 
 function saveDecision(projectPath: string, state: DecisionState): void {
@@ -169,7 +266,7 @@ function saveDecision(projectPath: string, state: DecisionState): void {
   safeWriteJson(jsonPath, state, 2);
 
   // Also update the markdown file
-  const files = readdirSync(dir).filter(f => f.startsWith(state.id + '-') && f.endsWith('.md'));
+  const files = readdirSync(dir).filter((f) => f.startsWith(state.id + '-') && f.endsWith('.md'));
   if (files.length > 0) {
     let md = readFileSync(join(dir, files[0]), 'utf-8');
     md = md.replace(/^(Status: ).*/m, `Status: ${state.status}`);
@@ -193,8 +290,14 @@ export function listDecisions(projectPath: string): DecisionState[] {
   const dir = getDecisionsDir(projectPath);
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => { try { return JSON.parse(readFileSync(join(dir, f), 'utf-8')); } catch { return null; } })
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
+      try {
+        return JSON.parse(readFileSync(join(dir, f), 'utf-8'));
+      } catch {
+        return null;
+      }
+    })
     .filter((d): d is DecisionState => d !== null)
     .sort((a, b) => b.number - a.number);
 }
@@ -203,7 +306,7 @@ export function listDecisions(projectPath: string): DecisionState[] {
  * List active (accepted) decisions only.
  */
 export function listActiveDecisions(projectPath: string): DecisionState[] {
-  return listDecisions(projectPath).filter(d => d.status === 'accepted');
+  return listDecisions(projectPath).filter((d) => d.status === 'accepted');
 }
 
 // ============================================================
@@ -233,13 +336,15 @@ function generateAdrMarkdown(state: DecisionState): string {
     '',
     '## Consequences',
     '',
-    ...(state.consequences.length > 0 ? state.consequences.map(c => `- ${c}`) : ['(none documented)']),
+    ...(state.consequences.length > 0 ? state.consequences.map((c) => `- ${c}`) : ['(none documented)']),
     '',
     '## Risks',
     '',
-    ...(state.risks.length > 0 ? state.risks.map(r => `- ${r}`) : ['(none identified)']),
+    ...(state.risks.length > 0 ? state.risks.map((r) => `- ${r}`) : ['(none identified)']),
     '',
     state.supersedes ? `## Supersedes\n\n${state.supersedes}\n` : '',
     state.approvedBy ? `## Approval\n\nApproved By: ${state.approvedBy}\nApproved At: ${state.approvedAt}\n` : '',
-  ].filter(l => l !== undefined).join('\n');
+  ]
+    .filter((l) => l !== undefined)
+    .join('\n');
 }

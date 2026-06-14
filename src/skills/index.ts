@@ -35,13 +35,13 @@ export async function getSkillsList(): Promise<{ count: number; skills: SkillLis
   const skills = registry.list();
   return {
     count: skills.length,
-    skills: skills.map(s => ({
+    skills: skills.map((s) => ({
       name: s.name,
       category: s.category,
       description: s.description,
       riskLevel: s.riskLevel,
       defaultEnabled: s.defaultEnabled,
-      tools: s.tools.map(t => t.name),
+      tools: s.tools.map((t) => t.name),
     })),
   };
 }

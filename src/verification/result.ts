@@ -93,7 +93,7 @@ export function computeIntegrity(result: Omit<VerificationResult, 'integrity'>):
     result.sourceStagedDigest ?? '',
     result.status,
     String(result.requiredSteps),
-    JSON.stringify(result.stepResults.map(s => `${s.name}:${s.status}:${s.exitCode}`)),
+    JSON.stringify(result.stepResults.map((s) => `${s.name}:${s.status}:${s.exitCode}`)),
     result.startedAt,
     result.finishedAt,
     result.reportPath,
@@ -150,15 +150,16 @@ function isExcluded(filePath: string): boolean {
  */
 export function computeWorktreeDigest(projectPath: string): string | undefined {
   try {
-    const filesOutput = execSync(
-      'git ls-files --cached --others --exclude-standard -z',
-      { cwd: projectPath, encoding: 'buffer', maxBuffer: 50 * 1024 * 1024 },
-    );
+    const filesOutput = execSync('git ls-files --cached --others --exclude-standard -z', {
+      cwd: projectPath,
+      encoding: 'buffer',
+      maxBuffer: 50 * 1024 * 1024,
+    });
     const files = filesOutput
       .toString('utf-8')
       .split('\0')
       .filter(Boolean)
-      .filter(filePath => !isExcluded(filePath))
+      .filter((filePath) => !isExcluded(filePath))
       .sort();
     const hash = createHash('sha256');
 
@@ -183,15 +184,16 @@ export function computeWorktreeDigest(projectPath: string): string | undefined {
  */
 export function computeStagedDigest(projectPath: string): string | undefined {
   try {
-    const indexOutput = execSync(
-      'git ls-files --stage -z',
-      { cwd: projectPath, encoding: 'buffer', maxBuffer: 50 * 1024 * 1024 },
-    );
+    const indexOutput = execSync('git ls-files --stage -z', {
+      cwd: projectPath,
+      encoding: 'buffer',
+      maxBuffer: 50 * 1024 * 1024,
+    });
     const records = indexOutput
       .toString('utf-8')
       .split('\0')
       .filter(Boolean)
-      .filter(record => {
+      .filter((record) => {
         const tabIdx = record.indexOf('\t');
         return tabIdx >= 0 && !isExcluded(record.slice(tabIdx + 1));
       })
@@ -215,8 +217,7 @@ export function computeStagedDigest(projectPath: string): string | undefined {
  */
 export function getCurrentTree(projectPath: string): string | undefined {
   try {
-    return execSync('git rev-parse HEAD:',
-      { cwd: projectPath, encoding: 'utf-8', timeout: 5000 }).trim();
+    return execSync('git rev-parse HEAD:', { cwd: projectPath, encoding: 'utf-8', timeout: 5000 }).trim();
   } catch {
     return undefined;
   }
@@ -247,10 +248,7 @@ export function getVerificationResultPath(verDir: string, verificationId: string
  * Save a structured verification result to disk.
  * Markdown consumers can still use the .md; JSON is the binding source of truth.
  */
-export function saveVerificationResult(
-  result: VerificationResult,
-  projectPath: string,
-): string {
+export function saveVerificationResult(result: VerificationResult, projectPath: string): string {
   const verDir = getVerificationResultDir(projectPath);
   if (!existsSync(verDir)) {
     mkdirSync(verDir, { recursive: true });
@@ -269,10 +267,7 @@ export function saveVerificationResult(
  * Load a structured verification result from disk.
  * Returns undefined if the file doesn't exist or is malformed.
  */
-export function loadVerificationResult(
-  projectPath: string,
-  verificationId: string,
-): VerificationResult | undefined {
+export function loadVerificationResult(projectPath: string, verificationId: string): VerificationResult | undefined {
   const verDir = getVerificationResultDir(projectPath);
   const filePath = getVerificationResultPath(verDir, verificationId);
   if (!existsSync(filePath)) return undefined;
@@ -331,7 +326,9 @@ export function checkVerificationBinding(
   const { integrity: _storedIntegrity, ...resultWithoutIntegrity } = result;
   const computedIntegrity = computeIntegrity(resultWithoutIntegrity);
   if (_storedIntegrity !== computedIntegrity) {
-    reasons.push(`Integrity mismatch: stored=${_storedIntegrity.slice(0, 12)} computed=${computedIntegrity.slice(0, 12)}`);
+    reasons.push(
+      `Integrity mismatch: stored=${_storedIntegrity.slice(0, 12)} computed=${computedIntegrity.slice(0, 12)}`,
+    );
   }
 
   // 2. projectId — compared against CALLER's expected (VER4-02)
@@ -394,7 +391,9 @@ export function checkVerificationBinding(
     } else if (!worktreeDigest) {
       reasons.push('Cannot compute worktree digest for binding check');
     } else if (result.sourceWorktreeDigest !== worktreeDigest) {
-      reasons.push(`Worktree changed since verification: result=${result.sourceWorktreeDigest.slice(0, 12)} current=${worktreeDigest.slice(0, 12)}`);
+      reasons.push(
+        `Worktree changed since verification: result=${result.sourceWorktreeDigest.slice(0, 12)} current=${worktreeDigest.slice(0, 12)}`,
+      );
     }
   }
 
@@ -406,7 +405,9 @@ export function checkVerificationBinding(
     } else if (!stagedDigest) {
       reasons.push('Cannot compute staged digest for binding check');
     } else if (result.sourceStagedDigest !== stagedDigest) {
-      reasons.push(`Staged state changed since verification: result=${result.sourceStagedDigest.slice(0, 12)} current=${stagedDigest.slice(0, 12)}`);
+      reasons.push(
+        `Staged state changed since verification: result=${result.sourceStagedDigest.slice(0, 12)} current=${stagedDigest.slice(0, 12)}`,
+      );
     }
   }
 

@@ -26,10 +26,7 @@ import {
   type TraceId,
   type TurnId,
 } from '../types.js';
-import {
-  type PolicyContext,
-  checkPolicy,
-} from '../governance/policy.js';
+import { type PolicyContext, checkPolicy } from '../governance/policy.js';
 import {
   type PendingApproval,
   submitApproval,

@@ -18,7 +18,13 @@
 export { runGuard, formatGuardResult, type GuardResult, type GuardCheck } from './guard.js';
 export { generateCommitMessage, generateCommitFromTask, taskTypeToCommitType, type CommitMessage } from './commit.js';
 export { generatePrBody, type PrBody, type PrBodyInput } from './pr.js';
-export { generateDeliveryReport, saveDeliveryReport, type DeliveryReport, type DeliveryType, type DeliveryStatus } from './report.js';
+export {
+  generateDeliveryReport,
+  saveDeliveryReport,
+  type DeliveryReport,
+  type DeliveryType,
+  type DeliveryStatus,
+} from './report.js';
 
 // ============================================================
 // Types

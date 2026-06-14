@@ -86,10 +86,7 @@ const REQUIRED_TYPES: CommandType[] = ['lint', 'typecheck', 'unit-test', 'test',
  * Build a verification plan from detected commands.
  * Orders: lint → typecheck → test/test-like → build → other
  */
-export function buildPlan(
-  projectPath: string,
-  commands: DetectedCommand[],
-): VerificationPlan {
+export function buildPlan(projectPath: string, commands: DetectedCommand[]): VerificationPlan {
   const steps: VerificationStep[] = commands
     .sort((a, b) => {
       const aIdx = COMMAND_ORDER.indexOf(a.type);
@@ -97,27 +94,27 @@ export function buildPlan(
       if (aIdx !== bIdx) return aIdx - bIdx;
       return a.name.localeCompare(b.name);
     })
-    .map(cmd => ({
-    name: cmd.name,
-    command: cmd.command,
-    type: cmd.type,
-    required: REQUIRED_TYPES.includes(cmd.type),
-    timeoutMs: DEFAULT_TIMEOUTS[cmd.type] ?? 300_000,
-    source: cmd.source,
-    uncertain: cmd.uncertain,
-    status: 'pending',
-    exitCode: null,
-    stdout: '',
-    stderr: '',
-    durationMs: 0,
-  }));
+    .map((cmd) => ({
+      name: cmd.name,
+      command: cmd.command,
+      type: cmd.type,
+      required: REQUIRED_TYPES.includes(cmd.type),
+      timeoutMs: DEFAULT_TIMEOUTS[cmd.type] ?? 300_000,
+      source: cmd.source,
+      uncertain: cmd.uncertain,
+      status: 'pending',
+      exitCode: null,
+      stdout: '',
+      stderr: '',
+      durationMs: 0,
+    }));
 
   return {
     projectPath,
     steps,
     createdAt: new Date().toISOString(),
     totalSteps: steps.length,
-    requiredSteps: steps.filter(s => s.required).length,
+    requiredSteps: steps.filter((s) => s.required).length,
   };
 }
 
@@ -140,7 +137,7 @@ export function formatPlan(plan: VerificationPlan): string {
     );
   });
 
-  if (plan.steps.some(s => s.uncertain)) {
+  if (plan.steps.some((s) => s.uncertain)) {
     lines.push('', '* — inferred command (may not be correct)');
   }
 

@@ -13,10 +13,7 @@
  *            11_ACCEPTANCE_CRITERIA.md §15
  */
 
-export {
-  SqliteStore,
-  type StoreConfig,
-} from './store.js';
+export { SqliteStore, type StoreConfig } from './store.js';
 
 export {
   createRunState,

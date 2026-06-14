@@ -17,17 +17,8 @@
  * - The orchestrator manages state, gating, and tracing.
  */
 
-import {
-  type AgentId,
-  type SessionId,
-  type TurnId,
-  type TurnState,
-  createTurnState,
-} from '../types.js';
-import {
-  type ToolCallVerdict,
-  evaluateToolCall,
-} from './pipeline.js';
+import { type AgentId, type SessionId, type TurnId, type TurnState, createTurnState } from '../types.js';
+import { type ToolCallVerdict, evaluateToolCall } from './pipeline.js';
 import {
   createSession,
   getSession,
@@ -165,10 +156,7 @@ export async function processToolCall(
  * @param responseSummary - Summary of the model's response
  * @returns Completed TurnState
  */
-export function completeTurn(
-  context: TurnContext,
-  responseSummary: string,
-): TurnState {
+export function completeTurn(context: TurnContext, responseSummary: string): TurnState {
   const now = new Date().toISOString();
   context.state.completed_at = now;
   context.state.response_summary = responseSummary;

@@ -18,8 +18,8 @@ import type { ContextCandidate } from './relevance.js';
 // ============================================================
 
 export const DEFAULT_MAX_TOKENS = 128_000; // Claude default
-export const DEFAULT_RESERVE_RESPONSE = 0.20; // 20%
-export const DEFAULT_RESERVE_TOOL_RESULTS = 0.10; // 10%
+export const DEFAULT_RESERVE_RESPONSE = 0.2; // 20%
+export const DEFAULT_RESERVE_TOOL_RESULTS = 0.1; // 10%
 
 // ============================================================
 // Token Estimation
@@ -116,19 +116,19 @@ export function trimToBudget(
   }
 
   // Strategy 1: Remove P3 metadata-only
-  const p3Metadata = candidates.filter(c => c.priority >= 3 && c.contentMode === 'metadata-only');
+  const p3Metadata = candidates.filter((c) => c.priority >= 3 && c.contentMode === 'metadata-only');
   for (const c of p3Metadata) {
     if (estimated <= available) break;
-    candidates = candidates.filter(x => x.id !== c.id);
+    candidates = candidates.filter((x) => x.id !== c.id);
     removed.push(c);
     estimated -= c.estimatedTokens || 0;
   }
 
   // Strategy 2: Convert P3 full → metadata-only
-  const p3Full = candidates.filter(c => c.priority >= 3 && c.contentMode === 'full');
+  const p3Full = candidates.filter((c) => c.priority >= 3 && c.contentMode === 'full');
   for (const c of p3Full) {
     if (estimated <= available) break;
-    const idx = candidates.findIndex(x => x.id === c.id);
+    const idx = candidates.findIndex((x) => x.id === c.id);
     if (idx >= 0) {
       candidates[idx] = { ...c, contentMode: 'metadata-only', estimatedTokens: Math.min(c.estimatedTokens, 50) };
       trimmed.push(c);
@@ -137,10 +137,10 @@ export function trimToBudget(
   }
 
   // Strategy 3: Convert P2 full → excerpt (if still over budget)
-  const p2Full = candidates.filter(c => c.priority >= 2 && c.contentMode === 'full');
+  const p2Full = candidates.filter((c) => c.priority >= 2 && c.contentMode === 'full');
   for (const c of p2Full) {
     if (estimated <= available) break;
-    const idx = candidates.findIndex(x => x.id === c.id);
+    const idx = candidates.findIndex((x) => x.id === c.id);
     if (idx >= 0) {
       candidates[idx] = { ...c, contentMode: 'excerpt', estimatedTokens: Math.min(c.estimatedTokens, 200) };
       trimmed.push(c);
@@ -149,10 +149,10 @@ export function trimToBudget(
   }
 
   // Strategy 4: Convert P1 full → excerpt
-  const p1Full = candidates.filter(c => c.priority >= 1 && c.contentMode === 'full' && !preserveP0.includes(c.id));
+  const p1Full = candidates.filter((c) => c.priority >= 1 && c.contentMode === 'full' && !preserveP0.includes(c.id));
   for (const c of p1Full) {
     if (estimated <= available) break;
-    const idx = candidates.findIndex(x => x.id === c.id);
+    const idx = candidates.findIndex((x) => x.id === c.id);
     if (idx >= 0) {
       candidates[idx] = { ...c, contentMode: 'excerpt', estimatedTokens: Math.min(c.estimatedTokens, 400) };
       trimmed.push(c);
@@ -169,10 +169,7 @@ export function trimToBudget(
 /**
  * Build the final budget summary for the Context Pack.
  */
-export function budgetToContextBudget(
-  candidates: ContextCandidate[],
-  config?: BudgetConfig,
-): ContextBudget {
+export function budgetToContextBudget(candidates: ContextCandidate[], config?: BudgetConfig): ContextBudget {
   const budget = calculateBudget(config);
   budget.estimatedTokens = estimateCandidatesTokens(candidates);
   return budget;

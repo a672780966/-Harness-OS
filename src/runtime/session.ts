@@ -42,7 +42,7 @@ class SessionStore {
 
   listActive(): SessionState[] {
     return Array.from(this.sessions.values())
-      .filter(s => s.status === 'active')
+      .filter((s) => s.status === 'active')
       .sort((a, b) => a.started_at.localeCompare(b.started_at));
   }
 

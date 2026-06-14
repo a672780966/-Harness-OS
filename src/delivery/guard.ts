@@ -22,10 +22,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { join, resolve } from 'path';
-import {
-  loadVerificationResult,
-  checkVerificationBinding,
-} from '../verification/result.js';
+import { loadVerificationResult, checkVerificationBinding } from '../verification/result.js';
 
 // ============================================================
 // Types
@@ -95,10 +92,9 @@ function checkVerification(
     return {
       check: 'Verification passed',
       passed: false,
-      reason: [
-        `Verification ${verId} failed binding checks:`,
-        ...bindingCheck.reasons.map(r => `  - ${r}`),
-      ].join('\n'),
+      reason: [`Verification ${verId} failed binding checks:`, ...bindingCheck.reasons.map((r) => `  - ${r}`)].join(
+        '\n',
+      ),
       severity: 'block',
     };
   }
@@ -115,9 +111,7 @@ function checkVerification(
   return {
     check: 'Verification passed',
     passed: true,
-    reason: `Verification ${verId}: passed ${
-      result.sourceCommit ? `@ ${result.sourceCommit.slice(0, 8)}` : ''
-    }`,
+    reason: `Verification ${verId}: passed ${result.sourceCommit ? `@ ${result.sourceCommit.slice(0, 8)}` : ''}`,
     severity: 'warn',
   };
 }
@@ -227,16 +221,14 @@ function checkGitStatus(projectPath: string): GuardCheck {
  *
  * VER3-04: verId is now REQUIRED — no fallback to Markdown scanning.
  */
-export async function runGuard(
-  options: {
-    deliveryType: 'commit' | 'pull-request' | 'release' | 'deploy' | 'rollback';
-    projectPath?: string;
-    taskId?: string;
-    runId?: string;
-    /** VER3-04: Required — structured verification result ID. */
-    verId: string;
-  },
-): Promise<GuardResult> {
+export async function runGuard(options: {
+  deliveryType: 'commit' | 'pull-request' | 'release' | 'deploy' | 'rollback';
+  projectPath?: string;
+  taskId?: string;
+  runId?: string;
+  /** VER3-04: Required — structured verification result ID. */
+  verId: string;
+}): Promise<GuardResult> {
   const projectPath = resolve(options.projectPath || process.cwd());
   const checks: GuardCheck[] = [];
   let projectId = '';
@@ -261,13 +253,13 @@ export async function runGuard(
   checks.push(await checkGovernance(options.deliveryType));
 
   // Summarize
-  const blockedChecks = checks.filter(c => !c.passed && c.severity === 'block');
-  const warnings = checks.filter(c => !c.passed && c.severity === 'warn').map(c => c.reason);
+  const blockedChecks = checks.filter((c) => !c.passed && c.severity === 'block');
+  const warnings = checks.filter((c) => !c.passed && c.severity === 'warn').map((c) => c.reason);
 
   return {
     canProceed: blockedChecks.length === 0,
     checks,
-    blockedBy: blockedChecks.map(c => c.reason),
+    blockedBy: blockedChecks.map((c) => c.reason),
     warnings,
   };
 }

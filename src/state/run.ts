@@ -113,11 +113,7 @@ export function loadRunState(runId: string, projectPath?: string): RunState | un
 /**
  * Update run state fields in-place and save.
  */
-export function updateRunState(
-  runId: string,
-  updates: Partial<RunState>,
-  projectPath?: string,
-): RunState | undefined {
+export function updateRunState(runId: string, updates: Partial<RunState>, projectPath?: string): RunState | undefined {
   const state = loadRunState(runId, projectPath);
   if (!state) return undefined;
 
@@ -137,22 +133,30 @@ export function pauseRun(runId: string, projectPath?: string): RunState | undefi
  * Complete a run.
  */
 export function completeRun(runId: string, summary?: string, projectPath?: string): RunState | undefined {
-  return updateRunState(runId, {
-    status: 'completed',
-    endedAt: new Date().toISOString(),
-    summary: summary || 'Completed',
-  }, projectPath);
+  return updateRunState(
+    runId,
+    {
+      status: 'completed',
+      endedAt: new Date().toISOString(),
+      summary: summary || 'Completed',
+    },
+    projectPath,
+  );
 }
 
 /**
  * Fail a run.
  */
 export function failRun(runId: string, summary?: string, projectPath?: string): RunState | undefined {
-  return updateRunState(runId, {
-    status: 'failed',
-    endedAt: new Date().toISOString(),
-    summary: summary || 'Failed',
-  }, projectPath);
+  return updateRunState(
+    runId,
+    {
+      status: 'failed',
+      endedAt: new Date().toISOString(),
+      summary: summary || 'Failed',
+    },
+    projectPath,
+  );
 }
 
 /**
@@ -164,8 +168,8 @@ export function listRunStates(projectPath?: string): RunState[] {
   if (!existsSync(dir)) return [];
 
   return readdirSync(dir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => {
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
       try {
         return JSON.parse(readFileSync(join(dir, f), 'utf-8')) as RunState;
       } catch {
@@ -185,11 +189,7 @@ export function listRunStates(projectPath?: string): RunState[] {
 /**
  * Link a checkpoint to a run.
  */
-export function linkCheckpointToRun(
-  runId: string,
-  checkpointId: string,
-  projectPath?: string,
-): RunState | undefined {
+export function linkCheckpointToRun(runId: string, checkpointId: string, projectPath?: string): RunState | undefined {
   const state = loadRunState(runId, projectPath);
   if (!state) return undefined;
 
@@ -204,11 +204,7 @@ export function linkCheckpointToRun(
 /**
  * Link a context pack to a run.
  */
-export function linkContextToRun(
-  runId: string,
-  contextPackId: string,
-  projectPath?: string,
-): RunState | undefined {
+export function linkContextToRun(runId: string, contextPackId: string, projectPath?: string): RunState | undefined {
   const state = loadRunState(runId, projectPath);
   if (!state) return undefined;
 

@@ -39,10 +39,7 @@ export interface RunResult {
 /**
  * Execute a single verification command.
  */
-async function runStep(
-  step: VerificationStep,
-  cwd: string,
-): Promise<VerificationStep> {
+async function runStep(step: VerificationStep, cwd: string): Promise<VerificationStep> {
   const start = Date.now();
   step.status = 'running';
 
@@ -108,9 +105,7 @@ async function runStep(
  * Fail-fast: if a required step fails, subsequent required steps are skipped.
  * Optional steps are always attempted.
  */
-export async function runVerification(
-  plan: VerificationPlan,
-): Promise<RunResult> {
+export async function runVerification(plan: VerificationPlan): Promise<RunResult> {
   let hasFailed = false;
   const start = Date.now();
 
@@ -129,9 +124,9 @@ export async function runVerification(
     }
   }
 
-  const passed = plan.steps.filter(s => s.status === 'passed').length;
-  const failed = plan.steps.filter(s => s.status === 'failed').length;
-  const skipped = plan.steps.filter(s => s.status === 'skipped').length;
+  const passed = plan.steps.filter((s) => s.status === 'passed').length;
+  const failed = plan.steps.filter((s) => s.status === 'failed').length;
+  const skipped = plan.steps.filter((s) => s.status === 'skipped').length;
   const total = plan.steps.length;
 
   let status: RunResult['status'];
@@ -172,7 +167,7 @@ export function formatResults(steps: VerificationStep[], result: RunResult): str
   });
 
   // Add failure details
-  const failures = steps.filter(s => s.status === 'failed');
+  const failures = steps.filter((s) => s.status === 'failed');
   if (failures.length > 0) {
     lines.push('', 'Failure Details:', '');
     for (const f of failures) {

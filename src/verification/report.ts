@@ -68,7 +68,7 @@ export function generateReport(
   const risks = options?.risks ?? [];
 
   // Auto-generate risks from failures
-  const failedSteps = steps.filter(s => s.status === 'failed');
+  const failedSteps = steps.filter((s) => s.status === 'failed');
   for (const f of failedSteps) {
     risks.push(`Verification failed: ${f.name} (${f.command})`);
   }
@@ -125,7 +125,7 @@ export function saveReport(report: VerificationReport): { mdPath: string; jsonPa
     sourceWorktreeDigest: worktreeDigest,
     sourceStagedDigest: stagedDigest,
     status: report.status,
-    requiredSteps: report.steps.filter(s => s.required).length,
+    requiredSteps: report.steps.filter((s) => s.required).length,
     stepResults: report.steps,
     startedAt: now,
     finishedAt: now,
@@ -190,7 +190,7 @@ function formatReport(report: VerificationReport): string {
   });
 
   // Failure details
-  const failures = report.steps.filter(s => s.status === 'failed');
+  const failures = report.steps.filter((s) => s.status === 'failed');
   if (failures.length > 0) {
     lines.push('', '## Failures', '');
     for (const f of failures) {

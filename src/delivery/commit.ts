@@ -66,16 +66,12 @@ export interface CommitMessageInput {
  * Generate a Conventional Commit message.
  */
 export function generateCommitMessage(input: CommitMessageInput): CommitMessage {
-  const type = input.taskType
-    ? taskTypeToCommitType(input.taskType)
-    : 'chore';
+  const type = input.taskType ? taskTypeToCommitType(input.taskType) : 'chore';
 
   const summary = input.taskSummary.trim();
 
   // Build full message
-  const header = input.scope
-    ? `${type}(${input.scope}): ${summary}`
-    : `${type}: ${summary}`;
+  const header = input.scope ? `${type}(${input.scope}): ${summary}` : `${type}: ${summary}`;
 
   const body = input.details?.trim();
   const footer = input.footer?.trim();
@@ -103,13 +99,12 @@ export function generateCommitFromTask(params: {
   changedFiles?: string[];
   runId?: string;
 }): CommitMessage {
-  const details = params.changedFiles && params.changedFiles.length > 0
-    ? `Changed files:\n${params.changedFiles.map(f => `- ${f}`).join('\n')}`
-    : undefined;
+  const details =
+    params.changedFiles && params.changedFiles.length > 0
+      ? `Changed files:\n${params.changedFiles.map((f) => `- ${f}`).join('\n')}`
+      : undefined;
 
-  const footer = params.runId
-    ? `Run: ${params.runId}`
-    : undefined;
+  const footer = params.runId ? `Run: ${params.runId}` : undefined;
 
   return generateCommitMessage({
     taskType: params.taskType,

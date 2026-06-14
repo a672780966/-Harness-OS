@@ -49,7 +49,7 @@ export function createError(
   message: string,
   recoveryHint: string | null,
   recoverable = true,
-  retryable = false
+  retryable = false,
 ): HarnessError {
   return {
     code,
@@ -60,7 +60,7 @@ export function createError(
     recoverable,
     retryable,
     userActionRequired: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 }
 
@@ -124,7 +124,17 @@ export interface ProjectManifest {
 // ============================================================
 
 export type TaskStatus = 'created' | 'ready' | 'running' | 'blocked' | 'paused' | 'verifying' | 'completed' | 'failed';
-export type TaskType = 'feature' | 'bugfix' | 'refactor' | 'test' | 'docs' | 'investigation' | 'delivery' | 'maintenance' | 'architecture' | 'unknown';
+export type TaskType =
+  | 'feature'
+  | 'bugfix'
+  | 'refactor'
+  | 'test'
+  | 'docs'
+  | 'investigation'
+  | 'delivery'
+  | 'maintenance'
+  | 'architecture'
+  | 'unknown';
 
 export interface TaskState {
   taskId: string;
@@ -367,7 +377,7 @@ export function mergeHookDecisions(decisions: HookDecision[]): HookMergeResult {
   }
 
   // If all are allow, result stays as the last allow
-  const allAllow = decisions.every(d => d.decision === 'allow');
+  const allAllow = decisions.every((d) => d.decision === 'allow');
   if (allAllow && decisions.length > 0) {
     result = decisions[decisions.length - 1];
   }
@@ -582,5 +592,5 @@ export enum HarnessExitCode {
   DELIVERY_ERROR = 80,
   STATE_ERROR = 90,
   CONFIG_ERROR = 100,
-  INTERNAL_ERROR = 120
+  INTERNAL_ERROR = 120,
 }

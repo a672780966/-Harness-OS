@@ -22,10 +22,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join, resolve } from 'path';
 import type { TaskState, TaskStatus } from '../types.js';
 import { transitionStatus } from './state-machine.js';
-import {
-  loadVerificationResult,
-  checkVerificationBinding,
-} from '../verification/result.js';
+import { loadVerificationResult, checkVerificationBinding } from '../verification/result.js';
 import { safeWriteJson, redactText } from '../governance/redactor.js';
 
 // ============================================================
@@ -118,9 +115,7 @@ function ensureDir(dir: string): void {
  *   6. Move files from active/ → completed/
  *   7. Return completion result
  */
-export async function completeTask(
-  params: CompleteTaskParams,
-): Promise<TaskCompletionResult> {
+export async function completeTask(params: CompleteTaskParams): Promise<TaskCompletionResult> {
   const projectPath = resolve(params.projectPath);
 
   // 1. Read current state
@@ -133,17 +128,14 @@ export async function completeTask(
   // Load from disk — caller-provided verificationId must reference a real
   // persisted JSON. In-memory objects or strings cannot form a passed.
   if (!params.verificationId) {
-    throw new Error(
-      `Cannot complete task: verificationId is required. ` +
-      `[VER3-02 gate: missing verificationId]`,
-    );
+    throw new Error(`Cannot complete task: verificationId is required. ` + `[VER3-02 gate: missing verificationId]`);
   }
 
   const verResult = loadVerificationResult(projectPath, params.verificationId);
   if (!verResult) {
     throw new Error(
       `Cannot complete task: verification result "${params.verificationId}" not found on disk. ` +
-      `Run verification first. [VER3-02 gate: result not found]`,
+        `Run verification first. [VER3-02 gate: result not found]`,
     );
   }
 
@@ -158,8 +150,8 @@ export async function completeTask(
   if (!bindingCheck.valid) {
     throw new Error(
       `Cannot complete task: verification binding failed.\n` +
-      bindingCheck.reasons.map(r => `  - ${r}`).join('\n') +
-      `\n[VER3-02 gate: binding mismatch]`,
+        bindingCheck.reasons.map((r) => `  - ${r}`).join('\n') +
+        `\n[VER3-02 gate: binding mismatch]`,
     );
   }
 
@@ -167,8 +159,8 @@ export async function completeTask(
   if (verResult.status !== 'passed') {
     throw new Error(
       `Cannot complete task: verification status is "${verResult.status}". ` +
-      `Only "passed" allows completion. Use failTask() for non-passed verifications. ` +
-      `[VER3-02 gate: status=${verResult.status}]`,
+        `Only "passed" allows completion. Use failTask() for non-passed verifications. ` +
+        `[VER3-02 gate: status=${verResult.status}]`,
     );
   }
 
@@ -213,17 +205,11 @@ export async function completeTask(
     md = md.replace(/^(Updated At: ).*/m, `$1${state.updatedAt}`);
 
     // Update verification section
-    md = md.replace(
-      /(Status: ).*/,
-      `Status: passed`,
-    );
+    md = md.replace(/(Status: ).*/, `Status: passed`);
 
     // Update changed files
-    const filesSection = state.changedFiles.map(f => `- ${f}`).join('\n');
-    md = md.replace(
-      /(## Changed Files\n\n).*?(?=\n## |\n$)/s,
-      `$1${filesSection || '(none)'}`,
-    );
+    const filesSection = state.changedFiles.map((f) => `- ${f}`).join('\n');
+    md = md.replace(/(## Changed Files\n\n).*?(?=\n## |\n$)/s, `$1${filesSection || '(none)'}`);
 
     writeFileSync(activeMd, redactText(md), 'utf-8');
   }
@@ -267,9 +253,7 @@ export interface FailTaskParams {
  * VER3-03: Failed/blocked tasks record verification status but don't validate
  * bindings — the failure is recorded regardless.
  */
-export async function failTask(
-  params: FailTaskParams,
-): Promise<TaskCompletionResult> {
+export async function failTask(params: FailTaskParams): Promise<TaskCompletionResult> {
   const projectPath = resolve(params.projectPath);
 
   // 1. Read current state
@@ -441,7 +425,7 @@ function generateDefaultSummary(state: TaskState, params: CompleteTaskParams): s
   }
   parts.push(`Verification: passed (${params.verificationId})`);
   if (params.risks && params.risks.length > 0) {
-    parts.push(`\nRisks:\n${params.risks.map(r => `- ${r}`).join('\n')}`);
+    parts.push(`\nRisks:\n${params.risks.map((r) => `- ${r}`).join('\n')}`);
   }
   return parts.join('\n');
 }

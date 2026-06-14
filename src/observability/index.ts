@@ -27,12 +27,7 @@ export {
   type RunTrace,
 } from './trace.js';
 
-export {
-  generateRunReport,
-  saveRunReport,
-  loadRunReport,
-  type RunReport,
-} from './report.js';
+export { generateRunReport, saveRunReport, loadRunReport, type RunReport } from './report.js';
 
 // ============================================================
 // Structured report data (CLI3-01)
@@ -65,14 +60,16 @@ export async function getReport(runId: string): Promise<ReportData> {
 
   return {
     runId,
-    trace: trace ? {
-      status: trace.status,
-      startedAt: trace.startedAt,
-      endedAt: trace.endedAt,
-      toolCallCount: trace.toolCallCount,
-      contextPackCount: trace.contextPackIds.length,
-      checkpointCount: trace.checkpointIds.length,
-    } : null,
+    trace: trace
+      ? {
+          status: trace.status,
+          startedAt: trace.startedAt,
+          endedAt: trace.endedAt,
+          toolCallCount: trace.toolCallCount,
+          contextPackCount: trace.contextPackIds.length,
+          checkpointCount: trace.checkpointIds.length,
+        }
+      : null,
     report: report ?? null,
     found: !!report,
   };

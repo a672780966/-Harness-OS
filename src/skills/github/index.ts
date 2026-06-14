@@ -13,16 +13,33 @@ export const manifest: SkillManifest = {
     {
       name: 'create_pr',
       description: 'Create a pull request (requires approval)',
-      inputSchema: { type: 'object', properties: { title: { type: 'string' }, body: { type: 'string' }, head: { type: 'string' }, base: { type: 'string' } }, required: ['title', 'head'] },
+      inputSchema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          body: { type: 'string' },
+          head: { type: 'string' },
+          base: { type: 'string' },
+        },
+        required: ['title', 'head'],
+      },
       outputSchema: { type: 'object', properties: { url: { type: 'string' }, number: { type: 'number' } } },
-      riskLevel: 'high', requiresApproval: true, timeoutMs: 30000,
+      riskLevel: 'high',
+      requiresApproval: true,
+      timeoutMs: 30000,
     },
     {
       name: 'create_issue',
       description: 'Create an issue',
-      inputSchema: { type: 'object', properties: { title: { type: 'string' }, body: { type: 'string' } }, required: ['title'] },
+      inputSchema: {
+        type: 'object',
+        properties: { title: { type: 'string' }, body: { type: 'string' } },
+        required: ['title'],
+      },
       outputSchema: { type: 'object', properties: { url: { type: 'string' }, number: { type: 'number' } } },
-      riskLevel: 'medium', requiresApproval: false, timeoutMs: 15000,
+      riskLevel: 'medium',
+      requiresApproval: false,
+      timeoutMs: 15000,
     },
   ],
 };

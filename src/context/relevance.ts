@@ -128,22 +128,99 @@ export function matchTestFile(filePath: string): string[] {
  */
 export function extractKeywords(text: string): string[] {
   const stopWords = new Set([
-    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-    'should', 'may', 'might', 'shall', 'can', 'need', 'dare', 'ought',
-    'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as',
-    'into', 'through', 'during', 'before', 'after', 'above', 'below',
-    'between', 'out', 'off', 'over', 'under', 'again', 'further', 'then',
-    'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each',
-    'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such', 'no',
-    'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
-    'and', 'but', 'or', 'because', 'since', 'until', 'while', 'if',
+    'the',
+    'a',
+    'an',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'being',
+    'have',
+    'has',
+    'had',
+    'do',
+    'does',
+    'did',
+    'will',
+    'would',
+    'could',
+    'should',
+    'may',
+    'might',
+    'shall',
+    'can',
+    'need',
+    'dare',
+    'ought',
+    'to',
+    'of',
+    'in',
+    'for',
+    'on',
+    'with',
+    'at',
+    'by',
+    'from',
+    'as',
+    'into',
+    'through',
+    'during',
+    'before',
+    'after',
+    'above',
+    'below',
+    'between',
+    'out',
+    'off',
+    'over',
+    'under',
+    'again',
+    'further',
+    'then',
+    'once',
+    'here',
+    'there',
+    'when',
+    'where',
+    'why',
+    'how',
+    'all',
+    'each',
+    'every',
+    'both',
+    'few',
+    'more',
+    'most',
+    'other',
+    'some',
+    'such',
+    'no',
+    'nor',
+    'not',
+    'only',
+    'own',
+    'same',
+    'so',
+    'than',
+    'too',
+    'very',
+    'and',
+    'but',
+    'or',
+    'because',
+    'since',
+    'until',
+    'while',
+    'if',
   ]);
 
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter(w => w.length >= 3 && !stopWords.has(w));
+    .filter((w) => w.length >= 3 && !stopWords.has(w));
 }
 
 // ============================================================
@@ -168,13 +245,13 @@ export function scoreFile(input: ScoreInput): ContextCandidate {
   const { filePath } = input;
 
   // Check explicit mention
-  if (input.explicitFiles.some(f => filePath.includes(f) || f.includes(filePath))) {
+  if (input.explicitFiles.some((f) => filePath.includes(f) || f.includes(filePath))) {
     score += SCORE_EXPLICIT;
     reason = 'explicit';
   }
 
   // Check git diff
-  if (input.gitChangedFiles.some(f => filePath.includes(f) || f.includes(filePath))) {
+  if (input.gitChangedFiles.some((f) => filePath.includes(f) || f.includes(filePath))) {
     score += SCORE_GIT_DIFF;
     if (reason === 'keyword-match') reason = 'git-diff';
   }
@@ -236,10 +313,7 @@ export function sortCandidates(candidates: ContextCandidate[]): ContextCandidate
 /**
  * Convert a ContextCandidate to a FileContext (with file content).
  */
-export function candidateToFileContext(
-  candidate: ContextCandidate,
-  content?: string,
-): FileContext {
+export function candidateToFileContext(candidate: ContextCandidate, content?: string): FileContext {
   return {
     path: candidate.path,
     reason: candidate.reason as FileReason,

@@ -48,9 +48,7 @@ export interface CreateCheckpointParams {
 /**
  * Create a checkpoint that captures git state and task metadata.
  */
-export async function createCheckpoint(
-  params: CreateCheckpointParams = {},
-): Promise<Checkpoint> {
+export async function createCheckpoint(params: CreateCheckpointParams = {}): Promise<Checkpoint> {
   const projectPath = resolve(params.projectPath || process.cwd());
   const git = simpleGit(projectPath);
 
@@ -62,9 +60,9 @@ export async function createCheckpoint(
     const isRepo = await git.checkIsRepo();
     if (isRepo) {
       const status = await git.status();
-      gitStatus = status.files.map(f => `${f.working_dir} ${f.path}`).join('\n') || '(clean)';
+      gitStatus = status.files.map((f) => `${f.working_dir} ${f.path}`).join('\n') || '(clean)';
       currentBranch = (await git.branch()).current || 'unknown';
-      changedFiles = status.files.map(f => f.path);
+      changedFiles = status.files.map((f) => f.path);
     }
   } catch {
     gitStatus = '(git error)';
@@ -105,10 +103,7 @@ export async function createCheckpoint(
 /**
  * Load a checkpoint by ID.
  */
-export function loadCheckpoint(
-  checkpointId: string,
-  projectPath?: string,
-): Checkpoint | undefined {
+export function loadCheckpoint(checkpointId: string, projectPath?: string): Checkpoint | undefined {
   const resolvedPath = resolve(projectPath || process.cwd());
   const filePath = join(resolvedPath, '.project/checkpoints', `${checkpointId}.json`);
 
@@ -134,8 +129,8 @@ export function listCheckpoints(projectPath?: string, limit: number = 10): Check
   if (!existsSync(dir)) return [];
 
   return readdirSync(dir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => {
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
       try {
         return JSON.parse(readFileSync(join(dir, f), 'utf-8')) as Checkpoint;
       } catch {
@@ -165,10 +160,7 @@ export interface RollbackResult {
  * Note: This shows what to restore — actual `git checkout` / `git reset`
  * requires separate approval flow.
  */
-export async function rollbackToCheckpoint(
-  checkpointId: string,
-  projectPath?: string,
-): Promise<RollbackResult> {
+export async function rollbackToCheckpoint(checkpointId: string, projectPath?: string): Promise<RollbackResult> {
   const resolvedPath = resolve(projectPath || process.cwd());
   const checkpoint = loadCheckpoint(checkpointId, resolvedPath);
   const warnings: string[] = [];
@@ -199,9 +191,7 @@ export async function rollbackToCheckpoint(
   }
 
   if (checkpoint.changedFiles.length > 0) {
-    warnings.push(
-      `Checkpoint has ${checkpoint.changedFiles.length} changed file(s) that may need restoration`,
-    );
+    warnings.push(`Checkpoint has ${checkpoint.changedFiles.length} changed file(s) that may need restoration`);
   }
 
   return {

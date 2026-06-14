@@ -15,13 +15,7 @@
  */
 
 // Re-export policy
-export {
-  checkPolicy,
-  classifyRisk,
-  createRule,
-  type PolicyContext,
-  type PolicyRule,
-} from './policy.js';
+export { checkPolicy, classifyRisk, createRule, type PolicyContext, type PolicyRule } from './policy.js';
 
 // Re-export approval gate
 export {

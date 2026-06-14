@@ -20,7 +20,17 @@ import { redactObject, redactText, safeWriteText } from '../governance/redactor.
 // ============================================================
 
 export type DeliveryType = 'commit' | 'pull-request' | 'release' | 'deploy' | 'rollback';
-export type DeliveryStatus = 'planned' | 'guarded' | 'ready' | 'committed' | 'pull-requested' | 'released' | 'deployed' | 'completed' | 'blocked' | 'failed';
+export type DeliveryStatus =
+  | 'planned'
+  | 'guarded'
+  | 'ready'
+  | 'committed'
+  | 'pull-requested'
+  | 'released'
+  | 'deployed'
+  | 'completed'
+  | 'blocked'
+  | 'failed';
 
 export interface DeliveryReport {
   deliveryId: string;
@@ -61,9 +71,7 @@ export function generateDeliveryReport(params: {
     taskId: params.taskId,
     runId: params.runId,
     type: params.type,
-    status: params.guardResult === undefined
-      ? 'ready'
-      : params.guardResult.canProceed ? 'ready' : 'blocked',
+    status: params.guardResult === undefined ? 'ready' : params.guardResult.canProceed ? 'ready' : 'blocked',
     createdAt: new Date().toISOString(),
     commitMessage: params.commitMessage,
     prBody: params.prBody,
@@ -79,10 +87,7 @@ export function generateDeliveryReport(params: {
 /**
  * Save a delivery report to .project/reports/delivery/<delivery-id>.md
  */
-export function saveDeliveryReport(
-  report: DeliveryReport,
-  projectPath?: string,
-): string {
+export function saveDeliveryReport(report: DeliveryReport, projectPath?: string): string {
   const resolvedPath = resolve(projectPath || process.cwd());
   const reportDir = join(resolvedPath, '.project/reports/delivery');
   if (!existsSync(reportDir)) {
@@ -150,5 +155,5 @@ function formatDeliveryReport(report: DeliveryReport): string {
     lines.push('');
   }
 
-  return lines.filter(l => l !== undefined).join('\n');
+  return lines.filter((l) => l !== undefined).join('\n');
 }

@@ -64,10 +64,7 @@ export interface RunReport {
 /**
  * Generate a run report from a trace and optional metadata.
  */
-export function generateRunReport(
-  trace: RunTrace,
-  overrides?: Partial<RunReport>,
-): RunReport {
+export function generateRunReport(trace: RunTrace, overrides?: Partial<RunReport>): RunReport {
   const now = new Date().toISOString();
   const startTime = trace.startedAt;
   const endTime = trace.endedAt || now;
@@ -105,10 +102,7 @@ export function generateRunReport(
 /**
  * Save a run report to .project/reports/runs/<run-id>.md.
  */
-export function saveRunReport(
-  report: RunReport,
-  projectPath?: string,
-): string {
+export function saveRunReport(report: RunReport, projectPath?: string): string {
   const resolvedPath = resolve(projectPath || process.cwd());
   const reportsDir = join(resolvedPath, '.project/reports/runs');
   if (!existsSync(reportsDir)) {
@@ -208,7 +202,7 @@ function formatRunReport(report: RunReport): string {
     lines.push('');
   }
 
-  return lines.filter(l => l !== undefined).join('\n');
+  return lines.filter((l) => l !== undefined).join('\n');
 }
 
 // ============================================================

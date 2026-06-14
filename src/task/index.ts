@@ -79,12 +79,10 @@ async function getProjectId(projectPath: string): Promise<string> {
  * VER3-02/VER3-03: Verification produces a structured result with integrity
  * hash. completeTask() loads it from disk — caller strings cannot override.
  */
-export async function runTask(
-  task: string,
-  options?: { json?: boolean; quiet?: boolean },
-): Promise<void> {
+export async function runTask(task: string, options?: { json?: boolean; quiet?: boolean }): Promise<void> {
   const projectPath = process.cwd();
-  const { detectOutputMode, jsonOutput, buildJsonOutput, prettySuccess, prettyError, prettyProgress, resetStartTime } = await import('../cli/formatter.js');
+  const { detectOutputMode, jsonOutput, buildJsonOutput, prettySuccess, prettyError, prettyProgress, resetStartTime } =
+    await import('../cli/formatter.js');
   const mode = detectOutputMode(options);
   resetStartTime();
 
@@ -124,9 +122,33 @@ export async function runTask(
 
     // ── 5. Record events ──
     const { logEvent, EventTypes } = await import('../observability/events.js');
-    logEvent({ projectId, type: EventTypes.runStarted, actor: 'harness', summary: `Run started: ${record.state.title}`, runId, taskId }, projectPath);
-    logEvent({ projectId, type: EventTypes.taskCreated, actor: 'harness', summary: `Task created: ${taskId}`, runId, taskId }, projectPath);
-    logEvent({ projectId, type: EventTypes.contextBuildCompleted, actor: 'harness', summary: `Context Pack built: ${pack.id}`, runId, taskId, payload: { files: pack.files.length, skills: pack.skills.length } }, projectPath);
+    logEvent(
+      {
+        projectId,
+        type: EventTypes.runStarted,
+        actor: 'harness',
+        summary: `Run started: ${record.state.title}`,
+        runId,
+        taskId,
+      },
+      projectPath,
+    );
+    logEvent(
+      { projectId, type: EventTypes.taskCreated, actor: 'harness', summary: `Task created: ${taskId}`, runId, taskId },
+      projectPath,
+    );
+    logEvent(
+      {
+        projectId,
+        type: EventTypes.contextBuildCompleted,
+        actor: 'harness',
+        summary: `Context Pack built: ${pack.id}`,
+        runId,
+        taskId,
+        payload: { files: pack.files.length, skills: pack.skills.length },
+      },
+      projectPath,
+    );
 
     // ── 6. Create checkpoint ──
     const { createCheckpoint } = await import('../state/checkpoint.js');
@@ -151,7 +173,17 @@ export async function runTask(
     let verificationStatus: 'passed' | 'failed' | 'skipped' = 'skipped';
     const commands = detectCommands(projectPath);
     if (commands.length > 0) {
-      logEvent({ projectId, type: EventTypes.verificationStarted, actor: 'harness', summary: `Verification: ${commands.length} commands`, runId, taskId }, projectPath);
+      logEvent(
+        {
+          projectId,
+          type: EventTypes.verificationStarted,
+          actor: 'harness',
+          summary: `Verification: ${commands.length} commands`,
+          runId,
+          taskId,
+        },
+        projectPath,
+      );
 
       const plan = buildPlan(projectPath, commands);
       const result = await runVerification(plan);
@@ -169,11 +201,18 @@ export async function runTask(
 
       verificationStatus = result.status === 'passed' ? 'passed' : result.status === 'failed' ? 'failed' : 'skipped';
 
-      logEvent({
-        projectId, type: verificationStatus === 'passed' ? EventTypes.verificationCompleted : EventTypes.verificationFailed,
-        actor: 'harness', summary: `Verification ${verificationStatus}: ${result.passed}/${result.total} passed`,
-        runId, taskId, payload: { passed: result.passed, failed: result.failed, skipped: result.skipped },
-      }, projectPath);
+      logEvent(
+        {
+          projectId,
+          type: verificationStatus === 'passed' ? EventTypes.verificationCompleted : EventTypes.verificationFailed,
+          actor: 'harness',
+          summary: `Verification ${verificationStatus}: ${result.passed}/${result.total} passed`,
+          runId,
+          taskId,
+          payload: { passed: result.passed, failed: result.failed, skipped: result.skipped },
+        },
+        projectPath,
+      );
 
       if (mode !== 'quiet') console.log(formatResults(plan.steps, result));
     }
@@ -194,37 +233,47 @@ export async function runTask(
         verificationId,
       });
 
-      logEvent({
-        projectId, type: EventTypes.taskCompleted, actor: 'harness',
-        summary: `Task completed: ${record.state.title}`,
-        runId, taskId,
-      }, projectPath);
+      logEvent(
+        {
+          projectId,
+          type: EventTypes.taskCompleted,
+          actor: 'harness',
+          summary: `Task completed: ${record.state.title}`,
+          runId,
+          taskId,
+        },
+        projectPath,
+      );
 
       // VER3-03: Update run state with verificationId
       const { updateRunState } = await import('../state/run.js');
       updateRunState(runId, { verificationResultId: verificationId }, projectPath);
-
     } else {
       // Failed/skipped verification → fail the task
-      const reason = verificationId
-        ? `Verification ${verificationStatus}`
-        : 'No verification commands found';
+      const reason = verificationId ? `Verification ${verificationStatus}` : 'No verification commands found';
 
       completionResult = await failTask({
         projectPath,
         taskId,
         verificationId,
         failureReason: reason,
-        recoveryHint: verificationStatus === 'failed'
-          ? 'Fix the failing checks and re-run verification'
-          : 'Configure verification commands in AGENTS.md or package.json',
+        recoveryHint:
+          verificationStatus === 'failed'
+            ? 'Fix the failing checks and re-run verification'
+            : 'Configure verification commands in AGENTS.md or package.json',
       });
 
-      logEvent({
-        projectId, type: EventTypes.taskFailed, actor: 'harness',
-        summary: `Task failed: ${record.state.title} (${reason})`,
-        runId, taskId,
-      }, projectPath);
+      logEvent(
+        {
+          projectId,
+          type: EventTypes.taskFailed,
+          actor: 'harness',
+          summary: `Task failed: ${record.state.title} (${reason})`,
+          runId,
+          taskId,
+        },
+        projectPath,
+      );
     }
 
     // ── 9. Generate run report ──
@@ -246,49 +295,84 @@ export async function runTask(
 
     // ── Output ──
     if (mode === 'json') {
-      jsonOutput(buildJsonOutput({
-        command: 'run', status: completionResult.finalStatus === 'completed' ? 'success' : 'failed',
-        data: {
-          taskId, runId, title: record.state.title, type: record.state.type,
-          verificationId, verificationStatus, checkpointId: cp.id, contextPackId: pack.id, reportPath,
-          finalStatus: completionResult.finalStatus,
-          commitMessage: commitMsg.full,
-        },
-      }));
+      jsonOutput(
+        buildJsonOutput({
+          command: 'run',
+          status: completionResult.finalStatus === 'completed' ? 'success' : 'failed',
+          data: {
+            taskId,
+            runId,
+            title: record.state.title,
+            type: record.state.type,
+            verificationId,
+            verificationStatus,
+            checkpointId: cp.id,
+            contextPackId: pack.id,
+            reportPath,
+            finalStatus: completionResult.finalStatus,
+            commitMessage: commitMsg.full,
+          },
+        }),
+      );
     } else if (mode === 'quiet') {
       console.log(taskId);
     } else {
       const statusLine = completionResult.finalStatus === 'completed' ? 'Run completed' : 'Run failed';
-      prettySuccess(statusLine, {
-        Task: `${taskId} — ${record.state.title}`,
-        Type: record.state.type,
-        'Context Pack': pack.id,
-        Checkpoint: cp.id,
-        Verification: `${verificationStatus}${verificationId ? ` (${verificationId})` : ''}`,
-        'Final Status': completionResult.finalStatus,
-        Report: reportPath,
-      }, [
-        `harness verify --task ${taskId}`,
-        `harness report ${runId}`,
-      ]);
+      prettySuccess(
+        statusLine,
+        {
+          Task: `${taskId} — ${record.state.title}`,
+          Type: record.state.type,
+          'Context Pack': pack.id,
+          Checkpoint: cp.id,
+          Verification: `${verificationStatus}${verificationId ? ` (${verificationId})` : ''}`,
+          'Final Status': completionResult.finalStatus,
+          Report: reportPath,
+        },
+        [`harness verify --task ${taskId}`, `harness report ${runId}`],
+      );
     }
 
     // ── Complete trace ──
     const { updateTraceStatus, saveTrace: saveTrace2 } = await import('../observability/trace.js');
-    updateTraceStatus(trace, completionResult.finalStatus === 'completed' ? 'completed' : 'failed',
-      `Task ${completionResult.finalStatus}`);
+    updateTraceStatus(
+      trace,
+      completionResult.finalStatus === 'completed' ? 'completed' : 'failed',
+      `Task ${completionResult.finalStatus}`,
+    );
     saveTrace2(trace, projectPath);
 
-    logEvent({
-      projectId, type: EventTypes.runCompleted, actor: 'harness',
-      summary: `Run ${completionResult.finalStatus}: ${runId}`,
-      runId, taskId,
-    }, projectPath);
-
+    logEvent(
+      {
+        projectId,
+        type: EventTypes.runCompleted,
+        actor: 'harness',
+        summary: `Run ${completionResult.finalStatus}: ${runId}`,
+        runId,
+        taskId,
+      },
+      projectPath,
+    );
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     if (mode === 'json') {
-      jsonOutput(buildJsonOutput({ command: 'run', status: 'failed', error: { code: 'ERR_RUN_FAILED', category: 'task', severity: 'error' as const, message: error, recoveryHint: 'Check the error and try again', recoverable: true, retryable: true, userActionRequired: false, createdAt: new Date().toISOString() } }));
+      jsonOutput(
+        buildJsonOutput({
+          command: 'run',
+          status: 'failed',
+          error: {
+            code: 'ERR_RUN_FAILED',
+            category: 'task',
+            severity: 'error' as const,
+            message: error,
+            recoveryHint: 'Check the error and try again',
+            recoverable: true,
+            retryable: true,
+            userActionRequired: false,
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
     } else {
       prettyError('ERR_RUN_FAILED', `Run failed: ${error}`, 'Check the error and try again');
     }

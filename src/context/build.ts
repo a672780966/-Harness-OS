@@ -18,12 +18,7 @@
 
 import { existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
-import type {
-  ContextPack,
-  FileContext,
-  DecisionContext,
-  SkillContext,
-} from '../types.js';
+import type { ContextPack, FileContext, DecisionContext, SkillContext } from '../types.js';
 import { collectAgentsMd, collectProject, collectGit, collectTask } from './sources.js';
 import { scoreFile, sortCandidates, extractKeywords } from './relevance.js';
 import { calculateBudget, availableContextTokens, trimToBudget } from './budget.js';
@@ -48,6 +43,27 @@ export interface BuildContextInput {
   maxTokens?: number;
 }
 
+/**
+ * Load accepted ADRs. Superseded/rejected decisions are excluded.
+ * Returns an empty array if the decisions directory doesn't exist.
+ */
+async function loadActiveDecisions(projectPath: string): Promise<DecisionContext[]> {
+  try {
+    const { listActiveDecisions } = await import('../decision/index.js');
+    const active = listActiveDecisions(projectPath);
+    return active.map((d) => ({
+      id: d.id,
+      path: `.project/decisions/${d.id}.json`,
+      title: d.title,
+      status: d.status,
+      summary: d.summary,
+      relevanceReason: `Active ${d.type} decision — Constrains project architecture and design choices`,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ============================================================
 // Build Context Pack
 // ============================================================
@@ -57,9 +73,7 @@ export interface BuildContextInput {
  *
  * Returns the assembled ContextPack and saves JSON + Markdown snapshots.
  */
-export async function buildContextPack(
-  input: BuildContextInput,
-): Promise<ContextPack> {
+export async function buildContextPack(input: BuildContextInput): Promise<ContextPack> {
   const workspacePath = resolve(input.workspacePath);
   const contextDir = join(workspacePath, '.project/context');
   const packId = `ctx_${input.runId}`;
@@ -68,9 +82,7 @@ export async function buildContextPack(
   const rules = collectAgentsMd(workspacePath);
   const project = collectProject(workspacePath);
   const git = await collectGit(workspacePath);
-  const task = input.taskId
-    ? collectTask(workspacePath, input.taskId)
-    : undefined;
+  const task = input.taskId ? collectTask(workspacePath, input.taskId) : undefined;
 
   // 2. Prepare file candidates
   const gitChangedFiles = git.changedFiles || [];
@@ -82,14 +94,14 @@ export async function buildContextPack(
   // Build file candidates from changed files
   const candidateInputs = [
     // From git diff
-    ...gitChangedFiles.map(path => ({
+    ...gitChangedFiles.map((path) => ({
       filePath: path,
       explicitFiles,
       gitChangedFiles,
       taskKeywords,
     })),
     // From explicit files
-    ...explicitFiles.map(path => ({
+    ...explicitFiles.map((path) => ({
       filePath: path,
       explicitFiles,
       gitChangedFiles,
@@ -99,13 +111,13 @@ export async function buildContextPack(
 
   // Deduplicate by filePath
   const seen = new Set<string>();
-  const uniqueInputs = candidateInputs.filter(i => {
+  const uniqueInputs = candidateInputs.filter((i) => {
     if (seen.has(i.filePath)) return false;
     seen.add(i.filePath);
     return true;
   });
 
-  const candidates = uniqueInputs.map(i => scoreFile(i));
+  const candidates = uniqueInputs.map((i) => scoreFile(i));
   const sorted = sortCandidates(candidates);
 
   // 3. Apply budget
@@ -117,11 +129,11 @@ export async function buildContextPack(
   // 4. Determine skills (from project manifest)
   const skills = getDefaultSkills();
 
-  // 5. Build decisions (stub — full ADR reading is P1)
-  const decisions: DecisionContext[] = [];
+  // 5. Build decisions from accepted ADRs (P1-003)
+  const decisions: DecisionContext[] = await loadActiveDecisions(input.workspacePath);
 
   // 6. Build FileContexts from candidates
-  const files: FileContext[] = trimmed.candidates.map(c => ({
+  const files: FileContext[] = trimmed.candidates.map((c) => ({
     path: c.path,
     reason: c.reason as FileContext['reason'],
     priority: c.priority,
@@ -214,14 +226,22 @@ function generateContextMarkdown(pack: ContextPack): string {
     `Type: ${pack.project.type}  `,
     `Language: ${pack.project.primaryLanguage}  `,
     `Runtime: ${pack.project.runtime}  `,
-    (pack.project.packageManager ? `Package Manager: ${pack.project.packageManager}  \n` : ''),
+    pack.project.packageManager ? `Package Manager: ${pack.project.packageManager}  \n` : '',
     '',
     '## Rules from AGENTS.md',
     '',
-    ...(pack.rules.architectureRules.length > 0 ? ['### Architecture Rules', ...pack.rules.architectureRules.map(r => `- ${r}`), ''] : []),
-    ...(pack.rules.codingRules.length > 0 ? ['### Coding Rules', ...pack.rules.codingRules.map(r => `- ${r}`), ''] : []),
-    ...(pack.rules.testingRules.length > 0 ? ['### Testing Rules', ...pack.rules.testingRules.map(r => `- ${r}`), ''] : []),
-    ...(pack.rules.securityRules.length > 0 ? ['### Security Rules', ...pack.rules.securityRules.map(r => `- ${r}`), ''] : []),
+    ...(pack.rules.architectureRules.length > 0
+      ? ['### Architecture Rules', ...pack.rules.architectureRules.map((r) => `- ${r}`), '']
+      : []),
+    ...(pack.rules.codingRules.length > 0
+      ? ['### Coding Rules', ...pack.rules.codingRules.map((r) => `- ${r}`), '']
+      : []),
+    ...(pack.rules.testingRules.length > 0
+      ? ['### Testing Rules', ...pack.rules.testingRules.map((r) => `- ${r}`), '']
+      : []),
+    ...(pack.rules.securityRules.length > 0
+      ? ['### Security Rules', ...pack.rules.securityRules.map((r) => `- ${r}`), '']
+      : []),
     '',
     '## Git State',
     '',
@@ -229,18 +249,20 @@ function generateContextMarkdown(pack: ContextPack): string {
     `User changes: ${pack.git.hasUserChanges ? 'yes' : 'no'}  `,
     `Changed files: ${pack.git.changedFiles.length}  `,
     '',
-    ...(pack.git.changedFiles.length > 0 ? ['### Changed Files', ...pack.git.changedFiles.map(f => `- ${f}`), ''] : []),
+    ...(pack.git.changedFiles.length > 0
+      ? ['### Changed Files', ...pack.git.changedFiles.map((f) => `- ${f}`), '']
+      : []),
     '',
     '## Relevant Files',
     '',
-    ...pack.files.map(f =>
-      `### ${f.path}\n\nReason: ${f.reason}  \nPriority: P${f.priority}  \nMode: ${f.contentMode}\n`
+    ...pack.files.map(
+      (f) => `### ${f.path}\n\nReason: ${f.reason}  \nPriority: P${f.priority}  \nMode: ${f.contentMode}\n`,
     ),
     '',
     '## Available Skills',
     '',
-    ...pack.skills.map(s =>
-      `- **${s.name}** — ${s.description} (${s.riskLevel}, ${s.allowed ? 'allowed' : 'disabled'})`
+    ...pack.skills.map(
+      (s) => `- **${s.name}** — ${s.description} (${s.riskLevel}, ${s.allowed ? 'allowed' : 'disabled'})`,
     ),
     '',
     '## Context Budget',
@@ -262,9 +284,33 @@ function generateContextMarkdown(pack: ContextPack): string {
 
 function getDefaultSkills(): SkillContext[] {
   return [
-    { name: 'filesystem', description: 'Read, write, edit, and list project files', allowed: true, riskLevel: 'medium', requiresApproval: false },
-    { name: 'shell', description: 'Execute shell commands within workspace', allowed: true, riskLevel: 'high', requiresApproval: true },
-    { name: 'git', description: 'Git status, diff, log, and commit operations', allowed: true, riskLevel: 'medium', requiresApproval: false },
-    { name: 'repo-scanner', description: 'Scan repository structure, detect tech stack, build maps', allowed: true, riskLevel: 'low', requiresApproval: false },
+    {
+      name: 'filesystem',
+      description: 'Read, write, edit, and list project files',
+      allowed: true,
+      riskLevel: 'medium',
+      requiresApproval: false,
+    },
+    {
+      name: 'shell',
+      description: 'Execute shell commands within workspace',
+      allowed: true,
+      riskLevel: 'high',
+      requiresApproval: true,
+    },
+    {
+      name: 'git',
+      description: 'Git status, diff, log, and commit operations',
+      allowed: true,
+      riskLevel: 'medium',
+      requiresApproval: false,
+    },
+    {
+      name: 'repo-scanner',
+      description: 'Scan repository structure, detect tech stack, build maps',
+      allowed: true,
+      riskLevel: 'low',
+      requiresApproval: false,
+    },
   ];
 }

@@ -23,12 +23,7 @@
  *            03_AGENTS_MD_STANDARD.md
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { simpleGit } from 'simple-git';
 import type { ProjectManifest } from '../types.js';
@@ -238,7 +233,7 @@ export async function initProject(projectPath?: string): Promise<RepairResult> {
     const content = readFileSync(agentsMdPath, 'utf-8');
     const sections = extractSections(content);
     for (const required of REQUIRED_AGENTS_SECTIONS) {
-      if (!sections.some(s => s.toLowerCase().includes(required.toLowerCase()))) {
+      if (!sections.some((s) => s.toLowerCase().includes(required.toLowerCase()))) {
         result.agentsMdMissingSections.push(required);
       }
     }
@@ -298,22 +293,22 @@ ${techStack.packageManager}
   const repoMapMd = `# Repository Map
 
 ## Source Directories
-${repoMap.sourceDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.sourceDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Test Directories
-${repoMap.testDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.testDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Documentation Directories
-${repoMap.docDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.docDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Configuration Files
-${repoMap.configFiles.map(f => `- ${f}`).join('\n') || '- none detected'}
+${repoMap.configFiles.map((f) => `- ${f}`).join('\n') || '- none detected'}
 
 ## Package Files
-${repoMap.packageFiles.map(f => `- ${f}`).join('\n') || '- none detected'}
+${repoMap.packageFiles.map((f) => `- ${f}`).join('\n') || '- none detected'}
 
 ## Entry Points
-${repoMap.entrypoints.map(e => `- ${e}`).join('\n') || '- none detected'}
+${repoMap.entrypoints.map((e) => `- ${e}`).join('\n') || '- none detected'}
 `;
   writeFileSync(join(resolvedPath, '.project/state/repository-map.md'), repoMapMd, 'utf-8');
   result.repoMapWritten = true;
@@ -450,7 +445,7 @@ export async function repairProject(projectPath?: string): Promise<RepairResult>
     const content = readFileSync(agentsMdPath, 'utf-8');
     const sections = extractSections(content);
     for (const required of REQUIRED_AGENTS_SECTIONS) {
-      if (!sections.some(s => s.toLowerCase().includes(required.toLowerCase()))) {
+      if (!sections.some((s) => s.toLowerCase().includes(required.toLowerCase()))) {
         result.agentsMdMissingSections.push(required);
       }
     }
@@ -489,22 +484,22 @@ ${techStack.packageManager}
   const repoMapMd = `# Repository Map (refreshed by repair)
 
 ## Source Directories
-${repoMap.sourceDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.sourceDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Test Directories
-${repoMap.testDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.testDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Documentation Directories
-${repoMap.docDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.docDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Configuration Files
-${repoMap.configFiles.map(f => `- ${f}`).join('\n') || '- none detected'}
+${repoMap.configFiles.map((f) => `- ${f}`).join('\n') || '- none detected'}
 
 ## Package Files
-${repoMap.packageFiles.map(f => `- ${f}`).join('\n') || '- none detected'}
+${repoMap.packageFiles.map((f) => `- ${f}`).join('\n') || '- none detected'}
 
 ## Entry Points
-${repoMap.entrypoints.map(e => `- ${e}`).join('\n') || '- none detected'}
+${repoMap.entrypoints.map((e) => `- ${e}`).join('\n') || '- none detected'}
 `;
   writeFileSync(join(resolvedPath, '.project/state/repository-map.md'), repoMapMd, 'utf-8');
   result.repoMapWritten = true;

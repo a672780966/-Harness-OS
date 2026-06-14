@@ -106,93 +106,257 @@ function createError(
 // ============================================================
 
 export function createInternalError(message: string, details?: Record<string, unknown>): HarnessError {
-  return createError(ErrorCodes.ERR_INTERNAL, 'internal', 'fatal', message, 'Report this as a bug', false, false, details);
+  return createError(
+    ErrorCodes.ERR_INTERNAL,
+    'internal',
+    'fatal',
+    message,
+    'Report this as a bug',
+    false,
+    false,
+    details,
+  );
 }
 
 export function createNotImplementedError(feature: string): HarnessError {
-  return createError(ErrorCodes.ERR_NOT_IMPLEMENTED, 'internal', 'warning', `${feature} is not yet implemented`, '', false, false);
+  return createError(
+    ErrorCodes.ERR_NOT_IMPLEMENTED,
+    'internal',
+    'warning',
+    `${feature} is not yet implemented`,
+    '',
+    false,
+    false,
+  );
 }
 
 // ---- Project ----
 
 export function createProjectNotFoundError(path: string): HarnessError {
-  return createError(ErrorCodes.ERR_PROJECT_NOT_FOUND, 'project', 'error', `Project path does not exist: ${path}`, 'Check the path and try again', true, false, { path });
+  return createError(
+    ErrorCodes.ERR_PROJECT_NOT_FOUND,
+    'project',
+    'error',
+    `Project path does not exist: ${path}`,
+    'Check the path and try again',
+    true,
+    false,
+    { path },
+  );
 }
 
 export function createProjectNotGitRepoError(path: string): HarnessError {
-  return createError(ErrorCodes.ERR_PROJECT_NOT_GIT_REPO, 'project', 'error', `Not a Git repository: ${path}`, 'Run `git init` or check the path', true, false, { path });
+  return createError(
+    ErrorCodes.ERR_PROJECT_NOT_GIT_REPO,
+    'project',
+    'error',
+    `Not a Git repository: ${path}`,
+    'Run `git init` or check the path',
+    true,
+    false,
+    { path },
+  );
 }
 
 export function createProjectMissingAgentsMdError(): HarnessError {
-  return createError(ErrorCodes.ERR_PROJECT_MISSING_AGENTS_MD, 'project', 'error', 'AGENTS.md is missing from the project root', 'Run `harness init` or `harness repair` to create it', true, true);
+  return createError(
+    ErrorCodes.ERR_PROJECT_MISSING_AGENTS_MD,
+    'project',
+    'error',
+    'AGENTS.md is missing from the project root',
+    'Run `harness init` or `harness repair` to create it',
+    true,
+    true,
+  );
 }
 
 export function createProjectInvalidManifestError(reason: string): HarnessError {
-  return createError(ErrorCodes.ERR_PROJECT_INVALID_MANIFEST, 'project', 'error', `Invalid project manifest: ${reason}`, 'Run `harness repair` to fix it', true, true);
+  return createError(
+    ErrorCodes.ERR_PROJECT_INVALID_MANIFEST,
+    'project',
+    'error',
+    `Invalid project manifest: ${reason}`,
+    'Run `harness repair` to fix it',
+    true,
+    true,
+  );
 }
 
 // ---- Task ----
 
 export function createTaskNotFoundError(taskId: string): HarnessError {
-  return createError(ErrorCodes.ERR_TASK_NOT_FOUND, 'task', 'error', `Task not found: ${taskId}`, 'Check the task ID and try again', true, false, { taskId });
+  return createError(
+    ErrorCodes.ERR_TASK_NOT_FOUND,
+    'task',
+    'error',
+    `Task not found: ${taskId}`,
+    'Check the task ID and try again',
+    true,
+    false,
+    { taskId },
+  );
 }
 
 export function createTaskInvalidTransitionError(from: string, to: string): HarnessError {
-  return createError(ErrorCodes.ERR_TASK_INVALID_TRANSITION, 'task', 'error', `Invalid task transition: ${from} → ${to}`, 'Check allowed transitions with `harness task status`', true, false, { from, to });
+  return createError(
+    ErrorCodes.ERR_TASK_INVALID_TRANSITION,
+    'task',
+    'error',
+    `Invalid task transition: ${from} → ${to}`,
+    'Check allowed transitions with `harness task status`',
+    true,
+    false,
+    { from, to },
+  );
 }
 
 // ---- Governance ----
 
 export function createPolicyDeniedError(action: string, reason: string): HarnessError {
-  return createError(ErrorCodes.ERR_POLICY_DENIED, 'governance', 'error', `Policy denied: ${action}`, reason, true, false, { action });
+  return createError(
+    ErrorCodes.ERR_POLICY_DENIED,
+    'governance',
+    'error',
+    `Policy denied: ${action}`,
+    reason,
+    true,
+    false,
+    { action },
+  );
 }
 
 export function createApprovalRequiredError(action: string, reason: string): HarnessError {
-  return createError(ErrorCodes.ERR_APPROVAL_REQUIRED, 'governance', 'error', `Approval required: ${action}`, reason, true, true, { action });
+  return createError(
+    ErrorCodes.ERR_APPROVAL_REQUIRED,
+    'governance',
+    'error',
+    `Approval required: ${action}`,
+    reason,
+    true,
+    true,
+    { action },
+  );
 }
 
 export function createApprovalDeniedError(approvalId: string): HarnessError {
-  return createError(ErrorCodes.ERR_APPROVAL_DENIED, 'governance', 'error', `Approval denied: ${approvalId}`, 'The operation was rejected by the operator', true, false, { approvalId });
+  return createError(
+    ErrorCodes.ERR_APPROVAL_DENIED,
+    'governance',
+    'error',
+    `Approval denied: ${approvalId}`,
+    'The operation was rejected by the operator',
+    true,
+    false,
+    { approvalId },
+  );
 }
 
 // ---- Skill ----
 
 export function createSkillNotFoundError(skillName: string): HarnessError {
-  return createError(ErrorCodes.ERR_SKILL_NOT_FOUND, 'skill', 'error', `Skill not found: ${skillName}`, 'Check available skills with `harness skills list`', true, false, { skillName });
+  return createError(
+    ErrorCodes.ERR_SKILL_NOT_FOUND,
+    'skill',
+    'error',
+    `Skill not found: ${skillName}`,
+    'Check available skills with `harness skills list`',
+    true,
+    false,
+    { skillName },
+  );
 }
 
 export function createSkillExecutionError(skillName: string, toolName: string, reason: string): HarnessError {
-  return createError(ErrorCodes.ERR_SKILL_EXECUTION_FAILED, 'skill', 'error', `Skill execution failed: ${skillName}.${toolName}: ${reason}`, 'Check the input and try again', true, true, { skillName, toolName });
+  return createError(
+    ErrorCodes.ERR_SKILL_EXECUTION_FAILED,
+    'skill',
+    'error',
+    `Skill execution failed: ${skillName}.${toolName}: ${reason}`,
+    'Check the input and try again',
+    true,
+    true,
+    { skillName, toolName },
+  );
 }
 
 // ---- Verification ----
 
 export function createVerificationFailedError(details?: Record<string, unknown>): HarnessError {
-  return createError(ErrorCodes.ERR_VERIFICATION_FAILED, 'verification', 'error', 'Verification failed: one or more checks did not pass', 'Fix the reported issues and run `harness verify` again', true, true, details);
+  return createError(
+    ErrorCodes.ERR_VERIFICATION_FAILED,
+    'verification',
+    'error',
+    'Verification failed: one or more checks did not pass',
+    'Fix the reported issues and run `harness verify` again',
+    true,
+    true,
+    details,
+  );
 }
 
 export function createVerificationNotRunError(): HarnessError {
-  return createError(ErrorCodes.ERR_VERIFICATION_NOT_RUN, 'verification', 'error', 'Verification has not been run', 'Run `harness verify` before delivery', true, false);
+  return createError(
+    ErrorCodes.ERR_VERIFICATION_NOT_RUN,
+    'verification',
+    'error',
+    'Verification has not been run',
+    'Run `harness verify` before delivery',
+    true,
+    false,
+  );
 }
 
 // ---- Delivery ----
 
 export function createDeliveryBlockedError(reason: string): HarnessError {
-  return createError(ErrorCodes.ERR_DELIVERY_BLOCKED, 'delivery', 'error', `Delivery blocked: ${reason}`, 'Resolve the blocking issues and try again', true, false);
+  return createError(
+    ErrorCodes.ERR_DELIVERY_BLOCKED,
+    'delivery',
+    'error',
+    `Delivery blocked: ${reason}`,
+    'Resolve the blocking issues and try again',
+    true,
+    false,
+  );
 }
 
 // ---- State ----
 
 export function createCheckpointNotFoundError(checkpointId: string): HarnessError {
-  return createError(ErrorCodes.ERR_CHECKPOINT_NOT_FOUND, 'state', 'error', `Checkpoint not found: ${checkpointId}`, 'Check the checkpoint ID with `harness checkpoint list`', true, false, { checkpointId });
+  return createError(
+    ErrorCodes.ERR_CHECKPOINT_NOT_FOUND,
+    'state',
+    'error',
+    `Checkpoint not found: ${checkpointId}`,
+    'Check the checkpoint ID with `harness checkpoint list`',
+    true,
+    false,
+    { checkpointId },
+  );
 }
 
 // ---- CLI ----
 
 export function createCliInvalidArgumentError(message: string): HarnessError {
-  return createError(ErrorCodes.ERR_CLI_INVALID_ARGUMENT, 'cli', 'error', message, 'Check the command usage with --help', true, false);
+  return createError(
+    ErrorCodes.ERR_CLI_INVALID_ARGUMENT,
+    'cli',
+    'error',
+    message,
+    'Check the command usage with --help',
+    true,
+    false,
+  );
 }
 
 export function createCliNonInteractiveApprovalError(): HarnessError {
-  return createError(ErrorCodes.ERR_CLI_NON_INTERACTIVE, 'cli', 'error', 'Action requires approval but running in non-interactive mode', 'Use --approve flag or run in interactive terminal', true, false);
+  return createError(
+    ErrorCodes.ERR_CLI_NON_INTERACTIVE,
+    'cli',
+    'error',
+    'Action requires approval but running in non-interactive mode',
+    'Use --approve flag or run in interactive terminal',
+    true,
+    false,
+  );
 }

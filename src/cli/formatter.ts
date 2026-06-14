@@ -56,11 +56,7 @@ export function isColorAllowed(): boolean {
 
 let _startTime = Date.now();
 
-export function buildMeta(
-  command: string,
-  outputMode: OutputMode,
-  overrides?: Partial<CliOutputMeta>,
-): CliOutputMeta {
+export function buildMeta(command: string, outputMode: OutputMode, overrides?: Partial<CliOutputMeta>): CliOutputMeta {
   return {
     version: HARNESS_VERSION,
     outputMode,
@@ -92,12 +88,13 @@ export function buildJsonOutput<T>(params: {
     command: params.command,
     status: params.status,
     data: params.data ? redactObject(params.data) : undefined,
-    error: params.error ? redactObject(params.error) as unknown as HarnessError : undefined,
-    warnings: params.warnings?.map(w => ({
-      ...w,
-      message: redactText(w.message),
-      recoveryHint: w.recoveryHint ? redactText(w.recoveryHint) : undefined,
-    })) ?? [],
+    error: params.error ? (redactObject(params.error) as unknown as HarnessError) : undefined,
+    warnings:
+      params.warnings?.map((w) => ({
+        ...w,
+        message: redactText(w.message),
+        recoveryHint: w.recoveryHint ? redactText(w.recoveryHint) : undefined,
+      })) ?? [],
     meta: buildMeta(params.command, 'json', params.metaOverrides),
   };
 }
@@ -128,11 +125,7 @@ export function prettySuccess(title: string, details: Record<string, string>, ne
  * Output goes to stderr.
  */
 export function prettyError(code: string, title: string, recovery?: string | null, details?: string): void {
-  const lines: string[] = [
-    `Error: ${code}`,
-    '',
-    title,
-  ];
+  const lines: string[] = [`Error: ${code}`, '', title];
   if (recovery) lines.push('', 'Recovery:', recovery);
   if (details) lines.push('', 'Details:', details);
   console.error(redactText(lines.join('\n')));
@@ -159,7 +152,7 @@ export function prettyApprovalPrompt(action: string, riskLevel: string, reason: 
     `Reason: ${reason}`,
     '',
     'Affected paths:',
-    ...paths.map(p => `  ${p}`),
+    ...paths.map((p) => `  ${p}`),
     '',
     'Approve? [y/N] ',
   ];
@@ -171,18 +164,22 @@ export function prettyApprovalPrompt(action: string, riskLevel: string, reason: 
  */
 export function prettyTable(headers: string[], rows: string[][]): void {
   // Calculate column widths
-  const colWidths = headers.map((h, i) =>
-    Math.max(h.length, ...rows.map(r => (r[i] || '').length)),
-  );
+  const colWidths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] || '').length)));
 
   // Header separator
-  const separator = `| ${colWidths.map(w => '-'.repeat(w)).join(' | ')} |`;
+  const separator = `| ${colWidths.map((w) => '-'.repeat(w)).join(' | ')} |`;
 
   // Header
   const header = `| ${headers.map((h, i) => h.padEnd(colWidths[i])).join(' | ')} |`;
-  console.log(redactText([header, separator, ...rows.map(r =>
-    `| ${r.map((c, i) => (c || '').padEnd(colWidths[i])).join(' | ')} |`,
-  )].join('\n')));
+  console.log(
+    redactText(
+      [
+        header,
+        separator,
+        ...rows.map((r) => `| ${r.map((c, i) => (c || '').padEnd(colWidths[i])).join(' | ')} |`),
+      ].join('\n'),
+    ),
+  );
 }
 
 /**
@@ -277,11 +274,13 @@ export async function runCliCommand<T>(
   try {
     if (mode === 'json') {
       const data = await handlers.jsonData();
-      jsonOutput(buildJsonOutput({
-        command: commandName,
-        status: 'success',
-        data,
-      }));
+      jsonOutput(
+        buildJsonOutput({
+          command: commandName,
+          status: 'success',
+          data,
+        }),
+      );
     } else if (mode === 'quiet') {
       const msg = await handlers.quiet?.();
       if (msg) quietSuccess(msg);

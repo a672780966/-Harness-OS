@@ -48,11 +48,26 @@ const DEFAULT_CONFIG: HarnessConfig = {
     redactSecrets: true,
     defaultNetwork: 'restricted',
     allowWorkspaceOutsideAccess: false,
-    dangerousCommands: ['rm -rf', 'sudo', 'chmod -R', 'chown -R', 'git reset --hard', 'git clean -fd', 'git push --force', 'curl | sh', 'wget | sh'],
+    dangerousCommands: [
+      'rm -rf',
+      'sudo',
+      'chmod -R',
+      'chown -R',
+      'git reset --hard',
+      'git clean -fd',
+      'git push --force',
+      'curl | sh',
+      'wget | sh',
+    ],
   },
   verification: { failFast: true, timeoutMs: 300000 },
   observability: { enabled: true, secretRedaction: true },
-  delivery: { requireApprovalForPr: true, requireApprovalForRelease: true, requireApprovalForDeploy: true, commitMessageFormat: 'conventional' },
+  delivery: {
+    requireApprovalForPr: true,
+    requireApprovalForRelease: true,
+    requireApprovalForDeploy: true,
+    commitMessageFormat: 'conventional',
+  },
   skills: { timeoutMs: 300000 },
   project: { allowAutoCommit: false, allowAutoPush: false, protectedBranches: ['main', 'master'] },
 };
@@ -115,11 +130,7 @@ function deleteFieldAtPath(obj: unknown, path: string): void {
  * Check if a safety field override is valid according to its type.
  * Returns null if valid, or a rejection reason string if invalid.
  */
-function checkSafetyOverride(
-  def: SafetyFieldDef,
-  currentValue: unknown,
-  newValue: unknown,
-): string | null {
+function checkSafetyOverride(def: SafetyFieldDef, currentValue: unknown, newValue: unknown): string | null {
   // Same value is always fine (no weakening)
   if (JSON.stringify(currentValue) === JSON.stringify(newValue)) return null;
 
@@ -185,11 +196,7 @@ function checkSafetyOverride(
  * Apply a safety-approved override value to the base config.
  * For arrays, performs union merge. For other types, replaces.
  */
-function applySafeOverride(
-  base: HarnessConfig,
-  def: SafetyFieldDef,
-  newValue: unknown,
-): void {
+function applySafeOverride(base: HarnessConfig, def: SafetyFieldDef, newValue: unknown): void {
   const baseObj = base as unknown as Record<string, unknown>;
 
   if (def.type === 'array' && Array.isArray(newValue)) {
@@ -197,7 +204,7 @@ function applySafeOverride(
     const current = (getFieldAtPath(baseObj, def.path) as unknown[]) ?? [];
     const merged = [...current];
     for (const item of newValue) {
-      if (!merged.some(existing => JSON.stringify(existing) === JSON.stringify(item))) {
+      if (!merged.some((existing) => JSON.stringify(existing) === JSON.stringify(item))) {
         merged.push(item);
       }
     }
@@ -271,7 +278,10 @@ function readEnvVars(): Partial<HarnessConfig> {
     config.runtime = { ...config.runtime, nonInteractive: true };
   }
   if (process.env.HARNESS_LOG_LEVEL) {
-    config.runtime = { ...config.runtime, logLevel: process.env.HARNESS_LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error' };
+    config.runtime = {
+      ...config.runtime,
+      logLevel: process.env.HARNESS_LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error',
+    };
   }
   if (process.env.NO_COLOR || process.env.HARNESS_NO_COLOR) {
     config.cli = { ...config.cli, colorEnabled: false };
@@ -308,7 +318,7 @@ function mergeConfig(
   warnings: string[],
   fieldSources: ConfigFieldSource[],
 ): HarnessConfig {
-  const result: Record<string, unknown> = { ...base as unknown as Record<string, unknown> };
+  const result: Record<string, unknown> = { ...(base as unknown as Record<string, unknown>) };
 
   // Walk safety fields first for type-specific enforcement
   for (const def of SAFETY_FIELDS) {
@@ -349,8 +359,15 @@ function mergeConfig(
     const ov = override[key];
     if (ov === undefined) continue;
 
-    if (key === 'cli' || key === 'runtime' || key === 'project' || key === 'skills' ||
-        key === 'verification' || key === 'observability' || key === 'delivery') {
+    if (
+      key === 'cli' ||
+      key === 'runtime' ||
+      key === 'project' ||
+      key === 'skills' ||
+      key === 'verification' ||
+      key === 'observability' ||
+      key === 'delivery'
+    ) {
       const baseVal = result[key] || {};
       const overrideVal = ov || {};
       result[key] = Object.assign({}, baseVal, overrideVal);
@@ -372,11 +389,13 @@ function validateConfig(config: HarnessConfig): ConfigValidation {
   const errors: string[] = [];
 
   // Validate enum fields against allowed values
-  const enumFields = SAFETY_FIELDS.filter(f => f.type === 'enum');
+  const enumFields = SAFETY_FIELDS.filter((f) => f.type === 'enum');
   for (const def of enumFields) {
     const value = getFieldAtPath(config, def.path);
     if (value !== undefined && def.validValues && !def.validValues.includes(String(value))) {
-      errors.push(`Config validation: "${def.path}" has invalid value "${String(value)}" �?must be one of: ${def.validValues.join(', ')}`);
+      errors.push(
+        `Config validation: "${def.path}" has invalid value "${String(value)}" �?must be one of: ${def.validValues.join(', ')}`,
+      );
     }
   }
 
@@ -388,7 +407,7 @@ function validateConfig(config: HarnessConfig): ConfigValidation {
 
   // Validate protectedBranches contains main or master
   const branches = getFieldAtPath(config, 'project.protectedBranches') as string[] | undefined;
-  if (Array.isArray(branches) && !branches.some(b => b === 'main' || b === 'master')) {
+  if (Array.isArray(branches) && !branches.some((b) => b === 'main' || b === 'master')) {
     errors.push('Config validation: "project.protectedBranches" must include "main" or "master"');
   }
 
@@ -408,10 +427,7 @@ function validateConfig(config: HarnessConfig): ConfigValidation {
  * @param projectPath Optional project path for project-level config
  * @param cliOverrides Optional CLI flag overrides
  */
-export function loadConfig(
-  projectPath?: string,
-  cliOverrides?: Partial<HarnessConfig>,
-): LoadedConfig {
+export function loadConfig(projectPath?: string, cliOverrides?: Partial<HarnessConfig>): LoadedConfig {
   const warnings: string[] = [];
   const sources: ConfigSource[] = [];
   const fieldSources: ConfigFieldSource[] = [];

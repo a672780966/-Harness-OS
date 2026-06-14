@@ -69,15 +69,15 @@ export function normalizeTitle(input: string): string {
 
 const TYPE_KEYWORDS: Record<string, string[]> = {
   // More specific types first (checked first)
-  test:      ['test', 'coverage', 'spec', 'assert', 'mock'],
-  bugfix:    ['fix', 'bug', 'error', 'crash', 'broken', 'incorrect', 'wrong'],
+  test: ['test', 'coverage', 'spec', 'assert', 'mock'],
+  bugfix: ['fix', 'bug', 'error', 'crash', 'broken', 'incorrect', 'wrong'],
   investigation: ['investigate', 'research', 'root cause', 'analyze', 'explore'],
-  docs:      ['doc', 'readme', 'documentation', 'comment', 'api doc'],
-  refactor:  ['refactor', 'rewrite', 'restructure', 'clean up', 'simplify'],
-  delivery:  ['deliver', 'release', 'publish', 'deploy', 'pr', 'commit'],
+  docs: ['doc', 'readme', 'documentation', 'comment', 'api doc'],
+  refactor: ['refactor', 'rewrite', 'restructure', 'clean up', 'simplify'],
+  delivery: ['deliver', 'release', 'publish', 'deploy', 'pr', 'commit'],
   maintenance: ['update', 'upgrade', 'migrate', 'bump', 'deprecat', 'audit'],
   // Generic types last (fallback)
-  feature:   ['implement', 'create', 'new', 'feature', 'build', 'support'],
+  feature: ['implement', 'create', 'new', 'feature', 'build', 'support'],
 };
 
 /**
@@ -163,9 +163,7 @@ export interface TaskRecord {
  *   4. Extract explicit refs
  *   5. Write task record files
  */
-export async function createTaskRecord(
-  params: CreateTaskParams,
-): Promise<TaskRecord> {
+export async function createTaskRecord(params: CreateTaskParams): Promise<TaskRecord> {
   const projectPath = resolve(params.projectPath);
   const activeDir = join(projectPath, '.project/tasks/active');
 
@@ -257,11 +255,11 @@ function generateTaskMarkdown(state: TaskState, refs: ExplicitRefs): string {
     '',
     '## Explicit Files',
     '',
-    ...(refs.files.length > 0 ? refs.files.map(f => `- ${f}`) : ['- (none detected)']),
+    ...(refs.files.length > 0 ? refs.files.map((f) => `- ${f}`) : ['- (none detected)']),
     '',
     '## Explicit Commands',
     '',
-    ...(refs.commands.length > 0 ? refs.commands.map(c => `- \`${c}\``) : ['- (none detected)']),
+    ...(refs.commands.length > 0 ? refs.commands.map((c) => `- \`${c}\``) : ['- (none detected)']),
     '',
     '## Context Links',
     '',

@@ -27,7 +27,32 @@ import {
   loadDecision,
 } from '../../src/decision/index.js';
 
+import {
+  submitApproval,
+  resolveApproval,
+  __test_clearStore,
+} from '../../src/governance/approval-gate.js';
+
 let testDir: string;
+
+/**
+ * Create an approved approval for ADR accept/supersede actions (P0-003).
+ * Returns the approval ID for use with acceptDecision / supersedeDecision.
+ */
+function createAdrApproval(adrId: string, action: 'accept_adr' | 'supersede_adr', extraInput?: Record<string, string>): string {
+  const approvalId = `test_aprv_${Date.now().toString(36)}`;
+  const input: Record<string, unknown> = { action, adrId, ...extraInput };
+  submitApproval({
+    id: approvalId,
+    action,
+    reason: `Test approval for ADR ${adrId}`,
+    riskLevel: 'medium',
+    toolName: 'decision',
+    input,
+  });
+  resolveApproval(approvalId, { approved: true, resolvedBy: 'test-operator' });
+  return approvalId;
+}
 let projectPath: string;
 let base: ReturnType<typeof makeBase>;
 
@@ -47,6 +72,7 @@ beforeEach(async () => {
   testDir = mkdtempSync(join(tmpdir(), 'harness-adr-test-'));
   projectPath = join(testDir, 'test-proj');
   await createProject({ name: 'test-proj', path: projectPath });
+  __test_clearStore(); // Clear approval store between tests (P0-003)
   base = makeBase();
 });
 
@@ -104,7 +130,8 @@ describe('proposeDecision', () => {
 describe('acceptDecision / rejectDecision', () => {
   it('accepts a proposed decision', () => {
     const proposed = proposeDecision(base);
-    const accepted = acceptDecision(projectPath, proposed.id, 'Tester');
+    const apId = createAdrApproval(proposed.id, 'accept_adr');
+    const accepted = acceptDecision(projectPath, proposed.id, apId, 'Tester');
     expect(accepted).toBeDefined();
     expect(accepted!.status).toBe('accepted');
     expect(accepted!.approvedBy).toBe('Tester');
@@ -119,18 +146,21 @@ describe('acceptDecision / rejectDecision', () => {
   });
 
   it('returns undefined for non-existent ADR', () => {
-    expect(acceptDecision(projectPath, 'ADR-9999')).toBeUndefined();
+    expect(() => acceptDecision(projectPath, 'ADR-9999', 'ignored')).toThrow('approval');
   });
 
   it('returns undefined for already accepted ADR', () => {
     const proposed = proposeDecision(base);
-    acceptDecision(projectPath, proposed.id, 'Op');
-    expect(acceptDecision(projectPath, proposed.id, 'Op2')).toBeUndefined();
+    const ap1 = createAdrApproval(proposed.id, 'accept_adr');
+    acceptDecision(projectPath, proposed.id, ap1, 'Op');
+    const ap2 = createAdrApproval(proposed.id, 'accept_adr');
+    expect(acceptDecision(projectPath, proposed.id, ap2, 'Op2')).toBeUndefined();
   });
 
   it('updates JSON file on accept', () => {
     const proposed = proposeDecision(base);
-    acceptDecision(projectPath, proposed.id, 'Admin');
+    const apId = createAdrApproval(proposed.id, 'accept_adr');
+    acceptDecision(projectPath, proposed.id, apId, 'Admin');
     const loaded = loadDecision(projectPath, proposed.id);
     expect(loaded!.status).toBe('accepted');
     expect(loaded!.approvedBy).toBe('Admin');
@@ -138,7 +168,8 @@ describe('acceptDecision / rejectDecision', () => {
 
   it('updates Markdown file on accept', () => {
     const proposed = proposeDecision(base);
-    acceptDecision(projectPath, proposed.id, 'Admin');
+    const apId = createAdrApproval(proposed.id, 'accept_adr');
+    acceptDecision(projectPath, proposed.id, apId, 'Admin');
     const files = readdirSync(join(projectPath, '.project/decisions')).filter(f => f.startsWith('ADR-0001') && f.endsWith('.md'));
     const md = readFileSync(join(projectPath, '.project/decisions', files[0]), 'utf-8');
     expect(md).toContain('Status: accepted');
@@ -153,8 +184,10 @@ describe('acceptDecision / rejectDecision', () => {
 describe('supersedeDecision', () => {
   it('marks an accepted ADR as superseded', () => {
     const old = proposeDecision(base);
-    acceptDecision(projectPath, old.id, 'Admin');
-    const updated = supersedeDecision(projectPath, old.id, 'ADR-0002');
+    const ap1 = createAdrApproval(old.id, 'accept_adr');
+    acceptDecision(projectPath, old.id, ap1, 'Admin');
+    const ap2 = createAdrApproval(old.id, 'supersede_adr', { supersededBy: 'ADR-0002' });
+    const updated = supersedeDecision(projectPath, old.id, 'ADR-0002', ap2);
     expect(updated).toBeDefined();
     expect(updated!.status).toBe('superseded');
     expect(updated!.supersededBy).toBe('ADR-0002');
@@ -177,8 +210,8 @@ describe('listDecisions', () => {
   it('listActiveDecisions filters accepted only', () => {
     const a1 = proposeDecision(base);
     const a2 = proposeDecision(base);
-    acceptDecision(projectPath, a1.id, 'Op');
-    acceptDecision(projectPath, a2.id, 'Op');
+    acceptDecision(projectPath, a1.id, createAdrApproval(a1.id, 'accept_adr'), 'Op');
+    acceptDecision(projectPath, a2.id, createAdrApproval(a2.id, 'accept_adr'), 'Op');
     const a3 = proposeDecision(base);
     rejectDecision(projectPath, a3.id);
 

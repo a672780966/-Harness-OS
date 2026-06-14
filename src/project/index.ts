@@ -23,16 +23,9 @@ export {
   type RepositoryMap,
 } from './create.js';
 
-export {
-  openProject,
-  type OpenProjectResult,
-} from './open.js';
+export { openProject, type OpenProjectResult } from './open.js';
 
-export {
-  initProject,
-  repairProject,
-  type RepairResult,
-} from './repair.js';
+export { initProject, repairProject, type RepairResult } from './repair.js';
 
 export {
   validateAgentsMd,

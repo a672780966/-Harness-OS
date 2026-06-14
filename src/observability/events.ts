@@ -53,13 +53,23 @@ function generateEventId(): string {
 // ============================================================
 
 const VALID_EVENT_PREFIXES = [
-  'run.', 'task.', 'context.', 'skill.', 'file.', 'git.',
-  'policy.', 'approval.', 'verification.', 'delivery.',
-  'checkpoint.', 'secret.', 'security.',
+  'run.',
+  'task.',
+  'context.',
+  'skill.',
+  'file.',
+  'git.',
+  'policy.',
+  'approval.',
+  'verification.',
+  'delivery.',
+  'checkpoint.',
+  'secret.',
+  'security.',
 ];
 
 function validateEventType(type: string): boolean {
-  return VALID_EVENT_PREFIXES.some(p => type.startsWith(p));
+  return VALID_EVENT_PREFIXES.some((p) => type.startsWith(p));
 }
 
 // ============================================================
@@ -134,11 +144,8 @@ export function logEvent(
 /**
  * Log multiple events in batch.
  */
-export function logEvents(
-  events: Array<Parameters<typeof logEvent>[0]>,
-  projectPath?: string,
-): HarnessEvent[] {
-  return events.map(e => logEvent(e, projectPath));
+export function logEvents(events: Array<Parameters<typeof logEvent>[0]>, projectPath?: string): HarnessEvent[] {
+  return events.map((e) => logEvent(e, projectPath));
 }
 
 // ============================================================

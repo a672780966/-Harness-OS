@@ -102,7 +102,9 @@ export class SqliteStore {
     this.db.exec(CREATE_SCHEMA_SQL);
 
     // Check/track version
-    const row = this.db.prepare('SELECT MAX(version) as version FROM schema_version').get() as { version: number | null } | undefined;
+    const row = this.db.prepare('SELECT MAX(version) as version FROM schema_version').get() as
+      | { version: number | null }
+      | undefined;
     const currentVersion = row?.version ?? 0;
 
     if (currentVersion < SCHEMA_VERSION) {
@@ -118,25 +120,31 @@ export class SqliteStore {
    * Insert a new session.
    */
   createSession(session: SessionState): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO sessions (session_id, project_id, started_at, last_active_at, turn_count, status, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      session.session_id,
-      session.project_id,
-      session.started_at,
-      session.last_active_at ?? null,
-      session.turn_count,
-      session.status,
-      JSON.stringify(session.metadata),
-    );
+    `,
+      )
+      .run(
+        session.session_id,
+        session.project_id,
+        session.started_at,
+        session.last_active_at ?? null,
+        session.turn_count,
+        session.status,
+        JSON.stringify(session.metadata),
+      );
   }
 
   /**
    * Get a session by ID.
    */
   getSession(id: SessionId): SessionState | undefined {
-    const row = this.db.prepare('SELECT * FROM sessions WHERE session_id = ?').get(id) as Record<string, unknown> | undefined;
+    const row = this.db.prepare('SELECT * FROM sessions WHERE session_id = ?').get(id) as
+      | Record<string, unknown>
+      | undefined;
     if (!row) return undefined;
     return this.rowToSession(row);
   }
@@ -150,19 +158,23 @@ export class SqliteStore {
 
     const merged = { ...existing, ...updates, session_id: id };
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       UPDATE sessions SET
         project_id = ?, last_active_at = ?, turn_count = ?,
         status = ?, metadata = ?, updated_at = datetime('now')
       WHERE session_id = ?
-    `).run(
-      merged.project_id,
-      merged.last_active_at ?? null,
-      merged.turn_count,
-      merged.status,
-      JSON.stringify(merged.metadata),
-      id,
-    );
+    `,
+      )
+      .run(
+        merged.project_id,
+        merged.last_active_at ?? null,
+        merged.turn_count,
+        merged.status,
+        JSON.stringify(merged.metadata),
+        id,
+      );
 
     return merged;
   }
@@ -171,20 +183,20 @@ export class SqliteStore {
    * List all active sessions.
    */
   listActiveSessions(): SessionState[] {
-    const rows = this.db.prepare(
-      "SELECT * FROM sessions WHERE status = 'active' ORDER BY started_at ASC",
-    ).all() as Record<string, unknown>[];
-    return rows.map(r => this.rowToSession(r));
+    const rows = this.db
+      .prepare("SELECT * FROM sessions WHERE status = 'active' ORDER BY started_at ASC")
+      .all() as Record<string, unknown>[];
+    return rows.map((r) => this.rowToSession(r));
   }
 
   /**
    * List sessions by project.
    */
   listSessionsByProject(projectId: string): SessionState[] {
-    const rows = this.db.prepare(
-      'SELECT * FROM sessions WHERE project_id = ? ORDER BY started_at DESC',
-    ).all(projectId) as Record<string, unknown>[];
-    return rows.map(r => this.rowToSession(r));
+    const rows = this.db
+      .prepare('SELECT * FROM sessions WHERE project_id = ? ORDER BY started_at DESC')
+      .all(projectId) as Record<string, unknown>[];
+    return rows.map((r) => this.rowToSession(r));
   }
 
   /**
@@ -203,20 +215,24 @@ export class SqliteStore {
    * Insert a new turn.
    */
   createTurn(turn: TurnState): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO turns (turn_id, session_id, turn_number, started_at, completed_at, status, user_input, response_summary, tool_calls)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      turn.turn_id,
-      turn.session_id,
-      turn.turn_number,
-      turn.started_at,
-      turn.completed_at ?? null,
-      turn.status,
-      turn.user_input ?? null,
-      turn.response_summary ?? null,
-      JSON.stringify(turn.tool_calls),
-    );
+    `,
+      )
+      .run(
+        turn.turn_id,
+        turn.session_id,
+        turn.turn_number,
+        turn.started_at,
+        turn.completed_at ?? null,
+        turn.status,
+        turn.user_input ?? null,
+        turn.response_summary ?? null,
+        JSON.stringify(turn.tool_calls),
+      );
   }
 
   /**
@@ -237,18 +253,22 @@ export class SqliteStore {
 
     const merged = { ...existing, ...updates, turn_id: id };
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       UPDATE turns SET
         completed_at = ?, status = ?, response_summary = ?,
         tool_calls = ?, updated_at = datetime('now')
       WHERE turn_id = ?
-    `).run(
-      merged.completed_at ?? null,
-      merged.status,
-      merged.response_summary ?? null,
-      JSON.stringify(merged.tool_calls),
-      id,
-    );
+    `,
+      )
+      .run(
+        merged.completed_at ?? null,
+        merged.status,
+        merged.response_summary ?? null,
+        JSON.stringify(merged.tool_calls),
+        id,
+      );
 
     return merged;
   }
@@ -257,10 +277,10 @@ export class SqliteStore {
    * List turns for a session, ordered by turn number.
    */
   listTurnsBySession(sessionId: SessionId): TurnState[] {
-    const rows = this.db.prepare(
-      'SELECT * FROM turns WHERE session_id = ? ORDER BY turn_number ASC',
-    ).all(sessionId) as Record<string, unknown>[];
-    return rows.map(r => this.rowToTurn(r));
+    const rows = this.db
+      .prepare('SELECT * FROM turns WHERE session_id = ? ORDER BY turn_number ASC')
+      .all(sessionId) as Record<string, unknown>[];
+    return rows.map((r) => this.rowToTurn(r));
   }
 
   /**
@@ -279,22 +299,26 @@ export class SqliteStore {
    * Insert a new approval.
    */
   createApproval(approval: PendingApproval): void {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO approvals (id, action, reason, risk_level, affected_paths, session_id, turn_id, agent_id, status, created_at, expires_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      approval.id,
-      approval.action,
-      approval.reason,
-      approval.riskLevel,
-      JSON.stringify(approval.affectedPaths),
-      approval.sessionId ?? null,
-      approval.turnId ?? null,
-      approval.agentId ?? null,
-      approval.status,
-      approval.createdAt,
-      approval.expiresAt,
-    );
+    `,
+      )
+      .run(
+        approval.id,
+        approval.action,
+        approval.reason,
+        approval.riskLevel,
+        JSON.stringify(approval.affectedPaths),
+        approval.sessionId ?? null,
+        approval.turnId ?? null,
+        approval.agentId ?? null,
+        approval.status,
+        approval.createdAt,
+        approval.expiresAt,
+      );
   }
 
   /**
@@ -315,18 +339,22 @@ export class SqliteStore {
 
     const merged = { ...existing, ...updates, id };
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       UPDATE approvals SET
         status = ?, resolved_at = ?, resolved_by = ?,
         modified_input = ?, updated_at = datetime('now')
       WHERE id = ?
-    `).run(
-      merged.status,
-      merged.resolvedAt ?? null,
-      merged.resolvedBy ?? null,
-      merged.modifiedInput ? JSON.stringify(merged.modifiedInput) : null,
-      id,
-    );
+    `,
+      )
+      .run(
+        merged.status,
+        merged.resolvedAt ?? null,
+        merged.resolvedBy ?? null,
+        merged.modifiedInput ? JSON.stringify(merged.modifiedInput) : null,
+        id,
+      );
 
     return merged;
   }
@@ -335,20 +363,20 @@ export class SqliteStore {
    * List pending (unexpired) approvals.
    */
   listPendingApprovals(): PendingApproval[] {
-    const rows = this.db.prepare(
-      "SELECT * FROM approvals WHERE status = 'pending' AND expires_at > datetime('now') ORDER BY created_at ASC",
-    ).all() as Record<string, unknown>[];
-    return rows.map(r => this.rowToApproval(r));
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM approvals WHERE status = 'pending' AND expires_at > datetime('now') ORDER BY created_at ASC",
+      )
+      .all() as Record<string, unknown>[];
+    return rows.map((r) => this.rowToApproval(r));
   }
 
   /**
    * List all approvals.
    */
   listAllApprovals(): PendingApproval[] {
-    const rows = this.db.prepare(
-      'SELECT * FROM approvals ORDER BY created_at DESC',
-    ).all() as Record<string, unknown>[];
-    return rows.map(r => this.rowToApproval(r));
+    const rows = this.db.prepare('SELECT * FROM approvals ORDER BY created_at DESC').all() as Record<string, unknown>[];
+    return rows.map((r) => this.rowToApproval(r));
   }
 
   /**
@@ -370,7 +398,9 @@ export class SqliteStore {
     const sessionCount = (this.db.prepare('SELECT COUNT(*) as count FROM sessions').get() as { count: number }).count;
     const turnCount = (this.db.prepare('SELECT COUNT(*) as count FROM turns').get() as { count: number }).count;
     const approvalCount = (this.db.prepare('SELECT COUNT(*) as count FROM approvals').get() as { count: number }).count;
-    const pendingApprovals = (this.db.prepare("SELECT COUNT(*) as count FROM approvals WHERE status = 'pending'").get() as { count: number }).count;
+    const pendingApprovals = (
+      this.db.prepare("SELECT COUNT(*) as count FROM approvals WHERE status = 'pending'").get() as { count: number }
+    ).count;
 
     return {
       dbPath: this.dbPath,

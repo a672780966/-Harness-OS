@@ -111,11 +111,7 @@ export function loadTrace(runId: string, projectPath?: string): RunTrace | undef
 /**
  * Update trace status.
  */
-export function updateTraceStatus(
-  trace: RunTrace,
-  status: RunTrace['status'],
-  summary?: string,
-): RunTrace {
+export function updateTraceStatus(trace: RunTrace, status: RunTrace['status'], summary?: string): RunTrace {
   trace.status = status;
   if (status === 'completed' || status === 'failed') {
     trace.endedAt = new Date().toISOString();

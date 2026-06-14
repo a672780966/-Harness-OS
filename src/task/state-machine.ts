@@ -22,14 +22,14 @@ import type { TaskStatus } from '../types.js';
 // ============================================================
 
 const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
-  'created':    ['ready', 'failed'],
-  'ready':      ['running', 'failed'],
-  'running':    ['blocked', 'paused', 'verifying', 'completed', 'failed'],
-  'blocked':    ['running', 'failed'],
-  'paused':     ['running', 'failed'],
-  'verifying':  ['completed', 'running', 'failed'],
-  'completed':  [],
-  'failed':     [],
+  created: ['ready', 'failed'],
+  ready: ['running', 'failed'],
+  running: ['blocked', 'paused', 'verifying', 'completed', 'failed'],
+  blocked: ['running', 'failed'],
+  paused: ['running', 'failed'],
+  verifying: ['completed', 'running', 'failed'],
+  completed: [],
+  failed: [],
 };
 
 // ============================================================
@@ -64,10 +64,7 @@ export function isValidTransition(from: TaskStatus, to: TaskStatus): boolean {
  *
  * @returns The new status on success.
  */
-export function transitionStatus(
-  current: TaskStatus,
-  target: TaskStatus,
-): TaskStatus {
+export function transitionStatus(current: TaskStatus, target: TaskStatus): TaskStatus {
   if (!isValidTransition(current, target)) {
     throw new InvalidTransitionError(current, target);
   }

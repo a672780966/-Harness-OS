@@ -45,7 +45,11 @@ const SECRET_PATTERNS: SecretPattern[] = [
   { name: 'pwd', pattern: /(['"]?pwd['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
 
   // Private Keys
-  { name: 'private-key', pattern: /-----BEGIN\s+.*PRIVATE\s+KEY-----[\s\S]*?-----END\s+.*PRIVATE\s+KEY-----/g, replaceFull: true },
+  {
+    name: 'private-key',
+    pattern: /-----BEGIN\s+.*PRIVATE\s+KEY-----[\s\S]*?-----END\s+.*PRIVATE\s+KEY-----/g,
+    replaceFull: true,
+  },
   { name: 'ssh-key', pattern: /ssh-(rsa|ed25519|ecdsa)\s+[A-Za-z0-9+/]{4,}[=]*/g, replaceFull: true },
 
   // Database URLs
@@ -54,13 +58,25 @@ const SECRET_PATTERNS: SecretPattern[] = [
   // Cloud Credentials
   { name: 'aws-key', pattern: /(['"]?aws_access_key_id['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
   { name: 'aws-secret', pattern: /(['"]?aws_secret_access_key['"]?\s*[:=]\s*['"])[^'"]+(['"])/gi, replaceFull: false },
-  { name: 'azure-conn', pattern: /DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[^;]+/g, replaceFull: true },
+  {
+    name: 'azure-conn',
+    pattern: /DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[^;]+/g,
+    replaceFull: true,
+  },
 
   // Authorization header (generic)
-  { name: 'auth-header', pattern: /(Authorization|Proxy-Authorization):\s*[A-Za-z0-9+/=_\-.\s]{8,}/gi, replaceFull: true },
+  {
+    name: 'auth-header',
+    pattern: /(Authorization|Proxy-Authorization):\s*[A-Za-z0-9+/=_\-.\s]{8,}/gi,
+    replaceFull: true,
+  },
 
   // URL query parameter secrets
-  { name: 'url-query-secret', pattern: /[?&](api_key|apikey|secret|token|password|access_token)=[^&\s]+/gi, replaceFull: true },
+  {
+    name: 'url-query-secret',
+    pattern: /[?&](api_key|apikey|secret|token|password|access_token)=[^&\s]+/gi,
+    replaceFull: true,
+  },
 
   // Audit canary (SEC3-05)
   { name: 'audit-canary', pattern: /HARNESS_AUDIT_SECRET_[A-Za-z0-9]+/g, replaceFull: true },
@@ -152,7 +168,7 @@ export function redactObject<T>(obj: T): T {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => redactObject(item)) as unknown as T;
+    return obj.map((item) => redactObject(item)) as unknown as T;
   }
 
   if (obj !== null && typeof obj === 'object') {
@@ -181,9 +197,19 @@ export function redactObject<T>(obj: T): T {
 function redactKeyName(key: string): boolean {
   const lower = key.toLowerCase();
   const sensitiveKeys = [
-    'password', 'secret', 'token', 'apikey', 'api_key',
-    'privatekey', 'private_key', 'accesstoken', 'access_token',
-    'authtoken', 'auth_token', 'credentials', 'credential',
+    'password',
+    'secret',
+    'token',
+    'apikey',
+    'api_key',
+    'privatekey',
+    'private_key',
+    'accesstoken',
+    'access_token',
+    'authtoken',
+    'auth_token',
+    'credentials',
+    'credential',
   ];
   return sensitiveKeys.includes(lower);
 }

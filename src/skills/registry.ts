@@ -16,12 +16,7 @@
 import type { SkillManifest, SkillCategory } from '../types.js';
 import type { SkillExecutor } from './executor.js';
 import { checkPolicy, type PolicyContext } from '../governance/policy.js';
-import {
-  submitApproval,
-  consumeApproval,
-  validateApprovalBinding,
-  getApproval,
-} from '../governance/approval-gate.js';
+import { submitApproval, consumeApproval, validateApprovalBinding, getApproval } from '../governance/approval-gate.js';
 import {
   failedResult as failExec,
   blockedResult as blockExec,
@@ -86,11 +81,7 @@ function normalizeSkillAction(skillName: string, toolName: string): string {
  * Build a PolicyContext from skill tool input.
  * Extracts command (for shell) and file paths (for filesystem).
  */
-function buildSkillPolicyContext(
-  skillName: string,
-  toolName: string,
-  input: Record<string, unknown>,
-): PolicyContext {
+function buildSkillPolicyContext(skillName: string, toolName: string, input: Record<string, unknown>): PolicyContext {
   const ctx: PolicyContext = {
     toolName,
     skillName,
@@ -209,7 +200,12 @@ class SkillRegistry {
       // Single-use consumption (GOV4-03): only one executor call per approval
       const consumed = consumeApproval(approvalId);
       if (!consumed) {
-        return blockExec(skillName, toolName, `Approval "${approvalId}" cannot be consumed — already consumed, rejected, or expired`, 0);
+        return blockExec(
+          skillName,
+          toolName,
+          `Approval "${approvalId}" cannot be consumed — already consumed, rejected, or expired`,
+          0,
+        );
       }
 
       // If operator modified the input, use that instead (GOV4-03)
@@ -223,7 +219,7 @@ class SkillRegistry {
     // ---- Manifest Validation: unknown tool → blocked (GOV-01) ----
     const manifest = this.skills.get(skillName);
     if (manifest) {
-      const knownTool = manifest.tools.find(t => t.name === toolName);
+      const knownTool = manifest.tools.find((t) => t.name === toolName);
       if (!knownTool) {
         return blockExec(
           skillName,
@@ -244,7 +240,7 @@ class SkillRegistry {
       const policyPromise = checkPolicy(action, policyCtx);
       const timeoutMs = 5000; // 5-second policy timeout
       const timeoutPromise = new Promise<import('../types.js').PolicyCheckResult>((_, reject) =>
-        setTimeout(() => reject(new Error('Policy check timed out')), timeoutMs)
+        setTimeout(() => reject(new Error('Policy check timed out')), timeoutMs),
       );
       policyResult = await Promise.race([policyPromise, timeoutPromise]);
     } catch (err) {
@@ -306,21 +302,21 @@ class SkillRegistry {
    * List skills by category.
    */
   listByCategory(category: SkillCategory): SkillManifest[] {
-    return this.list().filter(s => s.category === category);
+    return this.list().filter((s) => s.category === category);
   }
 
   /**
    * List skills by risk level.
    */
   listByRiskLevel(riskLevel: SkillManifest['riskLevel']): SkillManifest[] {
-    return this.list().filter(s => s.riskLevel === riskLevel);
+    return this.list().filter((s) => s.riskLevel === riskLevel);
   }
 
   /**
    * Get only enabled skills (defaultEnabled = true).
    */
   listEnabled(): SkillManifest[] {
-    return this.list().filter(s => s.defaultEnabled);
+    return this.list().filter((s) => s.defaultEnabled);
   }
 
   /**
@@ -363,12 +359,7 @@ import { manifest as shell, _register as shellRegister } from '../skills/shell/i
 import { manifest as git, _register as gitRegister } from '../skills/git/index.js';
 import { manifest as repoScanner, _register as scannerRegister } from '../skills/repo-scanner/index.js';
 
-registry.registerAll([
-  filesystem,
-  shell,
-  git,
-  repoScanner,
-]);
+registry.registerAll([filesystem, shell, git, repoScanner]);
 
 // Use self-registration
 fsRegister(registry);

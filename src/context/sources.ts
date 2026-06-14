@@ -15,13 +15,7 @@
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
 import { simpleGit } from 'simple-git';
-import type {
-  RuleContext,
-  ProjectContext,
-  GitContext,
-  TaskContext,
-  TaskType,
-} from '../types.js';
+import type { RuleContext, ProjectContext, GitContext, TaskContext, TaskType } from '../types.js';
 
 // ============================================================
 // AGENTS.md Collector
@@ -53,7 +47,10 @@ export function collectAgentsMd(projectPath: string): RuleContext {
   while ((match = sectionRegex.exec(content)) !== null) {
     const title = match[1].trim().toLowerCase();
     const body = match[2].trim();
-    const lines = body.split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean);
+    const lines = body
+      .split('\n')
+      .map((l) => l.replace(/^[-*]\s*/, '').trim())
+      .filter(Boolean);
 
     if (title.includes('architecture')) {
       rules.architectureRules = lines;
@@ -172,12 +169,12 @@ export async function collectGit(projectPath: string): Promise<GitContext> {
 
     return {
       branch,
-      statusShort: status.files.map(f => `${f.working_dir} ${f.path}`).join('\n'),
+      statusShort: status.files.map((f) => `${f.working_dir} ${f.path}`).join('\n'),
       diffStat: diffStat || '(no diff)',
       diffSummary: diffSummary?.slice(0, 2000) || undefined,
-      changedFiles: status.files.map(f => f.path),
+      changedFiles: status.files.map((f) => f.path),
       untrackedFiles: status.not_added || [],
-      recentCommits: log.all.map(c => `${c.date.slice(0, 10)} ${c.message}`),
+      recentCommits: log.all.map((c) => `${c.date.slice(0, 10)} ${c.message}`),
       hasUserChanges: status.files.length > 0,
     };
   } catch {
@@ -206,7 +203,7 @@ export function collectTask(projectPath: string, taskId?: string): TaskContext |
     if (existsSync(jsonPath)) targetFile = jsonPath;
   } else {
     // Find latest active task by timestamp in ID
-    const files = readdirSorted(activeDir).filter(f => f.endsWith('.json'));
+    const files = readdirSorted(activeDir).filter((f) => f.endsWith('.json'));
     if (files.length > 0) {
       targetFile = join(activeDir, files[files.length - 1]);
     }

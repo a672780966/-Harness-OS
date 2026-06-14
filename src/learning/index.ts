@@ -77,9 +77,7 @@ export class ObservationStore {
   private filePath: string;
 
   constructor(basePath?: string) {
-    this.filePath = basePath
-      ? join(basePath, DEFAULT_OBSERVATIONS_FILE)
-      : DEFAULT_OBSERVATIONS_FILE;
+    this.filePath = basePath ? join(basePath, DEFAULT_OBSERVATIONS_FILE) : DEFAULT_OBSERVATIONS_FILE;
 
     // Load existing observations
     this.load();
@@ -104,14 +102,14 @@ export class ObservationStore {
    * Get all observations for a session.
    */
   getBySession(sessionId: string): Observation[] {
-    return this.observations.filter(o => o.sessionId === sessionId);
+    return this.observations.filter((o) => o.sessionId === sessionId);
   }
 
   /**
    * Get all observations of a type.
    */
   getByType(type: ObservationType): Observation[] {
-    return this.observations.filter(o => o.type === type);
+    return this.observations.filter((o) => o.type === type);
   }
 
   /**
@@ -138,13 +136,12 @@ export class ObservationStore {
     for (const [signal, group] of groups) {
       if (group.length < minFrequency) continue;
 
-      const confidences = group.map(o => o.confidence);
+      const confidences = group.map((o) => o.confidence);
       const avgConfidence = confidences.reduce((a, b) => a + b, 0) / confidences.length;
-      const lastObs = group.reduce((latest, o) =>
-        o.timestamp > latest.timestamp ? o : latest, group[0]);
+      const lastObs = group.reduce((latest, o) => (o.timestamp > latest.timestamp ? o : latest), group[0]);
 
       // Find most common context
-      const contexts = group.filter(o => o.context).map(o => o.context!);
+      const contexts = group.filter((o) => o.context).map((o) => o.context!);
       const contextCounts = new Map<string, number>();
       for (const ctx of contexts) {
         contextCounts.set(ctx, (contextCounts.get(ctx) || 0) + 1);

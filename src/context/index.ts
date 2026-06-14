@@ -12,12 +12,7 @@
  * Reference: 05_CONTEXT_ENGINEERING.md
  */
 
-export {
-  collectAgentsMd,
-  collectProject,
-  collectGit,
-  collectTask,
-} from './sources.js';
+export { collectAgentsMd, collectProject, collectGit, collectTask } from './sources.js';
 
 export {
   scoreFile,
@@ -41,7 +36,4 @@ export {
   type TrimResult,
 } from './budget.js';
 
-export {
-  buildContextPack,
-  type BuildContextInput,
-} from './build.js';
+export { buildContextPack, type BuildContextInput } from './build.js';

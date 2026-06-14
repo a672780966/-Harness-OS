@@ -34,20 +34,20 @@ export interface AgentsSection {
  * Core sections block task execution if missing.
  */
 export const REQUIRED_SECTIONS: AgentsSection[] = [
-  { number: 1,  title: 'Project Identity',           isCore: true },
-  { number: 2,  title: 'Project Goals',               isCore: false },
-  { number: 3,  title: 'Architecture Rules',          isCore: true },
-  { number: 4,  title: 'Repository Structure',        isCore: false },
-  { number: 5,  title: 'Development Commands',        isCore: true },
-  { number: 6,  title: 'Testing and Verification',    isCore: true },
-  { number: 7,  title: 'Coding Standards',            isCore: false },
-  { number: 8,  title: 'Context Rules',               isCore: false },
-  { number: 9,  title: 'State and Memory Rules',      isCore: false },
-  { number: 10, title: 'Skill / Tool Rules',          isCore: false },
+  { number: 1, title: 'Project Identity', isCore: true },
+  { number: 2, title: 'Project Goals', isCore: false },
+  { number: 3, title: 'Architecture Rules', isCore: true },
+  { number: 4, title: 'Repository Structure', isCore: false },
+  { number: 5, title: 'Development Commands', isCore: true },
+  { number: 6, title: 'Testing and Verification', isCore: true },
+  { number: 7, title: 'Coding Standards', isCore: false },
+  { number: 8, title: 'Context Rules', isCore: false },
+  { number: 9, title: 'State and Memory Rules', isCore: false },
+  { number: 10, title: 'Skill / Tool Rules', isCore: false },
   { number: 11, title: 'Permission and Approval Rules', isCore: true },
-  { number: 12, title: 'Git and Delivery Rules',      isCore: false },
-  { number: 13, title: 'Security Rules',              isCore: true },
-  { number: 14, title: 'Task Completion Rules',       isCore: true },
+  { number: 12, title: 'Git and Delivery Rules', isCore: false },
+  { number: 13, title: 'Security Rules', isCore: true },
+  { number: 14, title: 'Task Completion Rules', isCore: true },
 ];
 
 // ============================================================
@@ -105,7 +105,10 @@ function extractSectionTitles(content: string): string[] {
  * Strips whitespace, lowercases, removes punctuation.
  */
 function normalizeTitle(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9/ ]/g, '').trim();
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9/ ]/g, '')
+    .trim();
 }
 
 /**
@@ -116,10 +119,7 @@ function normalizeTitle(title: string): string {
 function titleMatches(extracted: string, required: string): boolean {
   const normalizedExtracted = normalizeTitle(extracted);
   const normalizedRequired = normalizeTitle(required);
-  return (
-    normalizedExtracted.includes(normalizedRequired) ||
-    normalizedRequired.includes(normalizedExtracted)
-  );
+  return normalizedExtracted.includes(normalizedRequired) || normalizedRequired.includes(normalizedExtracted);
 }
 
 // ============================================================
@@ -132,9 +132,7 @@ function titleMatches(extracted: string, required: string): boolean {
  * @param projectPath - Path to the project root (containing AGENTS.md)
  * @returns Validation result with section status and warnings
  */
-export function validateAgentsMd(
-  projectPath: string,
-): AgentsMdValidationResult {
+export function validateAgentsMd(projectPath: string): AgentsMdValidationResult {
   const resolvedPath = resolve(projectPath);
   const agentsMdPath = join(resolvedPath, 'AGENTS.md');
   const result: AgentsMdValidationResult = {
@@ -150,14 +148,14 @@ export function validateAgentsMd(
   // 1. Check file exists
   if (!result.fileExists) {
     result.warnings.push('AGENTS.md is missing — run `harness init` to create it');
-    result.sections = REQUIRED_SECTIONS.map(s => ({
+    result.sections = REQUIRED_SECTIONS.map((s) => ({
       number: s.number,
       title: s.title,
       present: false,
       isCore: s.isCore,
     }));
-    result.missingCore = REQUIRED_SECTIONS.filter(s => s.isCore).map(s => s.title);
-    result.missingRequired = REQUIRED_SECTIONS.filter(s => !s.isCore).map(s => s.title);
+    result.missingCore = REQUIRED_SECTIONS.filter((s) => s.isCore).map((s) => s.title);
+    result.missingRequired = REQUIRED_SECTIONS.filter((s) => !s.isCore).map((s) => s.title);
     result.isValid = false;
     return result;
   }
@@ -175,7 +173,7 @@ export function validateAgentsMd(
 
   // 3. Check each required section
   for (const section of REQUIRED_SECTIONS) {
-    const present = extractedTitles.some(et => titleMatches(et, section.title));
+    const present = extractedTitles.some((et) => titleMatches(et, section.title));
 
     result.sections.push({
       number: section.number,
@@ -187,14 +185,10 @@ export function validateAgentsMd(
     if (!present) {
       if (section.isCore) {
         result.missingCore.push(section.title);
-        result.warnings.push(
-          `Core section missing: "${section.title}" — this blocks task execution`,
-        );
+        result.warnings.push(`Core section missing: "${section.title}" — this blocks task execution`);
       } else {
         result.missingRequired.push(section.title);
-        result.warnings.push(
-          `Required section missing: "${section.title}" — consider adding it`,
-        );
+        result.warnings.push(`Required section missing: "${section.title}" — consider adding it`);
       }
     }
   }

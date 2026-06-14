@@ -13,10 +13,7 @@
  * - modifiedInput must be re-validated before execution
  */
 
-import {
-  type PermissionDecision,
-  type RiskLevel,
-} from '../types.js';
+import { type PermissionDecision, type RiskLevel } from '../types.js';
 import { createHash } from 'crypto';
 
 // ============================================================
@@ -121,13 +118,12 @@ class ApprovalStore {
   listPending(): PendingApproval[] {
     const now = new Date().toISOString();
     return Array.from(this.approvals.values())
-      .filter(a => a.status === 'pending' && a.expiresAt > now)
+      .filter((a) => a.status === 'pending' && a.expiresAt > now)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   listAll(): PendingApproval[] {
-    return Array.from(this.approvals.values())
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return Array.from(this.approvals.values()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   clear(): void {

@@ -11,11 +11,7 @@
  * - classifyRisk() is a helper for simple command-based risk classification.
  */
 
-import {
-  type PermissionDecision,
-  type PolicyCheckResult,
-  type RiskLevel,
-} from '../types.js';
+import { type PermissionDecision, type PolicyCheckResult, type RiskLevel } from '../types.js';
 
 // ============================================================
 // Policy Rule
@@ -86,7 +82,7 @@ function hasDangerousPattern(command: string): boolean {
     'add-content',
   ];
   const normalized = command.toLowerCase();
-  return dangerous.some(d => normalized.includes(d));
+  return dangerous.some((d) => normalized.includes(d));
 }
 
 function touchesProtectedPath(paths: string[]): boolean {
@@ -103,7 +99,7 @@ function touchesProtectedPath(paths: string[]): boolean {
     '.key',
     '.token',
   ];
-  return paths.some(p => protectedPaths.some(pp => p.includes(pp)));
+  return paths.some((p) => protectedPaths.some((pp) => p.includes(pp)));
 }
 
 function isSensitiveFileRead(paths: string[]): boolean {
@@ -120,15 +116,17 @@ function isSensitiveFileRead(paths: string[]): boolean {
     '.token',
     'secrets',
   ];
-  return paths.some(p => sensitive.some(s => {
-    const basename = p.split(/[/\\]/).pop() || '';
-    return basename.startsWith(s.replace(/^\./, '')) && (p.includes(s) || basename.startsWith(s.replace(/^\./, '')));
-  }));
+  return paths.some((p) =>
+    sensitive.some((s) => {
+      const basename = p.split(/[/\\]/).pop() || '';
+      return basename.startsWith(s.replace(/^\./, '')) && (p.includes(s) || basename.startsWith(s.replace(/^\./, '')));
+    }),
+  );
 }
 
 function touchesGovernancePaths(paths: string[]): boolean {
   // AGENTS.md, accepted ADRs, governance/config policy files (GOV3-02)
-  return paths.some(p => {
+  return paths.some((p) => {
     const name = p.split(/[/\\]/).pop() || '';
     return name === 'AGENTS.md' || (name.endsWith('.md') && p.includes('decisions/')) || name === 'policy.json';
   });
@@ -156,9 +154,9 @@ const DEFAULT_RULES: PolicyRule[] = [
   {
     name: 'credential-write',
     description: 'Writing credential files is denied by default',
-    match: (_, ctx) => !!ctx.affectedPaths && ctx.affectedPaths.some(p =>
-      p.includes('credential') || p.includes('/token') || p.includes('/secret')
-    ),
+    match: (_, ctx) =>
+      !!ctx.affectedPaths &&
+      ctx.affectedPaths.some((p) => p.includes('credential') || p.includes('/token') || p.includes('/secret')),
     decision: 'deny',
     reason: 'Writing credential files is denied by default policy',
   },

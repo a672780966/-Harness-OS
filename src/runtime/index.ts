@@ -61,7 +61,7 @@ export async function getStatus(): Promise<StatusData> {
   const sessions = listActiveSessions();
   return {
     activeSessions: sessions.length,
-    sessions: sessions.map(s => ({ session_id: s.session_id, turn_count: s.turn_count })),
+    sessions: sessions.map((s) => ({ session_id: s.session_id, turn_count: s.turn_count })),
   };
 }
 

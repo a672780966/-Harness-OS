@@ -30,7 +30,28 @@ import { HARNESS_VERSION } from '../version.js';
 // Constants
 // ============================================================
 
-const TEMPLATES_DIR = resolve(import.meta.dirname, '../../templates');
+/**
+ * Find the templates directory regardless of runtime (source vs dist).
+ *
+ * When running via tsx (source):     import.meta.dirname = src/project/ → ../../templates
+ * When running via node (built dist): import.meta.dirname = dist/       → ../templates
+ */
+function findTemplatesDir(): string {
+  const candidates = [
+    resolve(import.meta.dirname, '../../templates'), // source:   src/project/../../templates
+    resolve(import.meta.dirname, '../templates'), // built:    dist/../templates
+    resolve(process.cwd(), 'templates'), // fallback: cwd/templates
+  ];
+  for (const dir of candidates) {
+    if (existsSync(dir)) return dir;
+  }
+  throw new Error(
+    `AGENTS.md template not found. Tried:\n  ${candidates.join('\n  ')}\n` +
+      `Ensure templates/ directory exists in the package root.`,
+  );
+}
+
+const TEMPLATES_DIR = findTemplatesDir();
 const AGENTS_MD_TEMPLATE_PATH = join(TEMPLATES_DIR, 'AGENTS.md');
 
 const PROJECT_DIRS = [
@@ -224,10 +245,18 @@ export function buildRepositoryMap(projectPath: string): RepositoryMap {
 
   // Config & package files
   const configCandidates = [
-    'tsconfig.json', '.eslintrc.js', '.eslintrc.json', '.eslintrc.yaml',
-    'prettier.config.js', '.prettierrc', '.prettierrc.json',
-    'biome.json', 'biome.jsonc',
-    'Makefile', 'Dockerfile', 'docker-compose.yml',
+    'tsconfig.json',
+    '.eslintrc.js',
+    '.eslintrc.json',
+    '.eslintrc.yaml',
+    'prettier.config.js',
+    '.prettierrc',
+    '.prettierrc.json',
+    'biome.json',
+    'biome.jsonc',
+    'Makefile',
+    'Dockerfile',
+    'docker-compose.yml',
     '.github/workflows',
   ];
   for (const cfg of configCandidates) {
@@ -237,9 +266,16 @@ export function buildRepositoryMap(projectPath: string): RepositoryMap {
   }
 
   const packageCandidates = [
-    'package.json', 'pnpm-lock.yaml', 'yarn.lock', 'package-lock.json',
-    'pyproject.toml', 'Cargo.toml', 'go.mod', 'go.sum',
-    'Gemfile', 'Gemfile.lock',
+    'package.json',
+    'pnpm-lock.yaml',
+    'yarn.lock',
+    'package-lock.json',
+    'pyproject.toml',
+    'Cargo.toml',
+    'go.mod',
+    'go.sum',
+    'Gemfile',
+    'Gemfile.lock',
   ];
   for (const pkg of packageCandidates) {
     if (existsSync(join(projectPath, pkg))) {
@@ -247,7 +283,19 @@ export function buildRepositoryMap(projectPath: string): RepositoryMap {
     }
   }
 
-  const entryCandidates = ['src/index.ts', 'src/index.js', 'src/main.ts', 'src/main.js', 'index.ts', 'index.js', 'app.ts', 'app.js', 'main.py', 'main.rs', 'main.go'];
+  const entryCandidates = [
+    'src/index.ts',
+    'src/index.js',
+    'src/main.ts',
+    'src/main.js',
+    'index.ts',
+    'index.js',
+    'app.ts',
+    'app.js',
+    'main.py',
+    'main.rs',
+    'main.go',
+  ];
   for (const ep of entryCandidates) {
     if (existsSync(join(projectPath, ep))) {
       map.entrypoints.push(ep);
@@ -309,9 +357,7 @@ export interface CreateProjectResult {
  *   11. Generate repository-map.md
  *   12. Git add + initial commit
  */
-export async function createProject(
-  opts: CreateProjectOptions,
-): Promise<CreateProjectResult> {
+export async function createProject(opts: CreateProjectOptions): Promise<CreateProjectResult> {
   const projectPath = resolve(opts.path || opts.name);
   const projectName = opts.name;
 
@@ -440,22 +486,22 @@ ${techStack.packageManager}
   const repoMapMd = `# Repository Map
 
 ## Source Directories
-${repoMap.sourceDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.sourceDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Test Directories
-${repoMap.testDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.testDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Documentation Directories
-${repoMap.docDirs.map(d => `- ${d}`).join('\n') || '- none detected'}
+${repoMap.docDirs.map((d) => `- ${d}`).join('\n') || '- none detected'}
 
 ## Configuration Files
-${repoMap.configFiles.map(f => `- ${f}`).join('\n') || '- none detected'}
+${repoMap.configFiles.map((f) => `- ${f}`).join('\n') || '- none detected'}
 
 ## Package Files
-${repoMap.packageFiles.map(f => `- ${f}`).join('\n') || '- none detected'}
+${repoMap.packageFiles.map((f) => `- ${f}`).join('\n') || '- none detected'}
 
 ## Entry Points
-${repoMap.entrypoints.map(e => `- ${e}`).join('\n') || '- none detected'}
+${repoMap.entrypoints.map((e) => `- ${e}`).join('\n') || '- none detected'}
 `;
   writeMarkdown(join(projectPath, '.project/state/repository-map.md'), repoMapMd);
 

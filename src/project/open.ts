@@ -84,9 +84,7 @@ function readJsonSafe<T>(path: string): { ok: true; data: T } | { ok: false; err
  * @param projectPath - Path to the project directory
  * @returns Open result with readiness status and warnings
  */
-export async function openProject(
-  projectPath: string,
-): Promise<OpenProjectResult> {
+export async function openProject(projectPath: string): Promise<OpenProjectResult> {
   const resolvedPath = resolve(projectPath);
   const warnings: string[] = [];
 
@@ -167,16 +165,16 @@ export async function openProject(
     const repoMapLines = [
       '# Repository Map\n',
       '## Source Directories',
-      ...(repoMap.sourceDirs.length > 0 ? repoMap.sourceDirs.map(d => `- ${d}`) : ['- none detected']),
+      ...(repoMap.sourceDirs.length > 0 ? repoMap.sourceDirs.map((d) => `- ${d}`) : ['- none detected']),
       '',
       '## Test Directories',
-      ...(repoMap.testDirs.length > 0 ? repoMap.testDirs.map(d => `- ${d}`) : ['- none detected']),
+      ...(repoMap.testDirs.length > 0 ? repoMap.testDirs.map((d) => `- ${d}`) : ['- none detected']),
       '',
       '## Configuration Files',
-      ...(repoMap.configFiles.map(f => `- ${f}`)),
+      ...repoMap.configFiles.map((f) => `- ${f}`),
       '',
       '## Package Files',
-      ...(repoMap.packageFiles.map(f => `- ${f}`)),
+      ...repoMap.packageFiles.map((f) => `- ${f}`),
     ];
     // Don't fail if we can't write
     try {

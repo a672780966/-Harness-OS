@@ -23,6 +23,7 @@
     "lint": "tsc --noEmit --pretty",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
+    "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test --run && pnpm build",
     "test:coverage": "vitest run --coverage"
   },
   "bin": {
