@@ -2,6 +2,7 @@
  * Harness OS — Approval Gate
  *
  * Thin Harness approval gate: handles pending approval submission and resolution.
+ * Persistent across processes via SQLite (better-sqlite3).
  * Does NOT execute tool calls, bypass policy, or serve as general-purpose storage.
  *
  * Source: CLAUDE.md §7 (Approval Gate constraints).
@@ -15,6 +16,9 @@
 
 import { type PermissionDecision, type RiskLevel } from '../types.js';
 import { createHash } from 'crypto';
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
+import { SqliteStore } from '../state/store.js';
 
 // ============================================================
 // Types
@@ -86,58 +90,120 @@ export interface ApprovalResolution {
 const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // ============================================================
-// Approval Gate Store (in-memory, Thin Harness)
+// Approval Gate Store (SQLite-backed, cross-process persistent)
 // ============================================================
 
 /**
- * A simple in-memory store for pending approvals.
+ * Persistent approval store backed by SQLite (better-sqlite3).
  *
- * Thin Harness: in-memory only.
- * Thick Harness extension: replace with persistent store (better-sqlite3,
- *   JSONL file, or external approval service).
+ * Replaces the Thin Harness in-memory Map with cross-process persistence.
+ * Approvals survive process restarts, enabling the three-step CLI flow:
+ *   approval create-adr → approval resolve → decision accept
+ *
+ * The SqliteStore is lazily initialized on first access so the module
+ * can be imported at any time without requiring a specific cwd.
  */
 class ApprovalStore {
-  private approvals: Map<string, PendingApproval> = new Map();
+  private _db: SqliteStore | null = null;
+
+  private getDb(): SqliteStore {
+    if (!this._db) {
+      this._db = new SqliteStore();
+    }
+    return this._db;
+  }
 
   add(approval: PendingApproval): void {
-    this.approvals.set(approval.id, approval);
+    this.getDb().createApproval(approval);
   }
 
   get(id: string): PendingApproval | undefined {
-    return this.approvals.get(id);
+    return this.getDb().getApproval(id);
   }
 
   update(id: string, updates: Partial<PendingApproval>): PendingApproval | undefined {
-    const existing = this.approvals.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...updates };
-    this.approvals.set(id, updated);
-    return updated;
+    return this.getDb().updateApproval(id, updates);
   }
 
   listPending(): PendingApproval[] {
-    const now = new Date().toISOString();
-    return Array.from(this.approvals.values())
-      .filter((a) => a.status === 'pending' && a.expiresAt > now)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return this.getDb().listPendingApprovals();
   }
 
   listAll(): PendingApproval[] {
-    return Array.from(this.approvals.values()).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return this.getDb().listAllApprovals();
   }
 
   clear(): void {
-    this.approvals.clear();
+    // Delete all approval rows for test isolation.
+    // The database connection stays live for the current process.
+    if (this._db) {
+      this._db.clearAllApprovals();
+    }
   }
 
   get size(): number {
-    return this.approvals.size;
+    return this.getDb().listAll().length;
   }
 }
 
-// Singleton store for Thin Harness.
-// Replace with dependency injection for testability.
+// Singleton store — SQLite-backed, cross-process.
 const store = new ApprovalStore();
+
+// ============================================================
+// Observability Helpers
+// ============================================================
+
+/**
+ * Emit an approval observability event if the project has an events directory.
+ * Silently skips if .project/reports/events/ doesn't exist (non-project usage).
+ */
+function emitApprovalEvent(
+  type: string,
+  approval: PendingApproval,
+  extra?: Record<string, unknown>,
+): void {
+  try {
+    const projectPath = process.cwd();
+    const eventsDir = resolve(projectPath, '.project/reports/events');
+    if (!existsSync(eventsDir)) return; // not in a project context
+
+    // Try to read projectId from manifest
+    let projectId = 'unknown';
+    try {
+      const manifestPath = resolve(projectPath, '.project/state/manifest.json');
+      if (existsSync(manifestPath)) {
+        const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+        if (manifest.projectId) projectId = manifest.projectId;
+      }
+    } catch {
+      // fall through
+    }
+
+    import('../observability/events.js').then(({ logEvent }) => {
+      logEvent(
+        {
+          projectId,
+          type,
+          actor: 'harness',
+          summary: `${approval.action} — ${approval.status} (${approval.id})`,
+          payload: {
+            approvalId: approval.id,
+            action: approval.action,
+            status: approval.status,
+            consumed: approval.consumed,
+            riskLevel: approval.riskLevel,
+            ...extra,
+          },
+        },
+        projectPath,
+      );
+    }).catch(() => {
+      // silent — observability is non-critical
+    });
+  } catch {
+    // silent
+  }
+}
 
 // ============================================================
 // Public API
@@ -201,6 +267,7 @@ export function submitApproval(params: {
   };
 
   store.add(approval);
+  emitApprovalEvent('approval.requested', approval);
   return approval;
 }
 
@@ -226,11 +293,13 @@ export function resolveApproval(
   // Expired check
   const now = new Date();
   if (approval.expiresAt < now.toISOString()) {
-    return store.update(id, {
+    const updated = store.update(id, {
       status: 'expired',
       resolvedAt: now.toISOString(),
       resolvedBy: resolution.resolvedBy,
     });
+    if (updated) emitApprovalEvent('approval.expired', updated);
+    return updated;
   }
 
   if (approval.status !== 'pending') {
@@ -238,12 +307,22 @@ export function resolveApproval(
     return approval;
   }
 
-  return store.update(id, {
+  const updated = store.update(id, {
     status: resolution.approved ? 'approved' : 'rejected',
     resolvedAt: now.toISOString(),
     resolvedBy: resolution.resolvedBy,
     modifiedInput: resolution.approved ? resolution.modifiedInput : undefined,
   });
+
+  if (updated) {
+    emitApprovalEvent(
+      resolution.approved ? 'approval.granted' : 'approval.denied',
+      updated,
+      { rejectionReason: resolution.rejectionReason },
+    );
+  }
+
+  return updated;
 }
 
 /**
@@ -251,6 +330,9 @@ export function resolveApproval(
  * Marks it as consumed so it cannot be reused.
  * Returns the approval with modifiedInput if provided, or undefined if
  * the approval cannot be consumed (not found, not approved, already consumed, expired).
+ *
+ * Consumption is atomic: concurrent consumers will find consumed=true after
+ * the first succeeds (SQLite single-writer guarantees serialized access).
  */
 export function consumeApproval(id: string): PendingApproval | undefined {
   const approval = store.get(id);
@@ -265,12 +347,15 @@ export function consumeApproval(id: string): PendingApproval | undefined {
   // Reject if expired
   const now = new Date();
   if (approval.expiresAt < now.toISOString()) {
-    store.update(id, { status: 'expired', resolvedAt: now.toISOString() });
+    const expired = store.update(id, { status: 'expired', resolvedAt: now.toISOString() });
+    if (expired) emitApprovalEvent('approval.expired', expired);
     return undefined;
   }
 
-  // Mark consumed and return
-  return store.update(id, { consumed: true, resolvedAt: now.toISOString() });
+  // Mark consumed atomically and return
+  const consumed = store.update(id, { consumed: true, resolvedAt: now.toISOString() });
+  if (consumed) emitApprovalEvent('approval.consumed', consumed);
+  return consumed;
 }
 
 /**

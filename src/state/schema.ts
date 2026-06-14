@@ -10,14 +10,24 @@
  * - Complex nested fields (metadata, tool_calls) stored as JSON text.
  * - ISO-8601 timestamps for all temporal fields.
  * - Schema version tracking for future migrations.
+ *
+ * Schema version history:
+ *   v1 — Initial schema (sessions, turns, approvals with basic columns)
+ *   v2 — Added missing PendingApproval fields to approvals table:
+ *        project_id, tool_name, skill_name, task_id, run_id,
+ *        input_digest, consumed
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // ============================================================
 // DDL
 // ============================================================
 
+/**
+ * Base DDL for fresh installations (SCHEMA_VERSION >= 2).
+ * Includes all columns in the approvals table.
+ */
 export const CREATE_SCHEMA_SQL = `
 -- Schema version tracking
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -53,17 +63,26 @@ CREATE TABLE IF NOT EXISTS turns (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Approvals table
+-- Approvals table (v2: includes strong-binding columns)
 CREATE TABLE IF NOT EXISTS approvals (
   id TEXT PRIMARY KEY,
   action TEXT NOT NULL,
   reason TEXT NOT NULL,
   risk_level TEXT NOT NULL CHECK(risk_level IN ('low', 'medium', 'high')),
   affected_paths TEXT NOT NULL DEFAULT '[]',
+  -- Strong-binding fields (GOV3-03 / P0-003)
+  skill_name TEXT,
+  tool_name TEXT,
+  project_id TEXT,
+  task_id TEXT,
+  run_id TEXT,
+  input_digest TEXT,
   session_id TEXT,
   turn_id TEXT,
   agent_id TEXT,
+  -- Status and lifecycle
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'expired')),
+  consumed INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   resolved_at TEXT,
@@ -82,9 +101,29 @@ CREATE INDEX IF NOT EXISTS idx_approvals_session ON approvals(session_id);
 `;
 
 // ============================================================
+// v1 → v2 Migration
+// ============================================================
+
+/**
+ * Migration queries for upgrading from schema v1 to v2.
+ * Each ALTER TABLE ADD COLUMN uses IF NOT EXISTS via PRAGMA check
+ * to safely handle databases already at v2.
+ */
+export const MIGRATE_V1_TO_V2 = `
+-- Add strong-binding columns to approvals (v2)
+ALTER TABLE approvals ADD COLUMN skill_name TEXT;
+ALTER TABLE approvals ADD COLUMN tool_name TEXT;
+ALTER TABLE approvals ADD COLUMN project_id TEXT;
+ALTER TABLE approvals ADD COLUMN task_id TEXT;
+ALTER TABLE approvals ADD COLUMN run_id TEXT;
+ALTER TABLE approvals ADD COLUMN input_digest TEXT;
+ALTER TABLE approvals ADD COLUMN consumed INTEGER NOT NULL DEFAULT 0;
+`;
+
+// ============================================================
 // Migration Runner
 // ============================================================
 
 export function getMigrationQueries(): string[] {
-  return [CREATE_SCHEMA_SQL];
+  return [CREATE_SCHEMA_SQL, MIGRATE_V1_TO_V2];
 }

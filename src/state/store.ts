@@ -23,7 +23,7 @@
 import Database from 'better-sqlite3';
 import type { SessionId, SessionState, TurnState, TurnId } from '../types.js';
 import type { PendingApproval } from '../governance/approval-gate.js';
-import { CREATE_SCHEMA_SQL, SCHEMA_VERSION } from './schema.js';
+import { CREATE_SCHEMA_SQL, SCHEMA_VERSION, getMigrationQueries } from './schema.js';
 import { existsSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 
@@ -98,16 +98,57 @@ export class SqliteStore {
   // ================================================================
 
   private migrate(): void {
-    // Run schema DDL
+    // Run base schema DDL (CREATE TABLE IF NOT EXISTS)
     this.db.exec(CREATE_SCHEMA_SQL);
 
-    // Check/track version
+    // Check current schema version
     const row = this.db.prepare('SELECT MAX(version) as version FROM schema_version').get() as
       | { version: number | null }
       | undefined;
     const currentVersion = row?.version ?? 0;
 
     if (currentVersion < SCHEMA_VERSION) {
+      // Run migration queries for each version gap
+      if (currentVersion <= 1 && SCHEMA_VERSION >= 2) {
+        // v1 → v2: add columns. ALTER TABLE ADD COLUMN may fail on
+        // re-run if columns already exist; we catch and ignore those.
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN skill_name TEXT');
+        } catch {
+          // column may already exist — safe to ignore
+        }
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN tool_name TEXT');
+        } catch {
+          // ignore
+        }
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN project_id TEXT');
+        } catch {
+          // ignore
+        }
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN task_id TEXT');
+        } catch {
+          // ignore
+        }
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN run_id TEXT');
+        } catch {
+          // ignore
+        }
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN input_digest TEXT');
+        } catch {
+          // ignore
+        }
+        try {
+          this.db.exec('ALTER TABLE approvals ADD COLUMN consumed INTEGER NOT NULL DEFAULT 0');
+        } catch {
+          // ignore
+        }
+      }
+
       this.db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
     }
   }
@@ -296,14 +337,20 @@ export class SqliteStore {
   // ================================================================
 
   /**
-   * Insert a new approval.
+   * Insert a new approval with all PendingApproval fields (v2 schema).
    */
   createApproval(approval: PendingApproval): void {
     this.db
       .prepare(
         `
-      INSERT INTO approvals (id, action, reason, risk_level, affected_paths, session_id, turn_id, agent_id, status, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO approvals (id, action, reason, risk_level, affected_paths,
+        skill_name, tool_name, project_id, task_id, run_id, input_digest,
+        session_id, turn_id, agent_id, status, consumed,
+        created_at, expires_at, resolved_at, resolved_by, modified_input)
+      VALUES (?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?)
     `,
       )
       .run(
@@ -312,12 +359,22 @@ export class SqliteStore {
         approval.reason,
         approval.riskLevel,
         JSON.stringify(approval.affectedPaths),
+        approval.skillName ?? null,
+        approval.toolName ?? null,
+        approval.projectId ?? null,
+        approval.taskId ?? null,
+        approval.runId ?? null,
+        approval.inputDigest ?? null,
         approval.sessionId ?? null,
         approval.turnId ?? null,
         approval.agentId ?? null,
         approval.status,
+        approval.consumed ? 1 : 0,
         approval.createdAt,
         approval.expiresAt,
+        approval.resolvedAt ?? null,
+        approval.resolvedBy ?? null,
+        approval.modifiedInput ? JSON.stringify(approval.modifiedInput) : null,
       );
   }
 
@@ -343,13 +400,14 @@ export class SqliteStore {
       .prepare(
         `
       UPDATE approvals SET
-        status = ?, resolved_at = ?, resolved_by = ?,
+        status = ?, consumed = ?, resolved_at = ?, resolved_by = ?,
         modified_input = ?, updated_at = datetime('now')
       WHERE id = ?
     `,
       )
       .run(
         merged.status,
+        merged.consumed ? 1 : 0,
         merged.resolvedAt ?? null,
         merged.resolvedBy ?? null,
         merged.modifiedInput ? JSON.stringify(merged.modifiedInput) : null,
@@ -377,6 +435,14 @@ export class SqliteStore {
   listAllApprovals(): PendingApproval[] {
     const rows = this.db.prepare('SELECT * FROM approvals ORDER BY created_at DESC').all() as Record<string, unknown>[];
     return rows.map((r) => this.rowToApproval(r));
+  }
+
+  /**
+   * Delete all approvals from the store.
+   * Used for test isolation (called by __test_clearStore).
+   */
+  clearAllApprovals(): void {
+    this.db.prepare('DELETE FROM approvals').run();
   }
 
   /**
@@ -456,10 +522,21 @@ export class SqliteStore {
       reason: row.reason as string,
       riskLevel: row.risk_level as PendingApproval['riskLevel'],
       affectedPaths: JSON.parse((row.affected_paths as string) || '[]'),
+
+      // Strong-binding fields (v2)
+      skillName: (row.skill_name as string) ?? undefined,
+      toolName: (row.tool_name as string) ?? undefined,
+      projectId: (row.project_id as string) ?? undefined,
+      taskId: (row.task_id as string) ?? undefined,
+      runId: (row.run_id as string) ?? undefined,
+      inputDigest: (row.input_digest as string) ?? undefined,
+
       sessionId: (row.session_id as string) ?? undefined,
       turnId: (row.turn_id as string) ?? undefined,
       agentId: (row.agent_id as string) ?? undefined,
+
       status: row.status as PendingApproval['status'],
+      consumed: row.consumed === 1 || row.consumed === true,
       createdAt: row.created_at as string,
       expiresAt: row.expires_at as string,
       resolvedAt: (row.resolved_at as string) ?? undefined,
