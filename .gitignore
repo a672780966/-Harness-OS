@@ -37,8 +37,13 @@ Thumbs.db
 # Test coverage
 coverage/
 
-# Claude Code hooks runtime data
+# Claude Code runtime data
 .claude/tool-trace.jsonl
+.claude/current-session-state.json
+.claude/last-session-state.json
+.claude/hook-errors.log
+.claude/observations.jsonl
+.claude/hooks/*.bak
 
 # Editor
 .vscode/

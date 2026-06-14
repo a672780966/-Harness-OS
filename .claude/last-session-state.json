@@ -1,9 +1,0 @@
-{
-  "timestamp": "2026-06-12T15:07:29.441192+00:00",
-  "event": "SessionEnd",
-  "session_id": "c4cb6102-6769-47be-99cc-1e8658d12923",
-  "turn_count": 0,
-  "status": "completed",
-  "tool_call_count": 0,
-  "summary": "Session completed and state saved for resume"
-}
