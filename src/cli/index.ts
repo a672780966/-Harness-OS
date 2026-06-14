@@ -988,9 +988,10 @@ approval
 approval
   .command('resolve <approval-id>')
   .description('Resolve an approval (approve or reject)')
-  .requiredOption('--approve', 'Approve the request')
-  .option('--by <name>', 'Operator name')
-  .option('--reject-reason <reason>', 'Rejection reason (required if rejecting)')
+  .option('--approve', 'Approve the request (mutually exclusive with --reject)')
+  .option('--reject', 'Reject the request (mutually exclusive with --approve)')
+  .option('--reason <text>', 'Reason for rejection (required if --reject)')
+  .option('--by <name>', 'Operator name (audit metadata)')
   .action(async (id, options) => {
     const { resolveApproval } = await import('../governance/approval-gate.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
@@ -999,10 +1000,21 @@ approval
     resetStartTime();
 
     try {
+      // Validate mutually exclusive flags
+      if (!options.approve && !options.reject) {
+        throw new Error('Must specify either --approve or --reject');
+      }
+      if (options.approve && options.reject) {
+        throw new Error('Cannot specify both --approve and --reject');
+      }
+      if (options.reject && !options.reason) {
+        throw new Error('--reason is required when rejecting');
+      }
+
       const result = resolveApproval(id, {
-        approved: options.approve,
+        approved: !!options.approve,
         resolvedBy: options.by,
-        rejectionReason: options.rejectReason,
+        rejectionReason: options.reason,
       });
 
       if (!result) {
@@ -1014,17 +1026,21 @@ approval
           buildJsonOutput({
             command: 'approval resolve',
             status: 'success',
-            data: { id: result.id, status: result.status, resolvedBy: result.resolvedBy },
+            data: {
+              id: result.id,
+              status: result.status,
+              resolvedBy: result.resolvedBy,
+              resolvedAt: result.resolvedAt,
+            },
             metaOverrides: { redacted: true },
           }),
         );
       } else {
         console.log(`\nApproval ${id}: ${result.status}`);
         if (result.resolvedBy) console.log(`Resolved by: ${result.resolvedBy}`);
-      }
-
-      if (result.status === 'rejected' && !options.approve) {
-        console.log(`Reason: ${options.rejectReason || 'not specified'}`);
+        if (result.status === 'rejected' && options.reason) {
+          console.log(`Reason: ${options.reason}`);
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
