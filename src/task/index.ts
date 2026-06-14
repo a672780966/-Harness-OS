@@ -157,6 +157,7 @@ export async function runTask(
       const report = generateReport(verificationId, plan.steps, result, {
         projectId,
         taskId,
+        runId,
         projectPath,
         risks: [],
       });

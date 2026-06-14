@@ -8,10 +8,10 @@
  * Reference: 09_VERIFICATION_OBSERVABILITY.md §15-19
  */
 
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import type { RunTrace } from './trace.js';
-import { redactText } from '../governance/redactor.js';
+import { redactObject, redactText, safeWriteText } from '../governance/redactor.js';
 
 // ============================================================
 // Run Report Types
@@ -118,22 +118,10 @@ export function saveRunReport(
   const reportPath = join(reportsDir, `${report.runId}.md`);
 
   // Redact sensitive fields before formatting (SEC-06)
-  const safeReport: RunReport = {
-    ...report,
-    summary: redactText(report.summary),
-    contextUsed: report.contextUsed?.map(c => redactText(c)),
-    contextExcluded: report.contextExcluded?.map(c => redactText(c)),
-    contextRisks: report.contextRisks?.map(c => redactText(c)),
-    risks: report.risks?.map(r => redactText(r)),
-    followUp: report.followUp?.map(f => redactText(f)),
-    approvals: report.approvals?.map(a => ({
-      action: redactText(a.action),
-      status: a.status,
-    })),
-  };
+  const safeReport = redactObject(report) as RunReport;
 
   const content = formatRunReport(safeReport);
-  writeFileSync(reportPath, content, 'utf-8');
+  safeWriteText(reportPath, content);
 
   report.reportPath = reportPath;
   return reportPath;
