@@ -12,7 +12,13 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { safeWriteJson, redactText } from '../governance/redactor.js';
-import { consumeApproval, validateApprovalBinding, type PendingApproval } from '../governance/approval-gate.js';
+import {
+  getApproval,
+  consumeApproval,
+  validateApprovalBinding,
+  computeInputDigest,
+  type PendingApproval,
+} from '../governance/approval-gate.js';
 
 // ============================================================
 // Types
@@ -152,7 +158,10 @@ export function proposeDecision(params: {
 
 /**
  * Accept a proposed ADR.
- * Requires a valid, approved, unconsumed approval binding (GOV3-03/P0-003).
+ * Requires a valid, approved, unconsumed approval binding (P0-004).
+ *
+ * Validation order: verify all required fields → atomic consume → transition.
+ * This ensures binding failures don't waste a consumed approval.
  *
  * @param projectPath - The project path
  * @param adrId - The ADR ID to accept
@@ -166,25 +175,76 @@ export function acceptDecision(
   approvalId: string,
   approvedBy?: string,
 ): DecisionState | undefined {
-  // GOV3-03/P0-003: Validate and consume the approval
-  const approval = consumeApproval(approvalId);
+  // P0-004: Step 1 — Get approval WITHOUT consuming
+  const approval = getApproval(approvalId);
   if (!approval) {
     throw new Error(
-      `Cannot accept ADR ${adrId}: approval "${approvalId}" is missing, already consumed, expired, or not approved. ` +
-        `[P0-003: approval gate]`,
+      `Cannot accept ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`,
     );
   }
 
-  // Validate approval binding matches this action
-  const bindingError = validateApprovalBinding(approval, {
-    projectId: getProjectId(projectPath),
-    toolName: 'decision',
-    input: { action: 'accept_adr', adrId },
-  });
-  if (bindingError) {
-    throw new Error(`Cannot accept ADR ${adrId}: approval binding mismatch — ${bindingError}. [P0-003: binding fail]`);
+  // P0-004: Step 2 — Validate all required binding fields BEFORE consumption
+  const projectId = getProjectId(projectPath);
+  const expectedInput = { action: 'accept_adr', adrId };
+  const bindingErrors: string[] = [];
+
+  // 2a. Required: projectId on both sides
+  if (!projectId) bindingErrors.push('expected projectId is empty');
+  if (!approval.projectId) bindingErrors.push('approval has no projectId');
+  if (projectId && approval.projectId && approval.projectId !== projectId) {
+    bindingErrors.push(`approval bound to project "${approval.projectId}", cannot use for "${projectId}"`);
   }
 
+  // 2b. Required: toolName === 'decision' on both sides
+  if (!approval.toolName) bindingErrors.push('approval has no toolName');
+  if (approval.toolName && approval.toolName !== 'decision') {
+    bindingErrors.push(`approval bound to tool "${approval.toolName}", expected "decision"`);
+  }
+
+  // 2c. Required: action must be accept_adr
+  if (!approval.action) bindingErrors.push('approval has no action');
+  if (approval.action && approval.action !== 'accept_adr') {
+    bindingErrors.push(`approval action is "${approval.action}", expected "accept_adr"`);
+  }
+
+  // 2d. Required: input digest must match (catches adrId changes, content changes)
+  if (!approval.inputDigest) bindingErrors.push('approval has no inputDigest');
+  if (approval.inputDigest) {
+    const expectedDigest = computeInputDigest(expectedInput);
+    if (approval.inputDigest !== expectedDigest) {
+      bindingErrors.push('approval input digest mismatch — adrId or input has changed since approval');
+    }
+  }
+
+  // 2e. Required: status must be approved, not pending/rejected/expired
+  if (approval.status !== 'approved') {
+    bindingErrors.push(`approval status is "${approval.status}", expected "approved"`);
+  }
+
+  // 2f. Required: not already consumed
+  if (approval.consumed) bindingErrors.push('approval already consumed (single-use)');
+
+  // 2g. Required: not expired
+  if (approval.expiresAt < new Date().toISOString()) {
+    bindingErrors.push('approval has expired');
+  }
+
+  // Fail closed on any binding error (approval NOT consumed yet)
+  if (bindingErrors.length > 0) {
+    throw new Error(
+      `Cannot accept ADR ${adrId}: approval binding failed — ${bindingErrors.join('; ')}. [P0-004: binding fail]`,
+    );
+  }
+
+  // Step 3 — Atomically consume now that all validations pass
+  const consumed = consumeApproval(approvalId);
+  if (!consumed) {
+    throw new Error(
+      `Cannot accept ADR ${adrId}: approval "${approvalId}" was consumed by another caller between validation and consumption. [P0-004: race condition]`,
+    );
+  }
+
+  // Step 4 — Transition ADR state
   const state = loadDecision(projectPath, adrId);
   if (!state || state.status !== 'proposed') return undefined;
   const now = new Date().toISOString();
@@ -210,7 +270,7 @@ export function rejectDecision(projectPath: string, adrId: string): DecisionStat
 
 /**
  * Supersede an accepted ADR.
- * Requires a valid, approved, unconsumed approval binding (P0-003).
+ * Requires a valid, approved, unconsumed approval binding (P0-004).
  */
 export function supersedeDecision(
   projectPath: string,
@@ -218,25 +278,76 @@ export function supersedeDecision(
   supersededBy: string,
   approvalId: string,
 ): DecisionState | undefined {
-  const approval = consumeApproval(approvalId);
+  // P0-004: Step 1 — Get approval WITHOUT consuming
+  const approval = getApproval(approvalId);
   if (!approval) {
     throw new Error(
-      `Cannot supersede ADR ${adrId}: approval "${approvalId}" is missing, already consumed, expired, or not approved. ` +
-        `[P0-003: approval gate]`,
+      `Cannot supersede ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`,
     );
   }
 
-  const bindingError = validateApprovalBinding(approval, {
-    projectId: getProjectId(projectPath),
-    toolName: 'decision',
-    input: { action: 'supersede_adr', adrId, supersededBy },
-  });
-  if (bindingError) {
+  // P0-004: Step 2 — Validate all required binding fields BEFORE consumption
+  const projectId = getProjectId(projectPath);
+  const expectedInput = { action: 'supersede_adr', adrId, supersededBy };
+  const bindingErrors: string[] = [];
+
+  // 2a. Required: projectId on both sides
+  if (!projectId) bindingErrors.push('expected projectId is empty');
+  if (!approval.projectId) bindingErrors.push('approval has no projectId');
+  if (projectId && approval.projectId && approval.projectId !== projectId) {
+    bindingErrors.push(`approval bound to project "${approval.projectId}", cannot use for "${projectId}"`);
+  }
+
+  // 2b. Required: toolName === 'decision'
+  if (!approval.toolName) bindingErrors.push('approval has no toolName');
+  if (approval.toolName && approval.toolName !== 'decision') {
+    bindingErrors.push(`approval bound to tool "${approval.toolName}", expected "decision"`);
+  }
+
+  // 2c. Required: action must be supersede_adr
+  if (!approval.action) bindingErrors.push('approval has no action');
+  if (approval.action && approval.action !== 'supersede_adr') {
+    bindingErrors.push(`approval action is "${approval.action}", expected "supersede_adr"`);
+  }
+
+  // 2d. Required: input digest must match (catches adrId/supersededBy changes)
+  if (!approval.inputDigest) bindingErrors.push('approval has no inputDigest');
+  if (approval.inputDigest) {
+    const expectedDigest = computeInputDigest(expectedInput);
+    if (approval.inputDigest !== expectedDigest) {
+      bindingErrors.push('approval input digest mismatch — input has changed since approval');
+    }
+  }
+
+  // 2e. Required: status must be approved
+  if (approval.status !== 'approved') {
+    bindingErrors.push(`approval status is "${approval.status}", expected "approved"`);
+  }
+
+  // 2f. Required: not already consumed
+  if (approval.consumed) bindingErrors.push('approval already consumed (single-use)');
+
+  // 2g. Required: not expired
+  if (approval.expiresAt < new Date().toISOString()) {
+    bindingErrors.push('approval has expired');
+  }
+
+  // Fail closed — approval NOT consumed yet
+  if (bindingErrors.length > 0) {
     throw new Error(
-      `Cannot supersede ADR ${adrId}: approval binding mismatch — ${bindingError}. [P0-003: binding fail]`,
+      `Cannot supersede ADR ${adrId}: approval binding failed — ${bindingErrors.join('; ')}. [P0-004: binding fail]`,
     );
   }
 
+  // Step 3 — Atomically consume now that all validations pass
+  const consumed = consumeApproval(approvalId);
+  if (!consumed) {
+    throw new Error(
+      `Cannot supersede ADR ${adrId}: approval "${approvalId}" was consumed by another caller between validation and consumption. [P0-004: race condition]`,
+    );
+  }
+
+  // Step 4 — Transition ADR state
   const state = loadDecision(projectPath, adrId);
   if (!state) return undefined;
   state.status = 'superseded';
