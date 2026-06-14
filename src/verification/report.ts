@@ -35,6 +35,7 @@ import {
 
 export interface VerificationReport {
   runId: string;
+  sourceRunId?: string;
   projectId: string;
   taskId?: string;
   projectPath: string;
@@ -59,6 +60,7 @@ export function generateReport(
   options?: {
     projectId?: string;
     taskId?: string;
+    runId?: string;
     projectPath?: string;
     risks?: string[];
   },
@@ -73,6 +75,7 @@ export function generateReport(
 
   return {
     runId,
+    sourceRunId: options?.runId,
     projectId: options?.projectId ?? 'unknown',
     taskId: options?.taskId,
     projectPath: options?.projectPath ?? process.cwd(),
@@ -116,6 +119,7 @@ export function saveReport(report: VerificationReport): { mdPath: string; jsonPa
     schemaVersion: VERIFICATION_RESULT_SCHEMA_VERSION,
     projectId: report.projectId,
     taskId: report.taskId,
+    runId: report.sourceRunId,
     sourceCommit,
     sourceTree,
     sourceWorktreeDigest: worktreeDigest,

@@ -20,6 +20,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync, mkdirSync, writeFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { execSync } from 'child_process';
 import { createProject } from '../../src/project/create.js';
 import {
   completeTask,
@@ -33,6 +34,8 @@ import {
   loadVerificationResult,
   checkVerificationBinding,
   computeIntegrity,
+  computeWorktreeDigest,
+  computeStagedDigest,
   saveVerificationResult,
 } from '../../src/verification/result.js';
 import { runGuard } from '../../src/delivery/guard.js';
@@ -308,6 +311,35 @@ describe('Test 7: Guard blocked behavior (VER3-05)', () => {
     expect(verCheck?.reason).toContain('not found on disk');
     expect(verCheck?.reason).not.toContain('PASSED'); // No Markdown fallback parsing
   });
+
+  it('binds project identity to the current manifest', async () => {
+    const verId = createPassedVerification('ver_project_identity');
+    const manifestPath = join(projectPath, '.project/state/manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+    manifest.projectId = 'proj_other';
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+
+    const guard = await runGuard({
+      deliveryType: 'commit',
+      projectPath,
+      verId,
+    });
+
+    expect(guard.blockedBy.some(reason => reason.includes('Project mismatch'))).toBe(true);
+  });
+
+  it('binds run identity supplied by the delivery caller', async () => {
+    const verId = createPassedVerification('ver_run_identity', { runId: 'run_expected' });
+
+    const guard = await runGuard({
+      deliveryType: 'commit',
+      projectPath,
+      verId,
+      runId: 'run_other',
+    });
+
+    expect(guard.blockedBy.some(reason => reason.includes('Run mismatch'))).toBe(true);
+  });
 });
 
 // ============================================================
@@ -496,5 +528,36 @@ describe('Verification Result JSON schema (VER3-01)', () => {
     });
     expect(binding.valid).toBe(false);
     expect(binding.reasons.some(r => r.includes('status is "failed"'))).toBe(true);
+  });
+});
+
+describe('VER4-01: exact worktree and index content binding', () => {
+  it('detects equal-length unstaged content replacement', () => {
+    const filePath = join(projectPath, 'equal-length.txt');
+    writeFileSync(filePath, 'AAAA', 'utf-8');
+    execSync('git add equal-length.txt && git commit -m "add probe"', { cwd: projectPath });
+
+    writeFileSync(filePath, 'CCCC', 'utf-8');
+    const before = computeWorktreeDigest(projectPath);
+    writeFileSync(filePath, 'DDDD', 'utf-8');
+
+    expect(computeWorktreeDigest(projectPath)).not.toBe(before);
+  });
+
+  it('detects equal-length staged content replacement', () => {
+    const filePath = join(projectPath, 'staged-equal-length.txt');
+    writeFileSync(filePath, 'AAAA', 'utf-8');
+    execSync('git add staged-equal-length.txt && git commit -m "add staged probe"', { cwd: projectPath });
+
+    writeFileSync(filePath, 'CCCC', 'utf-8');
+    execSync('git add staged-equal-length.txt', { cwd: projectPath });
+    const worktreeBefore = computeWorktreeDigest(projectPath);
+    const stagedBefore = computeStagedDigest(projectPath);
+
+    writeFileSync(filePath, 'DDDD', 'utf-8');
+    execSync('git add staged-equal-length.txt', { cwd: projectPath });
+
+    expect(computeWorktreeDigest(projectPath)).not.toBe(worktreeBefore);
+    expect(computeStagedDigest(projectPath)).not.toBe(stagedBefore);
   });
 });

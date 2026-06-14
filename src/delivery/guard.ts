@@ -19,7 +19,7 @@
  *            03_VERIFICATION_DELIVERY_STRONG_BINDING_FIX.md §4
  */
 
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
 import { join, resolve } from 'path';
 import {
@@ -60,7 +60,9 @@ export interface GuardResult {
 function checkVerification(
   projectPath: string,
   verId: string,
+  projectId: string,
   taskId?: string,
+  runId?: string,
 ): GuardCheck {
   if (!verId) {
     return {
@@ -83,8 +85,9 @@ function checkVerification(
 
   // Validate bindings against current state
   const bindingCheck = checkVerificationBinding(result, {
-    projectId: result.projectId,
+    projectId,
     taskId,
+    runId,
     projectPath,
   });
 
@@ -236,12 +239,20 @@ export async function runGuard(
 ): Promise<GuardResult> {
   const projectPath = resolve(options.projectPath || process.cwd());
   const checks: GuardCheck[] = [];
+  let projectId = '';
+  try {
+    const manifestPath = join(projectPath, '.project/state/manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as { projectId?: string };
+    projectId = manifest.projectId ?? '';
+  } catch {
+    // Missing or malformed identity is handled by the binding check.
+  }
 
   // 1. Check git status
   checks.push(checkGitStatus(projectPath));
 
   // 2. Check verification — REQUIRES verId, loads structured JSON from disk
-  checks.push(checkVerification(projectPath, options.verId, options.taskId));
+  checks.push(checkVerification(projectPath, options.verId, projectId, options.taskId, options.runId));
 
   // 3. Check run report
   checks.push(checkRunReport(projectPath, options.runId));

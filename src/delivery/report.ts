@@ -8,12 +8,12 @@
  * Reference: 10_DELIVERY_PIPELINE.md §15
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 import type { CommitMessage } from './commit.js';
 import type { PrBody } from './pr.js';
 import type { GuardResult } from './guard.js';
-import { redactText } from '../governance/redactor.js';
+import { redactObject, redactText, safeWriteText } from '../governance/redactor.js';
 
 // ============================================================
 // Types
@@ -90,8 +90,9 @@ export function saveDeliveryReport(
   }
 
   const reportPath = join(reportDir, `${report.deliveryId}.md`);
-  const content = formatDeliveryReport(report);
-  writeFileSync(reportPath, content, 'utf-8');
+  const safeReport = redactObject(report) as DeliveryReport;
+  const content = formatDeliveryReport(safeReport);
+  safeWriteText(reportPath, content);
   report.reportPath = reportPath;
 
   return reportPath;

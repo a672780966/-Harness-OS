@@ -87,6 +87,7 @@ export async function runVerificationPipeline(
   const report = generateReport(verificationId, plan.steps, runResult, {
     projectId: options?.projectId,
     taskId: options?.taskId,
+    runId: options?.runId,
     projectPath,
     risks: [],
   });

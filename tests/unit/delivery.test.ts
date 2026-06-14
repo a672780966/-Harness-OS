@@ -10,15 +10,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 
 import { generateCommitMessage, generateCommitFromTask, taskTypeToCommitType } from '../../src/delivery/commit.js';
 import { generatePrBody } from '../../src/delivery/pr.js';
-import { generateDeliveryReport } from '../../src/delivery/report.js';
+import { generateDeliveryReport, saveDeliveryReport } from '../../src/delivery/report.js';
 import { runGuard } from '../../src/delivery/guard.js';
+import { AUDIT_CANARY } from '../../src/governance/redactor.js';
 
 // ============================================================
 // Commit Message Tests
@@ -191,6 +192,23 @@ describe('delivery report', () => {
     });
 
     expect(report.status).toBe('blocked');
+  });
+
+  it('redacts every field before persisting', () => {
+    const testDir = mkdtempSync(join(tmpdir(), 'harness-delivery-redaction-'));
+    try {
+      const report = generateDeliveryReport({
+        deliveryId: 'del_secret',
+        projectId: 'proj_001',
+        type: 'commit',
+        taskId: AUDIT_CANARY,
+        summary: AUDIT_CANARY,
+      });
+      const path = saveDeliveryReport(report, testDir);
+      expect(readFileSync(path, 'utf-8')).not.toContain(AUDIT_CANARY);
+    } finally {
+      rmSync(testDir, { recursive: true, force: true });
+    }
   });
 });
 

@@ -21,9 +21,9 @@
  *            03_VERIFICATION_WORKTREE_DELIVERY_BINDING_FIX.md §4
  */
 
-import { existsSync, mkdirSync, readFileSync, statSync, readdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { execSync } from 'child_process';
-import { join, resolve, relative, sep } from 'path';
+import { join, resolve } from 'path';
 import { createHash } from 'crypto';
 import type { VerificationStep } from './plan.js';
 import { safeWriteJson } from '../governance/redactor.js';
@@ -145,78 +145,31 @@ function isExcluded(filePath: string): boolean {
 }
 
 /**
- * Compute a digest of the current working tree state.
- * This includes tracked, modified, staged, renamed, and deleted files,
- * while excluding runtime artifact directories.
- *
- * Algorithm:
- *   1. git diff HEAD --name-status (all changes vs HEAD)
- *   2. For each changed tracked file that is not excluded, hash its path + content
- *   3. For deleted files, hash the path + '/D' marker
- *   4. Sort entries for deterministic output
- *   5. SHA-256 of the sorted concatenation
- *
- * Returns undefined if the project is not a git repo or git fails.
+ * Bind verification to exact working-tree bytes, including untracked files.
+ * Runtime artifact directories remain excluded from the security boundary.
  */
 export function computeWorktreeDigest(projectPath: string): string | undefined {
   try {
-    // Get all changed files (staged + unstaged) from HEAD
-    const diffOutput = execSync(
-      'git diff HEAD --name-status --no-color',
-      { cwd: projectPath, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
-    ).trim();
-
-    const entries: string[] = [];
+    const filesOutput = execSync(
+      'git ls-files --cached --others --exclude-standard -z',
+      { cwd: projectPath, encoding: 'buffer', maxBuffer: 50 * 1024 * 1024 },
+    );
+    const files = filesOutput
+      .toString('utf-8')
+      .split('\0')
+      .filter(Boolean)
+      .filter(filePath => !isExcluded(filePath))
+      .sort();
     const hash = createHash('sha256');
 
-    if (!diffOutput) {
-      // No changes — digest is the HEAD tree hash itself
+    for (const filePath of files) {
+      hash.update(`path:${filePath}\0`);
       try {
-        const headTree = execSync('git rev-parse HEAD:', { cwd: projectPath, encoding: 'utf-8' }).trim();
-        hash.update(`clean:${headTree}`);
-        return hash.digest('hex');
+        hash.update(readFileSync(join(projectPath, filePath)));
       } catch {
-        return undefined;
+        hash.update('unreadable');
       }
-    }
-
-    const lines = diffOutput.split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      // Format: <status>\t<path> where status is M/A/D/R/etc
-      const tabIdx = trimmed.indexOf('\t');
-      if (tabIdx < 0) continue;
-      const status = trimmed.substring(0, tabIdx).trim();
-      const filePath = trimmed.substring(tabIdx + 1).trim();
-
-      if (isExcluded(filePath)) continue;
-
-      if (status.startsWith('D')) {
-        // Deleted file
-        hash.update(`D:${filePath}\n`);
-      } else {
-        // Added, modified, renamed — hash content
-        // Use git show :<path> for staged version, or cat for working tree
-        try {
-          let content: string;
-          if (status.startsWith('R')) {
-            // Rename: format is "R###\told\tnew"
-            const parts = trimmed.split('\t');
-            const newPath = parts[parts.length - 1];
-            content = readFileSync(join(projectPath, newPath), 'utf-8');
-            hash.update(`R:${newPath}:${content.length}\n`);
-          } else if (status.startsWith('A') || status.startsWith('M') || status.startsWith('?') || status.startsWith(' ')) {
-            // For staged (M in first column) or unstaged ( M) changes
-            content = readFileSync(join(projectPath, filePath), 'utf-8');
-            hash.update(`${status}:${filePath}:${content.length}\n`);
-          }
-        } catch {
-          // File might be deleted or unreadable — skip
-          hash.update(`${status}:${filePath}:unreadable\n`);
-        }
-      }
+      hash.update('\0');
     }
 
     return hash.digest('hex');
@@ -226,37 +179,28 @@ export function computeWorktreeDigest(projectPath: string): string | undefined {
 }
 
 /**
- * Compute a digest of the staging area only (git diff --cached).
- * Useful for checking if staged changes have been tampered with.
+ * Bind verification to the exact Git index using its content-addressed blobs.
  */
 export function computeStagedDigest(projectPath: string): string | undefined {
   try {
-    const diffCached = execSync(
-      'git diff --cached --name-status --no-color',
-      { cwd: projectPath, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 }
-    ).trim();
-
+    const indexOutput = execSync(
+      'git ls-files --stage -z',
+      { cwd: projectPath, encoding: 'buffer', maxBuffer: 50 * 1024 * 1024 },
+    );
+    const records = indexOutput
+      .toString('utf-8')
+      .split('\0')
+      .filter(Boolean)
+      .filter(record => {
+        const tabIdx = record.indexOf('\t');
+        return tabIdx >= 0 && !isExcluded(record.slice(tabIdx + 1));
+      })
+      .sort();
     const hash = createHash('sha256');
 
-    if (!diffCached) {
-      // No staged changes — staged is clean
-      hash.update('staged:clean');
-      return hash.digest('hex');
-    }
-
-    const lines = diffCached.split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      const tabIdx = trimmed.indexOf('\t');
-      if (tabIdx < 0) continue;
-      const status = trimmed.substring(0, tabIdx).trim();
-      const filePath = trimmed.substring(tabIdx + 1).trim();
-
-      if (isExcluded(filePath)) continue;
-
-      hash.update(`${status}:${filePath}\n`);
+    for (const record of records) {
+      hash.update(record);
+      hash.update('\0');
     }
 
     return hash.digest('hex');
@@ -457,7 +401,11 @@ export function checkVerificationBinding(
   // 9. Staged digest
   if (isGitRepo) {
     const stagedDigest = computeStagedDigest(expected.projectPath);
-    if (result.sourceStagedDigest && stagedDigest && result.sourceStagedDigest !== stagedDigest) {
+    if (!result.sourceStagedDigest) {
+      reasons.push('Verification result has no sourceStagedDigest');
+    } else if (!stagedDigest) {
+      reasons.push('Cannot compute staged digest for binding check');
+    } else if (result.sourceStagedDigest !== stagedDigest) {
       reasons.push(`Staged state changed since verification: result=${result.sourceStagedDigest.slice(0, 12)} current=${stagedDigest.slice(0, 12)}`);
     }
   }

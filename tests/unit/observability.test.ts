@@ -15,6 +15,7 @@ import { mkdtempSync, rmSync, existsSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { redactText } from '../../src/governance/redactor.js';
+import { AUDIT_CANARY } from '../../src/governance/redactor.js';
 
 import { logEvent, EventTypes, type HarnessEvent } from '../../src/observability/events.js';
 import {
@@ -244,6 +245,19 @@ describe('run report', () => {
     const content = readFileSync(path, 'utf-8');
     expect(content).toContain('Run Report');
     expect(content).toContain('run_002');
+  });
+
+  it('redacts every report field before persisting', () => {
+    const trace = createTrace({ runId: 'run_secret', projectId: 'proj_001', summary: AUDIT_CANARY });
+    const report = generateRunReport(trace, {
+      title: AUDIT_CANARY,
+      changedFiles: [AUDIT_CANARY],
+      contextUsed: [AUDIT_CANARY],
+      risks: [AUDIT_CANARY],
+    });
+
+    const path = saveRunReport(report, testDir);
+    expect(readFileSync(path, 'utf-8')).not.toContain(AUDIT_CANARY);
   });
 
   it('calculates duration from start to end', () => {
