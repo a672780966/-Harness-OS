@@ -259,6 +259,15 @@ function generateContextMarkdown(pack: ContextPack): string {
       (f) => `### ${f.path}\n\nReason: ${f.reason}  \nPriority: P${f.priority}  \nMode: ${f.contentMode}\n`,
     ),
     '',
+    '## Decisions',
+    '',
+    ...(pack.decisions.length > 0
+      ? pack.decisions.map(
+          (d) =>
+            `### ${d.id}: ${d.title}\n\nStatus: ${d.status}  \nSummary: ${d.summary}  \nRelevance: ${d.relevanceReason}\n`,
+        )
+      : ['(none — no active decisions)']),
+    '',
     '## Available Skills',
     '',
     ...pack.skills.map(
