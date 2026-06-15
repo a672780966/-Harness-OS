@@ -42,6 +42,20 @@ describe('createProject', () => {
     expect(result.path).toBe(testDir);
   });
 
+  it('rejects .git indirection that points outside the target repo', async () => {
+    const targetDir = join(testDir, 'indirected');
+    const externalGitDir = join(testDir, 'external-git');
+    mkdirSync(targetDir, { recursive: true });
+    mkdirSync(externalGitDir, { recursive: true });
+    const git = simpleGit(externalGitDir);
+    await git.init();
+    writeFileSync(join(targetDir, '.git'), `gitdir: ${externalGitDir.replace(/\\/g, '/')}\n`, 'utf-8');
+
+    await expect(createProject({ name: 'demo', path: targetDir })).rejects.toThrow(
+      /Git root|unable to verify Git repository root/,
+    );
+  });
+
   it('creates .gitignore with Harness entries', async () => {
     await createProject({ name: 'demo', path: testDir });
     const gitignore = readFileSync(join(testDir, '.gitignore'), 'utf-8');

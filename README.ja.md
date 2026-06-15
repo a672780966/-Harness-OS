@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0--rc.2-blue?style=flat-square" alt="バージョン">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square" alt="バージョン">
   <img src="https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square" alt="TypeScript">
   <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="ライセンス">
   <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="テスト">
@@ -112,7 +112,7 @@ pnpm build
 ```bash
 # バージョン表示
 pnpm harness --version
-# → 1.0.0-rc.2
+# → 1.0.0
 
 # ヘルプ表示
 pnpm harness --help
@@ -320,7 +320,7 @@ pnpm format
 
 ## ステータス
 
-**v1.0.0-rc.2** — コアガバナンスと検証のリリース候補。
+**v1.0.0** — コアガバナンスと検証、プロダクションリリース。
 
 実装済み：
 - ✅ CLI フレームワーク（17 コマンド）

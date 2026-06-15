@@ -1,6 +1,6 @@
 {
   "name": "harness-os",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0",
   "description": "Harness OS - Codex-first Project Operating System",
   "type": "module",
   "packageManager": "pnpm@11.5.3",
@@ -23,7 +23,7 @@
     "lint": "eslint src/ tests/",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test --run && pnpm build",
+    "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm build && pnpm test --run",
     "test:coverage": "vitest run --coverage"
   },
   "bin": {

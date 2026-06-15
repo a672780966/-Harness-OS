@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0--rc.2-blue?style=flat-square" alt="버전">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square" alt="버전">
   <img src="https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square" alt="TypeScript">
   <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="라이선스">
   <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="테스트">
@@ -112,7 +112,7 @@ pnpm build
 ```bash
 # 버전 표시
 pnpm harness --version
-# → 1.0.0-rc.2
+# → 1.0.0
 
 # 도움말 표시
 pnpm harness --help
@@ -320,7 +320,7 @@ pnpm format
 
 ## 상태
 
-**v1.0.0-rc.2** — 핵심 거버넌스 및 검증을 위한 릴리스 후보.
+**v1.0.0** — 핵심 거버넌스 및 검증, 프로덕션 릴리스.
 
 구현 완료:
 - ✅ CLI 프레임워크 (17개 명령어)

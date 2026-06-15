@@ -1,7 +1,7 @@
-# Third Round Security Verification — Harness OS v1.0.0-rc.2
+# Third Round Security Verification — Harness OS v1.0.0
 
 **Status:** 🟢 PASSED  
-**Commit SHA:** `2f6be41853e3abdbd9a9f3847c8a555a4b672cd1`  
+**Commit SHA:** `e6ccb4a15fcc9b4885c313715cd2b52d906ed203`  
 **Branch:** `main`  
 
 ---
@@ -137,11 +137,11 @@ All commands verified: no extra text on stdout, valid JSON, uniform envelope.
 **SECURITY VERDICT: PASSED**
 
 All security-critical paths verified:
-- ✅ Secret redaction covers all output boundaries
+- ✅ Secret redaction covers all output boundaries (re-audit confirmed)
 - ✅ No secret leakage via key collision or value exposure
 - ✅ Task completion requires disk-loaded verification only
 - ✅ Delivery guard requires structured verification with integrity
 - ✅ All CLI JSON output is parseable, redacted, and envelope-wrapped
 - ✅ Git tracks no runtime artifacts
 
-**Overall: READY_FOR_TAG v1.0.0-rc.2**
+**Overall: READY_FOR_TAG v1.0.0**

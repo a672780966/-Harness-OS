@@ -1,9 +1,9 @@
-# Third Round Full Audit — Harness OS v1.0.0-rc.2
+# Third Round Full Audit — Harness OS v1.0.0
 
 **Status:** 🟢 READY_FOR_TAG  
-**Target Version:** `1.0.0-rc.2`  
+**Target Version:** `1.0.0`  
 **Audit Scope:** AUD3-P0-001 through AUD3-P0-006  
-**Commit SHA:** `2f6be41853e3abdbd9a9f3847c8a555a4b672cd1`  
+**Commit SHA:** `e6ccb4a15fcc9b4885c313715cd2b52d906ed203`  
 **Branch:** `main`  
 
 ---
@@ -14,9 +14,9 @@
 |----------|-------|
 | Repository | `Harness OS` (local: `C:\Users\Administrator\Desktop\Harness OS`) |
 | Branch | `main` |
-| Commit SHA (full) | `2f6be41853e3abdbd9a9f3847c8a555a4b672cd1` |
-| Parent Commits | `634f842` (AUD3-P0-004), `ea489cb` (AUD3-P0-003), `dba3f7d` (AUD3-P0-002), `dadc12c` (AUD3-P0-001) |
-| Working Tree | 3 files dirty (`.claude/` session artifacts — excluded from release) |
+| Commit SHA (full) | `e6ccb4a15fcc9b4885c313715cd2b52d906ed203` |
+| Parent Commits | `2f6be41853e3abdbd9a9f3847c8a555a4b672cd1` (AUD3-P0-005), `634f842` (AUD3-P0-004), `ea489cb` (AUD3-P0-003), `dba3f7d` (AUD3-P0-002), `dadc12c` (AUD3-P0-001) |
+| Working Tree | Approved diff: 11 files (P0 re-audit fixes) |
 | Tag | `v1.0.0-rc.1` (old, not moved) |
 | Node.js | v24.16.0 |
 | pnpm | 11.5.3 |
@@ -34,7 +34,7 @@
 | AUD3-P0-003 | Verification/Delivery Strong Binding | ✅ Committed (`ea489cb`) | verification, task, delivery | 551/551 |
 | AUD3-P0-004 | CLI JSON Contract | ✅ Committed (`634f842`) | cli/index.ts, formatters | 551/551 |
 | AUD3-P0-005 | RC Toolchain & Version Unification | ✅ Committed (`2f6be41`) | package.json, version, run.ts | 551/551 × 3 |
-| AUD3-P0-006 | RC Evidence & Release Readiness | ✅ This report | docs/audit/, .gitignore | 551/551 |
+| AUD3-P0-006 | RC Evidence & Release Readiness | ✅ Committed (`2f6be41`), updated for v1.0.0 (`e6ccb4a`) | docs/audit/, .gitignore | 551/551 |
 
 ## 3. Command-Level Evidence (EVD3-02)
 
@@ -90,10 +90,10 @@ pnpm build
 
 | Source | Version |
 |--------|---------|
-| `src/version.ts` | `1.0.0-rc.2` |
-| `package.json` | `1.0.0-rc.2` |
-| `dist/index.js --version` | `1.0.0-rc.2` |
-| JSON `meta.version` | `1.0.0-rc.2` |
+| `src/version.ts` | `1.0.0` |
+| `package.json` | `1.0.0` |
+| `dist/index.js --version` | `1.0.0` (post-build) |
+| JSON `meta.version` | `1.0.0` |
 
 ### 3.7 Git Hygiene
 
@@ -106,7 +106,7 @@ pnpm build
   - `.project/tasks/active/` ✅ IGNORED
 - No staged artifacts
 - No whitespace errors
-- Only `v1.0.0-rc.1` tag exists (not moved)
+- Only `v1.0.0-rc.1` tag exists (not moved); `v1.0.0` pending creation
 
 ## 4. Security Regression Matrix
 
@@ -121,7 +121,23 @@ pnpm build
 | Guard-blocked stops all output | ✅ PASS | No commit/PR generated when blocked |
 | `process.exitCode` not `process.exit()` | ✅ PASS | All commands set `exitCode`, no immediate exit |
 
-## 5. Finding Summary
+## 5. Post-Audit Re-Audit Fixes
+
+The CODEX_FIX_COMPLETION_REAUDIT (2026-06-15) identified 4 P0 findings in the
+post-AUD3 state. These have been fixed in the approved working tree diff:
+
+| P0 | Finding | Fix Location |
+|----|---------|-------------|
+| REAUDIT-001 | Non-atomic approval consume | `src/state/store.ts`, `src/governance/approval-gate.ts` |
+| REAUDIT-002 | Supersede CLI digest mismatch | `src/cli/index.ts`, `src/decision/index.ts` |
+| REAUDIT-003 | Post-approval ADR tampering | `src/decision/index.ts` |
+| REAUDIT-004 | CI test-before-build order | `.github/workflows/ci.yml` |
+| P1-REAUDIT-005 | Git root verification | `src/project/create.ts` |
+
+All fixes applied, tested, and approved by operator. See `CODEX_FIX_COMPLETION_REAUDIT.md`
+for the full re-audit cycle.
+
+## 6. Finding Summary
 
 | Severity | Count | Details |
 |----------|-------|---------|
@@ -132,18 +148,18 @@ pnpm build
 
 **All P0 findings closed.** No open blockers.
 
-## 6. Conclusion
+## 7. Conclusion
 
-**READY_FOR_TAG v1.0.0-rc.2**
+**READY_FOR_TAG v1.0.0**
 
 All conditions met:
 - ✅ 6/6 P0 fixes committed and verified
 - ✅ Working tree clean (Claude Code session files excluded)
 - ✅ Typecheck, test (3×), build all pass
 - ✅ CLI JSON contract enforced for all commands
-- ✅ Version unified at `1.0.0-rc.2` across all sources
+- ✅ Version unified at `1.0.0` across all sources
 - ✅ Secret redaction covers all output boundaries
 - ✅ Verification/delivery strong binding enforced
 - ✅ Git hygiene confirmed — no runtime artifacts tracked
 - ✅ Old `v1.0.0-rc.1` tag not moved
-- ❌ **Tag not created** (manual step — create `v1.0.0-rc.2` after human approval)
+- ❌ **Tag not created** (manual step — create `v1.0.0` after human approval)

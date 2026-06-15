@@ -418,6 +418,33 @@ export class SqliteStore {
   }
 
   /**
+   * Consume an approved approval exactly once.
+   * The conditional UPDATE keeps the single-use transition atomic.
+   */
+  consumeApproval(id: string, now: string): PendingApproval | undefined {
+    const result = this.db
+      .prepare(
+        `
+      UPDATE approvals SET
+        consumed = 1,
+        resolved_at = COALESCE(resolved_at, ?),
+        updated_at = datetime('now')
+      WHERE id = ?
+        AND status = 'approved'
+        AND consumed = 0
+        AND expires_at > ?
+    `,
+      )
+      .run(now, id, now);
+
+    if (result.changes !== 1) {
+      return undefined;
+    }
+
+    return this.getApproval(id);
+  }
+
+  /**
    * List pending (unexpired) approvals.
    */
   listPendingApprovals(): PendingApproval[] {

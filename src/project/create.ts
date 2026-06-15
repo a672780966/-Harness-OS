@@ -368,6 +368,21 @@ export async function createProject(opts: CreateProjectOptions): Promise<CreateP
     );
   }
 
+  // Verify the repository root resolves to the requested target path.
+  // This catches parent-repo bleed-through and `.git` indirection.
+  let gitTopLevel: string;
+  try {
+    gitTopLevel = (await git.raw(['rev-parse', '--show-toplevel'])).trim();
+  } catch {
+    throw new Error(`Cannot create project: unable to verify Git repository root for "${projectPath}"`);
+  }
+  if (resolve(gitTopLevel) !== projectPath) {
+    throw new Error(
+      `Cannot create project: Git root "${gitTopLevel}" does not match target "${projectPath}". ` +
+        `Choose a different location outside the parent repository.`,
+    );
+  }
+
   // 3. Write .gitignore
   writeFileSync(join(projectPath, '.gitignore'), GITIGNORE_CONTENT, 'utf-8');
 

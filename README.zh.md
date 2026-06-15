@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0--rc.2-blue?style=flat-square" alt="版本">
+  <img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square" alt="版本">
   <img src="https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square" alt="TypeScript">
   <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="许可证">
   <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="测试">
@@ -112,7 +112,7 @@ pnpm build
 ```bash
 # 显示版本
 pnpm harness --version
-# → 1.0.0-rc.2
+# → 1.0.0
 
 # 显示帮助
 pnpm harness --help
@@ -320,7 +320,7 @@ pnpm format
 
 ## 状态
 
-**v1.0.0-rc.2** — 核心治理和验证的发布候选版本。
+**v1.0.0** — 核心治理和验证，正式发布版本。
 
 已实现：
 - ✅ CLI 框架（17 个命令）

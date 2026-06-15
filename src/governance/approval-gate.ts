@@ -146,15 +146,7 @@ class ApprovalStore implements ApprovalRepository {
 
   /** Atomic single-use consumption (GOV3-03). */
   consumeApproved(id: string, now: string): PendingApproval | undefined {
-    const approval = this.get(id);
-    if (!approval) return undefined;
-    if (approval.status !== 'approved') return undefined;
-    if (approval.consumed) return undefined;
-    if (approval.expiresAt < now) {
-      this.update(id, { status: 'expired', resolvedAt: now });
-      return undefined;
-    }
-    return this.update(id, { consumed: true, resolvedAt: now });
+    return this.getDb().consumeApproval(id, now);
   }
 
   listPending(_now: string): PendingApproval[] {
@@ -243,8 +235,28 @@ function emitApprovalEvent(type: string, approval: PendingApproval, extra?: Reco
  * Compute a SHA-256 digest of normalized tool input for binding (GOV3-03).
  */
 export function computeInputDigest(input: Record<string, unknown>): string {
-  const normalized = JSON.stringify(input, Object.keys(input).sort());
+  const normalized = JSON.stringify(normalizeValue(input));
   return createHash('sha256').update(normalized).digest('hex');
+}
+
+function normalizeValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeValue(entry));
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const normalized: Record<string, unknown> = {};
+    for (const key of Object.keys(record).sort()) {
+      const entry = normalizeValue(record[key]);
+      if (entry !== undefined) {
+        normalized[key] = entry;
+      }
+    }
+    return normalized;
+  }
+
+  return value;
 }
 
 /**
@@ -376,7 +388,10 @@ export function validateApprovalBinding(
     toolName?: string;
     projectId?: string;
     taskId?: string;
+    runId?: string;
     sessionId?: string;
+    turnId?: string;
+    agentId?: string;
     input?: Record<string, unknown>;
   },
 ): string | null {
@@ -391,9 +406,21 @@ export function validateApprovalBinding(
   if (approval.projectId && expected.projectId && approval.projectId !== expected.projectId) {
     return `Approval bound to project "${approval.projectId}", cannot use for "${expected.projectId}"`;
   }
+  if (approval.taskId && expected.taskId && approval.taskId !== expected.taskId) {
+    return `Approval bound to task "${approval.taskId}", cannot use for "${expected.taskId}"`;
+  }
+  if (approval.runId && expected.runId && approval.runId !== expected.runId) {
+    return `Approval bound to run "${approval.runId}", cannot use for "${expected.runId}"`;
+  }
   // Cross-session binding check
   if (approval.sessionId && expected.sessionId && approval.sessionId !== expected.sessionId) {
     return `Approval bound to session "${approval.sessionId}", cannot use for "${expected.sessionId}"`;
+  }
+  if (approval.turnId && expected.turnId && approval.turnId !== expected.turnId) {
+    return `Approval bound to turn "${approval.turnId}", cannot use for "${expected.turnId}"`;
+  }
+  if (approval.agentId && expected.agentId && approval.agentId !== expected.agentId) {
+    return `Approval bound to agent "${approval.agentId}", cannot use for "${expected.agentId}"`;
   }
   // Input digest check (if both have input)
   if (expected.input && approval.inputDigest) {

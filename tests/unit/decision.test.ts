@@ -25,6 +25,7 @@ import {
   listDecisions,
   listActiveDecisions,
   loadDecision,
+  computeDecisionDigest,
 } from '../../src/decision/index.js';
 
 import {
@@ -42,7 +43,30 @@ let testDir: string;
  */
 function createAdrApproval(adrId: string, action: 'accept_adr' | 'supersede_adr', extraInput?: Record<string, string>): string {
   const approvalId = `test_aprv_${Date.now().toString(36)}`;
-  const input: Record<string, unknown> = { action, adrId, ...extraInput };
+  const adr = loadDecision(projectPath, adrId);
+  if (!adr) {
+    throw new Error(`ADR not found for approval: ${adrId}`);
+  }
+  const input: Record<string, unknown> =
+    action === 'accept_adr'
+      ? { action, adrId, adrDigest: computeDecisionDigest(adr) }
+      : (() => {
+          const supersededBy = extraInput?.supersededBy;
+          if (!supersededBy) {
+            throw new Error('supersededBy is required for supersede approvals');
+          }
+          const targetAdr = loadDecision(projectPath, supersededBy);
+          if (!targetAdr) {
+            throw new Error(`Target ADR not found for approval: ${supersededBy}`);
+          }
+          return {
+            action,
+            adrId,
+            supersededBy,
+            sourceDigest: computeDecisionDigest(adr),
+            targetDigest: computeDecisionDigest(targetAdr),
+          };
+        })();
 
   // Read projectId from manifest for strong binding (P0-004)
   let projectId = 'test-project-id';
@@ -211,16 +235,33 @@ describe('supersedeDecision', () => {
 
   it('rejects superseding a non-accepted ADR', () => {
     const proposed = proposeDecision(base);
-    const ap2 = createAdrApproval(proposed.id, 'supersede_adr', { supersededBy: 'ADR-9999' });
-    expect(() => supersedeDecision(projectPath, proposed.id, 'ADR-9999', ap2)).toThrow('status is "proposed"');
+    const target = proposeDecision(makeBase({ title: 'Replacement ADR' }));
+    const ap2 = createAdrApproval(proposed.id, 'supersede_adr', { supersededBy: target.id });
+    expect(() => supersedeDecision(projectPath, proposed.id, target.id, ap2)).toThrow('status is "proposed"');
   });
 
   it('rejects superseding with non-existent supersededBy', () => {
     const old = proposeDecision(base);
     const ap1 = createAdrApproval(old.id, 'accept_adr');
     acceptDecision(projectPath, old.id, ap1, 'Admin');
-    const ap2 = createAdrApproval(old.id, 'supersede_adr', { supersededBy: 'NONEXISTENT' });
-    expect(() => supersedeDecision(projectPath, old.id, 'NONEXISTENT', ap2)).toThrow('not found');
+    const ap2Id = `test_aprv_${Date.now().toString(36)}`;
+    submitApproval({
+      id: ap2Id,
+      action: 'supersede_adr',
+      reason: `Test approval for ADR ${old.id}`,
+      riskLevel: 'medium',
+      toolName: 'decision',
+      projectId: 'test-project-id',
+      input: {
+        action: 'supersede_adr',
+        adrId: old.id,
+        supersededBy: 'NONEXISTENT',
+        sourceDigest: computeDecisionDigest(old),
+        targetDigest: 'bogus',
+      },
+    });
+    resolveApproval(ap2Id, { approved: true, resolvedBy: 'test-operator' });
+    expect(() => supersedeDecision(projectPath, old.id, 'NONEXISTENT', ap2Id)).toThrow('not found');
   });
 
   it('proposeDecision does NOT prematurely mark old ADR', () => {
@@ -344,7 +385,8 @@ describe('P0-004: approval strong binding', () => {
 
   it('rejects cross-action usage (accept vs supersede)', () => {
     const proposed = proposeDecision(base);
-    const apId = createAdrApproval(proposed.id, 'supersede_adr', { supersededBy: 'ADR-9999' });
+    const target = proposeDecision(makeBase({ title: 'Replacement ADR' }));
+    const apId = createAdrApproval(proposed.id, 'supersede_adr', { supersededBy: target.id });
     // Try to use supersede approval for accept
     expect(() => acceptDecision(projectPath, proposed.id, apId, 'Tester')).toThrow('binding');
   });
@@ -357,7 +399,11 @@ describe('P0-004: approval strong binding', () => {
       id: apId, action: 'accept_adr', reason: 'test', riskLevel: 'medium',
       toolName: 'decision',
       projectId: 'test-project-id',
-      input: { action: 'accept_adr', adrId: proposed.id },
+      input: {
+        action: 'accept_adr',
+        adrId: proposed.id,
+        adrDigest: computeDecisionDigest(proposed),
+      },
     });
     resolveApproval(apId, { approved: true, resolvedBy: 'test' });
     // Re-read projectId from manifest to match
@@ -372,7 +418,11 @@ describe('P0-004: approval strong binding', () => {
       id: apId2, action: 'accept_adr', reason: 'test', riskLevel: 'medium',
       toolName: 'decision',
       projectId,
-      input: { action: 'accept_adr', adrId: proposed.id },
+      input: {
+        action: 'accept_adr',
+        adrId: proposed.id,
+        adrDigest: computeDecisionDigest(proposed),
+      },
     });
     resolveApproval(apId2, { approved: true, resolvedBy: 'test' });
     // Should succeed with correct binding

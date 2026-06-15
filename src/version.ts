@@ -7,4 +7,4 @@
  * Reference: RC-02 (AUD-P0-006)
  */
 
-export const HARNESS_VERSION = '1.0.0-rc.2';
+export const HARNESS_VERSION = '1.0.0';

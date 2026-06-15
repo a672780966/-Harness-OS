@@ -928,9 +928,11 @@ approval
   .description('Create an approval request for an ADR state transition')
   .requiredOption('--adr <id>', 'ADR ID')
   .requiredOption('--action <action>', 'Action: accept|supersede')
+  .option('--superseded-by <id>', 'ADR ID that this ADR will supersede')
   .option('--project-id <id>', 'Project ID (default: from manifest)')
   .action(async (options) => {
     const { submitApproval } = await import('../governance/approval-gate.js');
+    const { loadDecision, computeDecisionDigest } = await import('../decision/index.js');
     const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
@@ -952,15 +954,47 @@ approval
         }
       }
 
+      const adr = loadDecision(process.cwd(), options.adr);
+      if (!adr) {
+        throw new Error(`ADR not found: ${options.adr}`);
+      }
+
+      let input: Record<string, unknown>;
+      let reason: string;
+      if (options.action === 'accept') {
+        input = {
+          action: 'accept_adr',
+          adrId: options.adr,
+          adrDigest: computeDecisionDigest(adr),
+        };
+        reason = `ADR ${options.adr}: Accept decision`;
+      } else {
+        if (!options.supersededBy) {
+          throw new Error('--superseded-by is required when action is supersede');
+        }
+        const targetAdr = loadDecision(process.cwd(), options.supersededBy);
+        if (!targetAdr) {
+          throw new Error(`Superseded-by ADR not found: ${options.supersededBy}`);
+        }
+        input = {
+          action: 'supersede_adr',
+          adrId: options.adr,
+          supersededBy: options.supersededBy,
+          sourceDigest: computeDecisionDigest(adr),
+          targetDigest: computeDecisionDigest(targetAdr),
+        };
+        reason = `ADR ${options.adr}: Supersede decision`;
+      }
+
       const approvalId = `aprv_${Date.now().toString(36)}`;
       const approval = submitApproval({
         id: approvalId,
         action: `${options.action}_adr`,
-        reason: `ADR ${options.adr}: ${options.action === 'accept' ? 'Accept decision' : 'Supersede decision'}`,
+        reason,
         riskLevel: 'medium',
         projectId: projectId || 'unknown',
         toolName: 'decision',
-        input: { action: `${options.action}_adr`, adrId: options.adr },
+        input,
       });
 
       if (mode === 'json') {

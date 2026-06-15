@@ -93,6 +93,22 @@ function fmtFile(title: string): string {
     .slice(0, 60);
 }
 
+export function computeDecisionDigest(state: DecisionState): string {
+  return computeInputDigest({
+    id: state.id,
+    number: state.number,
+    title: state.title,
+    status: state.status,
+    type: state.type,
+    summary: state.summary,
+    context: state.context,
+    decision: state.decision,
+    consequences: state.consequences,
+    risks: state.risks,
+    supersedes: state.supersedes ?? null,
+  });
+}
+
 // ============================================================
 // CRUD
 // ============================================================
@@ -170,9 +186,22 @@ export function acceptDecision(
     throw new Error(`Cannot accept ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`);
   }
 
-  // P0-004: Step 2 — Validate all required binding fields BEFORE consumption
+  // P0-004: Step 2 — Load ADR state and validate lifecycle BEFORE consumption
+  const state = loadDecision(projectPath, adrId);
+  if (!state) return undefined;
+  if (state.status !== 'proposed') return undefined;
+
+  if (state.supersedes) {
+    const oldAdr = loadDecision(projectPath, state.supersedes);
+    if (!oldAdr || oldAdr.status !== 'accepted') {
+      throw new Error(
+        `Cannot accept ADR ${adrId}: supersedes target "${state.supersedes}" is missing or not accepted. [P0-004: lifecycle]`,
+      );
+    }
+  }
+
   const projectId = getProjectId(projectPath);
-  const expectedInput = { action: 'accept_adr', adrId };
+  const expectedInput = { action: 'accept_adr', adrId, adrDigest: computeDecisionDigest(state) };
   const bindingErrors: string[] = [];
 
   // 2a. Required: projectId on both sides
@@ -232,8 +261,6 @@ export function acceptDecision(
   }
 
   // Step 4 — Transition ADR state
-  const state = loadDecision(projectPath, adrId);
-  if (!state || state.status !== 'proposed') return undefined;
   const now = new Date().toISOString();
   state.status = 'accepted';
   state.updatedAt = now;
@@ -285,9 +312,28 @@ export function supersedeDecision(
     throw new Error(`Cannot supersede ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`);
   }
 
-  // P0-004: Step 2 — Validate all required binding fields BEFORE consumption
+  // P0-004: Step 2 — Load ADR state and validate lifecycle BEFORE consumption
+  const state = loadDecision(projectPath, adrId);
+  if (!state) return undefined;
+  if (state.status !== 'accepted') {
+    throw new Error(
+      `Cannot supersede ADR ${adrId}: status is "${state.status}", expected "accepted". [P0-004: lifecycle]`,
+    );
+  }
+
+  const newAdr = loadDecision(projectPath, supersededBy);
+  if (!newAdr) {
+    throw new Error(`Cannot supersede ADR ${adrId}: supersededBy ADR "${supersededBy}" not found. [P0-004: lifecycle]`);
+  }
+
   const projectId = getProjectId(projectPath);
-  const expectedInput = { action: 'supersede_adr', adrId, supersededBy };
+  const expectedInput = {
+    action: 'supersede_adr',
+    adrId,
+    supersededBy,
+    sourceDigest: computeDecisionDigest(state),
+    targetDigest: computeDecisionDigest(newAdr),
+  };
   const bindingErrors: string[] = [];
 
   // 2a. Required: projectId on both sides
@@ -346,26 +392,7 @@ export function supersedeDecision(
     );
   }
 
-  // Step 4 — Validate ADR lifecycle constraints (Node 03)
-  const state = loadDecision(projectPath, adrId);
-  if (!state) return undefined;
-  if (state.status !== 'accepted') {
-    throw new Error(
-      `Cannot supersede ADR ${adrId}: status is "${state.status}", expected "accepted". [P0-004: lifecycle]`,
-    );
-  }
-
-  // 4b. Validate supersededBy ADR exists and is accepted
-  if (supersededBy) {
-    const newAdr = loadDecision(projectPath, supersededBy);
-    if (!newAdr) {
-      throw new Error(
-        `Cannot supersede ADR ${adrId}: supersededBy ADR "${supersededBy}" not found. [P0-004: lifecycle]`,
-      );
-    }
-  }
-
-  // Step 5 — Transition ADR state
+  // Step 4 — Transition ADR state
   state.status = 'superseded';
   state.supersededBy = supersededBy;
   state.updatedAt = new Date().toISOString();
