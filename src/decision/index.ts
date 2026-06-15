@@ -136,16 +136,11 @@ export function proposeDecision(params: {
     updatedAt: now,
   };
 
-  // Update superseded ADR if applicable
-  if (params.supersedes && state.status === 'proposed') {
-    const old = loadDecision(params.projectPath, params.supersedes);
-    if (old) {
-      old.status = 'superseded';
-      old.supersededBy = id;
-      old.updatedAt = now;
-      saveDecision(params.projectPath, old);
-    }
-  }
+  // ✅ Node 03: Do NOT mark superseded ADR here.
+  //   The old ADR remains accepted until the new ADR is itself
+  //   approved via acceptDecision() or supersedeDecision().
+  //   Prematurely marking it superseded would let an unapproved
+  //   proposal remove a valid architectural constraint.
 
   const mdPath = join(dir, `${id}-${fmtFile(params.title)}.md`);
   const jsonPath = join(dir, `${id}.json`);
@@ -249,6 +244,20 @@ export function acceptDecision(
   state.approvedBy = approvedBy;
   state.approvedAt = now;
   saveDecision(projectPath, state);
+
+  // Step 5 — If this ADR supersedes another, mark the old one as superseded.
+  //   This only happens after the new ADR is legitimately accepted, not
+  //   at proposal time (prevents unapproved proposals from removing constraints).
+  if (state.supersedes) {
+    const oldAdr = loadDecision(projectPath, state.supersedes);
+    if (oldAdr && oldAdr.status === 'accepted') {
+      oldAdr.status = 'superseded';
+      oldAdr.supersededBy = adrId;
+      oldAdr.updatedAt = now;
+      saveDecision(projectPath, oldAdr);
+    }
+  }
+
   return state;
 }
 
@@ -341,9 +350,26 @@ export function supersedeDecision(
     );
   }
 
-  // Step 4 — Transition ADR state
+  // Step 4 — Validate ADR lifecycle constraints (Node 03)
   const state = loadDecision(projectPath, adrId);
   if (!state) return undefined;
+  if (state.status !== 'accepted') {
+    throw new Error(
+      `Cannot supersede ADR ${adrId}: status is "${state.status}", expected "accepted". [P0-004: lifecycle]`,
+    );
+  }
+
+  // 4b. Validate supersededBy ADR exists and is accepted
+  if (supersededBy) {
+    const newAdr = loadDecision(projectPath, supersededBy);
+    if (!newAdr) {
+      throw new Error(
+        `Cannot supersede ADR ${adrId}: supersededBy ADR "${supersededBy}" not found. [P0-004: lifecycle]`,
+      );
+    }
+  }
+
+  // Step 5 — Transition ADR state
   state.status = 'superseded';
   state.supersededBy = supersededBy;
   state.updatedAt = new Date().toISOString();

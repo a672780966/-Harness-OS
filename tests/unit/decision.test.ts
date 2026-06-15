@@ -198,11 +198,76 @@ describe('supersedeDecision', () => {
     const old = proposeDecision(base);
     const ap1 = createAdrApproval(old.id, 'accept_adr');
     acceptDecision(projectPath, old.id, ap1, 'Admin');
-    const ap2 = createAdrApproval(old.id, 'supersede_adr', { supersededBy: 'ADR-0002' });
-    const updated = supersedeDecision(projectPath, old.id, 'ADR-0002', ap2);
+
+    // Propose the new ADR that will supersede the old one
+    const newAdr = proposeDecision(makeBase({ title: 'Better SQLite' }));
+
+    const ap2 = createAdrApproval(old.id, 'supersede_adr', { supersededBy: newAdr.id });
+    const updated = supersedeDecision(projectPath, old.id, newAdr.id, ap2);
     expect(updated).toBeDefined();
     expect(updated!.status).toBe('superseded');
-    expect(updated!.supersededBy).toBe('ADR-0002');
+    expect(updated!.supersededBy).toBe(newAdr.id);
+  });
+
+  it('rejects superseding a non-accepted ADR', () => {
+    const proposed = proposeDecision(base);
+    const ap2 = createAdrApproval(proposed.id, 'supersede_adr', { supersededBy: 'ADR-9999' });
+    expect(() => supersedeDecision(projectPath, proposed.id, 'ADR-9999', ap2)).toThrow('status is "proposed"');
+  });
+
+  it('rejects superseding with non-existent supersededBy', () => {
+    const old = proposeDecision(base);
+    const ap1 = createAdrApproval(old.id, 'accept_adr');
+    acceptDecision(projectPath, old.id, ap1, 'Admin');
+    const ap2 = createAdrApproval(old.id, 'supersede_adr', { supersededBy: 'NONEXISTENT' });
+    expect(() => supersedeDecision(projectPath, old.id, 'NONEXISTENT', ap2)).toThrow('not found');
+  });
+
+  it('proposeDecision does NOT prematurely mark old ADR', () => {
+    // Given: an accepted ADR
+    const old = proposeDecision(base);
+    const ap1 = createAdrApproval(old.id, 'accept_adr');
+    acceptDecision(projectPath, old.id, ap1, 'Admin');
+
+    // When: proposing a new ADR that supersedes the old one
+    const newAdr = proposeDecision(makeBase({
+      title: 'New ADR',
+      supersedes: old.id,
+    }));
+
+    // Then: old ADR must still be accepted (not prematurely marked)
+    const loadedOld = loadDecision(projectPath, old.id);
+    expect(loadedOld!.status).toBe('accepted');
+    expect(loadedOld!.supersededBy).toBeUndefined();
+
+    // And the new ADR is proposed
+    expect(newAdr.status).toBe('proposed');
+    expect(newAdr.supersedes).toBe(old.id);
+  });
+
+  it('acceptDecision chains supersede when new ADR references old', () => {
+    // Given: an accepted old ADR and a proposed new ADR that supersedes it
+    const old = proposeDecision(base);
+    const ap1 = createAdrApproval(old.id, 'accept_adr');
+    acceptDecision(projectPath, old.id, ap1, 'Admin');
+
+    const newAdr = proposeDecision(makeBase({
+      title: 'Superseding ADR',
+      supersedes: old.id,
+    }));
+
+    // When: the new ADR is accepted
+    const ap2 = createAdrApproval(newAdr.id, 'accept_adr');
+    acceptDecision(projectPath, newAdr.id, ap2, 'Admin');
+
+    // Then: the old ADR should now be superseded
+    const loadedOld = loadDecision(projectPath, old.id);
+    expect(loadedOld!.status).toBe('superseded');
+    expect(loadedOld!.supersededBy).toBe(newAdr.id);
+
+    // And the new ADR is accepted
+    const loadedNew = loadDecision(projectPath, newAdr.id);
+    expect(loadedNew!.status).toBe('accepted');
   });
 });
 
