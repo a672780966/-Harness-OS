@@ -26,10 +26,20 @@ export function createTempWorkspace(): string {
 
 /**
  * Remove a temporary workspace.
+ * Retries on Windows to handle delayed file lock release.
  */
 export function removeTempWorkspace(dir: string): void {
-  if (fs.existsSync(dir)) {
-    fs.rmSync(dir, { recursive: true, force: true });
+  if (!fs.existsSync(dir)) return;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+      return;
+    } catch {
+      if (attempt < 2) {
+        // Wait a bit for any lingering git processes to release file handles
+        require('child_process').execSync('timeout /t 1 /nobreak >nul 2>&1 || sleep 1', { stdio: 'ignore' });
+      }
+    }
   }
 }
 

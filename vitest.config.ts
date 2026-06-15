@@ -41,6 +41,8 @@ export default defineConfig({
     // Sequential for integration/E2E tests that share state
     fileParallelism: true,
     maxConcurrency: 4,
+    pool: 'forks',
+    retry: 1,
   },
 
   resolve: {
