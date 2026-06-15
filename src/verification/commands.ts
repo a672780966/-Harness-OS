@@ -85,7 +85,7 @@ function detectFromAgentsMd(projectPath: string): DetectedCommand[] {
   const commands: DetectedCommand[] = [];
 
   // Match lines like "Lint: eslint" or "Test: pnpm test" in the dev commands section
-  const sectionMatch = content.match(/##\s+\d*\.?\s*Development Commands\n([\s\S]*?)(?=\n##\s|\Z)/i);
+  const sectionMatch = content.match(/##\s+\d*\.?\s*Development Commands\n([\s\S]*?)(?=\n##\s|Z)/i);
   if (!sectionMatch) return [];
 
   const section = sectionMatch[1];

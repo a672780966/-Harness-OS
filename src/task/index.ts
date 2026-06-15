@@ -58,7 +58,7 @@ import { redactText } from '../governance/redactor.js';
 // CLI Entry Point — Full Run Pipeline
 // ============================================================
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync } from 'fs';
 
 async function getProjectId(projectPath: string): Promise<string> {
   try {
@@ -69,7 +69,7 @@ async function getProjectId(projectPath: string): Promise<string> {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
       return manifest.projectId || 'unknown';
     }
-  } catch {}
+  } catch { /* empty — project may not exist */ }
   return 'unknown';
 }
 
@@ -165,7 +165,7 @@ export async function runTask(task: string, options?: { json?: boolean; quiet?: 
     const { buildPlan } = await import('../verification/plan.js');
     const { runVerification, formatResults } = await import('../verification/runner.js');
     const { generateReport, saveReport } = await import('../verification/report.js');
-    const { loadVerificationResult } = await import('../verification/result.js');
+    const { loadVerificationResult: _loadVerificationResult } = await import('../verification/result.js');
 
     if (mode !== 'quiet') prettyProgress('Running verification...');
 
@@ -197,7 +197,7 @@ export async function runTask(task: string, options?: { json?: boolean; quiet?: 
       });
 
       // Save both Markdown and structured JSON with binding (VER4-01/VER4-04)
-      const paths = saveReport(report);
+      const _paths = saveReport(report);
 
       verificationStatus = result.status === 'passed' ? 'passed' : result.status === 'failed' ? 'failed' : 'skipped';
 
@@ -385,7 +385,7 @@ export async function runTask(task: string, options?: { json?: boolean; quiet?: 
  */
 export async function resumeRun(runId: string): Promise<void> {
   const { loadRunState } = await import('../state/run.js');
-  const { loadTrace } = await import('../observability/trace.js');
+  const { loadTrace: _loadTrace } = await import('../observability/trace.js');
 
   const state = loadRunState(runId);
   if (!state) {

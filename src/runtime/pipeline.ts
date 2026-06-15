@@ -52,12 +52,7 @@ export type ToolCallVerdict =
 // Trace ID Generation
 // ============================================================
 
-let counter = 0;
-
-function generateTraceId(): string {
-  counter += 1;
-  return `trc_${Date.now().toString(36)}_${counter.toString(36).padStart(4, '0')}`;
-}
+const counter = 0;
 
 // ============================================================
 // Trace Builder

@@ -13,9 +13,8 @@
  *            11_ACCEPTANCE_CRITERIA.md §15
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
-import { execSync } from 'child_process';
 import { simpleGit } from 'simple-git';
 import type { Checkpoint } from '../types.js';
 import { safeWriteJson } from '../governance/redactor.js';

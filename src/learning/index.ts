@@ -13,7 +13,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'fs';
-import { dirname, join, resolve } from 'path';
+import { dirname, join } from 'path';
 import { redactObject } from '../governance/redactor.js';
 
 // ============================================================

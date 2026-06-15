@@ -13,9 +13,8 @@
  * Reference: 16_CLI_OUTPUT_CONTRACT.md §5-7, §23
  */
 
-import type { OutputMode, CliJsonOutput, CliOutputMeta, HarnessError } from '../types.js';
+import { type OutputMode, type CliJsonOutput, type CliOutputMeta, type HarnessError, HarnessExitCode } from '../types.js';
 import { redactText, redactObject } from '../governance/redactor.js';
-import { HarnessExitCode } from '../types.js';
 import { HARNESS_VERSION } from '../version.js';
 
 // ============================================================

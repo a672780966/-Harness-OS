@@ -11,9 +11,8 @@
 
 import { detectCommands } from './commands.js';
 import { buildPlan, formatPlan } from './plan.js';
-import { runVerification, formatResults } from './runner.js';
+import { runVerification, formatResults, type RunResult } from './runner.js';
 import { generateReport, saveReport } from './report.js';
-import type { RunResult } from './runner.js';
 
 export { detectCommands, type CommandType, type DetectedCommand } from './commands.js';
 export { buildPlan, formatPlan, type VerificationPlan, type VerificationStep } from './plan.js';

@@ -17,7 +17,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
-import type { TaskState, TaskStatus, TaskType } from '../types.js';
+import type { TaskState, TaskType } from '../types.js';
 import { safeWriteJson, redactText } from '../governance/redactor.js';
 
 // ============================================================

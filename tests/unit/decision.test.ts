@@ -51,7 +51,7 @@ function createAdrApproval(adrId: string, action: 'accept_adr' | 'supersede_adr'
     if (existsSync(manifestPath)) {
       projectId = JSON.parse(readFileSync(manifestPath, 'utf-8')).projectId || projectId;
     }
-  } catch {}
+  } catch { /* empty — project may not have manifest yet */ }
 
   submitApproval({
     id: approvalId,

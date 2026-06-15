@@ -23,7 +23,7 @@
 import Database from 'better-sqlite3';
 import type { SessionId, SessionState, TurnState, TurnId } from '../types.js';
 import type { PendingApproval } from '../governance/approval-gate.js';
-import { CREATE_SCHEMA_SQL, SCHEMA_VERSION, getMigrationQueries } from './schema.js';
+import { CREATE_SCHEMA_SQL, SCHEMA_VERSION } from './schema.js';
 import { existsSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 

@@ -285,7 +285,7 @@ export interface RedactionReport {
 /**
  * Count redactions in text (for reporting).
  */
-export function countRedactions(original: string, redacted: string): RedactionReport {
+export function countRedactions(original: string, _redacted: string): RedactionReport {
   const report: RedactionReport = { totalRedacted: 0, patterns: {} };
 
   for (const sp of SECRET_PATTERNS) {

@@ -14,14 +14,14 @@
  */
 
 import type { SkillManifest, SkillCategory } from '../types.js';
-import type { SkillExecutor } from './executor.js';
-import { checkPolicy, type PolicyContext } from '../governance/policy.js';
-import { submitApproval, consumeApproval, validateApprovalBinding, getApproval } from '../governance/approval-gate.js';
 import {
+  type SkillExecutor,
   failedResult as failExec,
   blockedResult as blockExec,
   requiresApprovalResult as reqApprovalExec,
 } from './executor.js';
+import { checkPolicy, type PolicyContext } from '../governance/policy.js';
+import { submitApproval, consumeApproval, validateApprovalBinding, getApproval } from '../governance/approval-gate.js';
 
 // ============================================================
 // Closure-scoped executor store (GOV4-01)

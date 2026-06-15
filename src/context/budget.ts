@@ -10,7 +10,7 @@
  * - Must not delete: current task, AGENTS.md core rules, git status, explicit files
  */
 
-import type { ContextBudget, ContextPack, FileContext, ContentMode } from '../types.js';
+import type { ContextBudget } from '../types.js';
 import type { ContextCandidate } from './relevance.js';
 
 // ============================================================

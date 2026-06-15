@@ -10,7 +10,7 @@
  *            11_ACCEPTANCE_CRITERIA.md §15
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
 import { safeWriteJson } from '../governance/redactor.js';
 

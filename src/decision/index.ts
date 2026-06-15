@@ -15,9 +15,7 @@ import { safeWriteJson, redactText } from '../governance/redactor.js';
 import {
   getApproval,
   consumeApproval,
-  validateApprovalBinding,
   computeInputDigest,
-  type PendingApproval,
 } from '../governance/approval-gate.js';
 
 // ============================================================

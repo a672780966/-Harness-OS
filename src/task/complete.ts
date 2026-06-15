@@ -59,19 +59,6 @@ export interface TaskCompletionResult {
   risks: string[];
 }
 
-// ============================================================
-// Helper: Find task files
-// ============================================================
-
-function findTaskPath(projectPath: string, taskId: string): string | undefined {
-  const dirs = ['active', 'completed', 'failed'];
-  for (const dir of dirs) {
-    const mdPath = join(projectPath, `.project/tasks/${dir}/${taskId}.md`);
-    if (existsSync(mdPath)) return join(projectPath, `.project/tasks/${dir}`);
-  }
-  return undefined;
-}
-
 function readTaskState(projectPath: string, taskId: string): TaskState | undefined {
   // Try active first, then other dirs
   const dirs = ['active', 'completed', 'failed'];

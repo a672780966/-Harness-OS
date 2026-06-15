@@ -142,7 +142,7 @@ class ApprovalStore {
   }
 
   get size(): number {
-    return this.getDb().listAll().length;
+    return this.getDb().listAllApprovals().length;
   }
 }
 

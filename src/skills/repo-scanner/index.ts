@@ -1,5 +1,5 @@
 import { SkillManifest } from '../../types.js';
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { type SkillExecutionContext, type SkillExecutionResult, successResult, failedResult } from '../executor.js';
 import { type SkillRegistry } from '../registry.js';

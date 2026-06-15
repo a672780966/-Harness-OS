@@ -34,7 +34,7 @@ import {
 
 let turnCounter = 0;
 
-function generateTurnId(sessionId: SessionId): TurnId {
+function generateTurnId(_sessionId: SessionId): TurnId {
   turnCounter += 1;
   const ts = Date.now().toString(36);
   const seq = turnCounter.toString(36).padStart(4, '0');

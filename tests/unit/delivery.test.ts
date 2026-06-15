@@ -10,9 +10,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync, mkdtempSync } from 'fs';
 import { join } from 'path';
-import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 
 import { generateCommitMessage, generateCommitFromTask, taskTypeToCommitType } from '../../src/delivery/commit.js';

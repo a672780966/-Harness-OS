@@ -21,15 +21,15 @@
 import { existsSync, readFileSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join, resolve } from 'path';
-import type {
-  HarnessConfig,
-  LoadedConfig,
-  ConfigSource,
-  ConfigFieldSource,
-  SafetyFieldDef,
-  ConfigValidation,
+import {
+  type HarnessConfig,
+  type LoadedConfig,
+  type ConfigSource,
+  type ConfigFieldSource,
+  type SafetyFieldDef,
+  type ConfigValidation,
+  SAFETY_FIELDS,
 } from './types.js';
-import { SAFETY_FIELDS } from './types.js';
 import { HARNESS_VERSION } from '../version.js';
 
 // ============================================================

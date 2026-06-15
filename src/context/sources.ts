@@ -42,7 +42,7 @@ export function collectAgentsMd(projectPath: string): RuleContext {
   const content = readFileSync(agentsMdPath, 'utf-8');
 
   // Extract section content using regex
-  const sectionRegex = /^##\s+\d*\.?\s*(.+)$([\s\S]*?)(?=^##\s|\Z)/gm;
+  const sectionRegex = /^##\s+\d*\.?\s*(.+)$([\s\S]*?)(?=^##\s|Z)/gm;
   let match: RegExpExecArray | null;
   while ((match = sectionRegex.exec(content)) !== null) {
     const title = match[1].trim().toLowerCase();
@@ -117,7 +117,7 @@ export function collectProject(projectPath: string): ProjectContext {
     try {
       const content = readFileSync(projectMdPath, 'utf-8');
       // Extract any "## Architecture" or "## Rules" section
-      const archMatch = content.match(/## Architecture[^]*?(?=\n##|\Z)/);
+      const archMatch = content.match(/## Architecture[^]*?(?=\n##|Z)/);
       if (archMatch) {
         architectureSummary = archMatch[0].trim();
       }

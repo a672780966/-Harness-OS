@@ -14,8 +14,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { redactText } from '../../src/governance/redactor.js';
-import { AUDIT_CANARY } from '../../src/governance/redactor.js';
+import { redactText, AUDIT_CANARY } from '../../src/governance/redactor.js';
 
 import { logEvent, EventTypes, type HarnessEvent } from '../../src/observability/events.js';
 import {

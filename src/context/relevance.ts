@@ -45,13 +45,13 @@ export interface ContextCandidate {
 const SCORE_EXPLICIT = 100;
 const SCORE_GIT_DIFF = 90;
 const SCORE_TEST_MATCH = 80;
-const SCORE_SYMBOL_MATCH = 70;
+const _SCORE_SYMBOL_MATCH = 70;
 const SCORE_KEYWORD_FILENAME = 60;
-const SCORE_KEYWORD_CONTENT = 50;
-const SCORE_TASK_REFERENCE = 40;
+const _SCORE_KEYWORD_CONTENT = 50;
+const _SCORE_TASK_REFERENCE = 40;
 const SCORE_DECISION_REFERENCE = 40;
-const SCORE_PROJECT_STATE = 30;
-const SCORE_OLD_REPORT = 10;
+const _SCORE_PROJECT_STATE = 30;
+const _SCORE_OLD_REPORT = 10;
 
 // ============================================================
 // Priority Mapping

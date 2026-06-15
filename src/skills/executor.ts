@@ -9,7 +9,6 @@
  * Reference: 07_MCP_SKILLS_SPEC.md §7
  */
 
-import type { SkillToolManifest } from '../types.js';
 
 // ============================================================
 // Execution Context

@@ -148,7 +148,7 @@ program
   .option('-q, --quiet', 'Quiet output mode')
   .action(async (path, options) => {
     const { openProject } = await import('../project/index.js');
-    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } =
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
@@ -214,7 +214,7 @@ program
   .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { initProject } = await import('../project/index.js');
-    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } =
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
@@ -264,7 +264,7 @@ program
   .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { repairProject } = await import('../project/index.js');
-    const { detectOutputMode, buildJsonOutput, jsonOutput, prettySuccess, prettyError, resetStartTime } =
+    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyError, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
@@ -316,7 +316,7 @@ program
   .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { validateAgentsMd } = await import('../project/index.js');
-    const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable, prettyError, resetStartTime } =
+    const { detectOutputMode, buildJsonOutput, jsonOutput, resetStartTime } =
       await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
@@ -948,7 +948,7 @@ approval
             const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
             projectId = manifest.projectId;
           }
-        } catch {}
+        } catch { /* empty — optional manifest field */ }
       }
 
       const approvalId = `aprv_${Date.now().toString(36)}`;
@@ -1083,7 +1083,7 @@ program
       .option('-j, --json', 'JSON output')
       .action(async (options) => {
         const { getSkillsList } = await import('../skills/index.js');
-        const { detectOutputMode, buildJsonOutput, jsonOutput, prettyTable } = await import('./formatter.js');
+        const { detectOutputMode, buildJsonOutput, jsonOutput } = await import('./formatter.js');
         const mode = detectOutputMode({ ...program.opts(), ...options });
 
         const data = await getSkillsList();

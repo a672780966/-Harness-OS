@@ -21,8 +21,8 @@ import { join, resolve } from 'path';
 import type { ContextPack, FileContext, DecisionContext, SkillContext } from '../types.js';
 import { collectAgentsMd, collectProject, collectGit, collectTask } from './sources.js';
 import { scoreFile, sortCandidates, extractKeywords } from './relevance.js';
-import { calculateBudget, availableContextTokens, trimToBudget } from './budget.js';
-import { redactObject, redactText, safeWriteJson, safeWriteText } from '../governance/redactor.js';
+import { calculateBudget, trimToBudget } from './budget.js';
+import { redactObject, safeWriteJson, safeWriteText } from '../governance/redactor.js';
 
 // ============================================================
 // Build Input
