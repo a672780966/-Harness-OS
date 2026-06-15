@@ -286,12 +286,13 @@ describe('E2E: Governance — High-Risk Prevention', () => {
   });
 
   it('harness run: approval gate works end-to-end', () => {
+    const approvalId = `app_e2e_${Date.now().toString(36)}`;
     const approval = submitApproval({
-      id: 'app_e2e_001', action: 'Delete file', reason: 'Cleanup', riskLevel: 'high',
+      id: approvalId, action: 'Delete file', reason: 'Cleanup', riskLevel: 'high',
     });
     expect(approval.status).toBe('pending');
 
-    const resolved = resolveApproval('app_e2e_001', { approved: true, resolvedBy: 'operator' });
+    const resolved = resolveApproval(approvalId, { approved: true, resolvedBy: 'operator' });
     expect(resolved!.status).toBe('approved');
   });
 
