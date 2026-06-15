@@ -1,5 +1,5 @@
-# Harness OS CI — Corepack + pnpm + typecheck + test + build
-# RC4-01/RC4-02: pnpm/tsup toolchain only. No npm/webpack.
+# Harness OS CI — Gates: format → lint → typecheck → test → build → smoke
+# P1-003: All gates run on Node 22 and 24. No continue-on-error.
 # Reference: 05_RC_CI_VERSION_CONSISTENCY_FIX.md §4
 
 name: CI
@@ -40,14 +40,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
-        run: pnpm test
+        run: pnpm test --run
 
       - name: Build
         run: pnpm build
 
-      - name: Verify CLI
+      - name: CLI smoke test
         run: node dist/index.js --version
