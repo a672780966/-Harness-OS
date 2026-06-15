@@ -1,0 +1,14 @@
+# Normalize line endings — all source files LF
+*.ts        text eol=lf
+*.js        text eol=lf
+*.json      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.md        text eol=lf
+
+# Binary files — detect
+*.png       binary
+*.jpg       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary

@@ -178,9 +178,7 @@ export function acceptDecision(
   // P0-004: Step 1 — Get approval WITHOUT consuming
   const approval = getApproval(approvalId);
   if (!approval) {
-    throw new Error(
-      `Cannot accept ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`,
-    );
+    throw new Error(`Cannot accept ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`);
   }
 
   // P0-004: Step 2 — Validate all required binding fields BEFORE consumption
@@ -281,9 +279,7 @@ export function supersedeDecision(
   // P0-004: Step 1 — Get approval WITHOUT consuming
   const approval = getApproval(approvalId);
   if (!approval) {
-    throw new Error(
-      `Cannot supersede ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`,
-    );
+    throw new Error(`Cannot supersede ADR ${adrId}: approval "${approvalId}" not found. [P0-004: binding fail]`);
   }
 
   // P0-004: Step 2 — Validate all required binding fields BEFORE consumption

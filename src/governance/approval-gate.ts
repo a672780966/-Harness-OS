@@ -157,11 +157,7 @@ const store = new ApprovalStore();
  * Emit an approval observability event if the project has an events directory.
  * Silently skips if .project/reports/events/ doesn't exist (non-project usage).
  */
-function emitApprovalEvent(
-  type: string,
-  approval: PendingApproval,
-  extra?: Record<string, unknown>,
-): void {
+function emitApprovalEvent(type: string, approval: PendingApproval, extra?: Record<string, unknown>): void {
   try {
     const projectPath = process.cwd();
     const eventsDir = resolve(projectPath, '.project/reports/events');
@@ -179,27 +175,29 @@ function emitApprovalEvent(
       // fall through
     }
 
-    import('../observability/events.js').then(({ logEvent }) => {
-      logEvent(
-        {
-          projectId,
-          type,
-          actor: 'harness',
-          summary: `${approval.action} — ${approval.status} (${approval.id})`,
-          payload: {
-            approvalId: approval.id,
-            action: approval.action,
-            status: approval.status,
-            consumed: approval.consumed,
-            riskLevel: approval.riskLevel,
-            ...extra,
+    import('../observability/events.js')
+      .then(({ logEvent }) => {
+        logEvent(
+          {
+            projectId,
+            type,
+            actor: 'harness',
+            summary: `${approval.action} — ${approval.status} (${approval.id})`,
+            payload: {
+              approvalId: approval.id,
+              action: approval.action,
+              status: approval.status,
+              consumed: approval.consumed,
+              riskLevel: approval.riskLevel,
+              ...extra,
+            },
           },
-        },
-        projectPath,
-      );
-    }).catch(() => {
-      // silent — observability is non-critical
-    });
+          projectPath,
+        );
+      })
+      .catch(() => {
+        // silent — observability is non-critical
+      });
   } catch {
     // silent
   }
@@ -315,11 +313,9 @@ export function resolveApproval(
   });
 
   if (updated) {
-    emitApprovalEvent(
-      resolution.approved ? 'approval.granted' : 'approval.denied',
-      updated,
-      { rejectionReason: resolution.rejectionReason },
-    );
+    emitApprovalEvent(resolution.approved ? 'approval.granted' : 'approval.denied', updated, {
+      rejectionReason: resolution.rejectionReason,
+    });
   }
 
   return updated;

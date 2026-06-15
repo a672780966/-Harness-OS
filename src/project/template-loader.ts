@@ -29,9 +29,9 @@ import { join, resolve } from 'path';
  */
 function findTemplatesDir(): string {
   const candidates = [
-    resolve(import.meta.dirname, './templates'),       // built/standalone: dist/templates/
-    resolve(import.meta.dirname, '../../templates'),    // source dev:       src/project/../../templates/
-    resolve(import.meta.dirname, '../templates'),       // fallback:         dist/../templates/
+    resolve(import.meta.dirname, './templates'), // built/standalone: dist/templates/
+    resolve(import.meta.dirname, '../../templates'), // source dev:       src/project/../../templates/
+    resolve(import.meta.dirname, '../templates'), // fallback:         dist/../templates/
   ];
 
   for (const dir of candidates) {
