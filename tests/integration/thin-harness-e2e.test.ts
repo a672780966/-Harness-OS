@@ -492,7 +492,7 @@ describe('E2E: Cross-Process Approval Persistence', () => {
         // Non-zero exit — try to parse JSON from stdout
         const execError = e as { stdout?: string };
         if (execError.stdout) {
-          try { return JSON.parse(execError.stdout.trim()); } catch {}
+          try { return JSON.parse(execError.stdout.trim()); } catch { /* ignore parse errors */ }
         }
         throw e;
       }

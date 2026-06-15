@@ -36,26 +36,6 @@ import { readAgentsMdTemplate } from './template-loader.js';
  * case-insensitivity. Used to verify git repo root matches the
  * expected project path.
  */
-/**
- * Compare two paths for equality, handling Windows separator and
- * case-insensitivity. Used to verify git repo root matches the
- * expected project path.
- *
- * On Windows, the toplevel from git uses forward slashes and long
- * directory names (e.g., "C:/Users/Administrator/..."), while
- * resolve() may use backslashes and short 8.3 names
- * (e.g., "C:\Users\ADMINI~1\..."). We normalize both to the same
- * form by lowercasing and stripping the drive-letter slash direction.
- */
-function pathsEqual(a: string, b: string): boolean {
-  const normalize = (p: string): string =>
-    resolve(p)
-      .replace(/[/\\]+/g, '/')
-      .replace(/^([A-Za-z]):\//, '$1:/')
-      .toLowerCase();
-  return normalize(a) === normalize(b);
-}
-
 // ============================================================
 // Constants
 // ============================================================

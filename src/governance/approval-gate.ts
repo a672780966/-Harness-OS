@@ -157,7 +157,7 @@ class ApprovalStore implements ApprovalRepository {
     return this.update(id, { consumed: true, resolvedAt: now });
   }
 
-  listPending(now: string): PendingApproval[] {
+  listPending(_now: string): PendingApproval[] {
     return this.getDb().listPendingApprovals();
   }
 
