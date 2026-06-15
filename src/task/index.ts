@@ -69,7 +69,9 @@ async function getProjectId(projectPath: string): Promise<string> {
       const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
       return manifest.projectId || 'unknown';
     }
-  } catch { /* empty — project may not exist */ }
+  } catch {
+    /* empty — project may not exist */
+  }
   return 'unknown';
 }
 

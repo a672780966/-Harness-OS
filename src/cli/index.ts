@@ -316,8 +316,7 @@ program
   .option('-q, --quiet', 'Quiet output mode')
   .action(async (options) => {
     const { validateAgentsMd } = await import('../project/index.js');
-    const { detectOutputMode, buildJsonOutput, jsonOutput, resetStartTime } =
-      await import('./formatter.js');
+    const { detectOutputMode, buildJsonOutput, jsonOutput, resetStartTime } = await import('./formatter.js');
     const mode = detectOutputMode({ ...program.opts(), ...options });
     resetStartTime();
 
@@ -948,7 +947,9 @@ approval
             const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
             projectId = manifest.projectId;
           }
-        } catch { /* empty — optional manifest field */ }
+        } catch {
+          /* empty — optional manifest field */
+        }
       }
 
       const approvalId = `aprv_${Date.now().toString(36)}`;

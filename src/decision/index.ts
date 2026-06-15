@@ -12,11 +12,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { safeWriteJson, redactText } from '../governance/redactor.js';
-import {
-  getApproval,
-  consumeApproval,
-  computeInputDigest,
-} from '../governance/approval-gate.js';
+import { getApproval, consumeApproval, computeInputDigest } from '../governance/approval-gate.js';
 
 // ============================================================
 // Types

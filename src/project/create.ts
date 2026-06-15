@@ -49,7 +49,10 @@ import { readAgentsMdTemplate } from './template-loader.js';
  */
 function pathsEqual(a: string, b: string): boolean {
   const normalize = (p: string): string =>
-    resolve(p).replace(/[/\\]+/g, '/').replace(/^([A-Za-z]):\//, '$1:/').toLowerCase();
+    resolve(p)
+      .replace(/[/\\]+/g, '/')
+      .replace(/^([A-Za-z]):\//, '$1:/')
+      .toLowerCase();
   return normalize(a) === normalize(b);
 }
 
@@ -380,8 +383,8 @@ export async function createProject(opts: CreateProjectOptions): Promise<CreateP
   if (!existsSync(join(projectPath, '.git'))) {
     throw new Error(
       `Cannot create project: target directory "${projectPath}" is inside ` +
-      `an existing Git repository. Initializing a new repository failed. ` +
-      `Choose a different location outside the parent repository.`,
+        `an existing Git repository. Initializing a new repository failed. ` +
+        `Choose a different location outside the parent repository.`,
     );
   }
 
