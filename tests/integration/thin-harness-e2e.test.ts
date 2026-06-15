@@ -463,3 +463,74 @@ describe('E2E: Skill Execution', () => {
     expect(result.status).toBe('success');
   });
 });
+
+// ============================================================
+// E2E Scenario 9: Cross-Process Approval Persistence
+// ============================================================
+
+describe('E2E: Cross-Process Approval Persistence', () => {
+  beforeEach(async () => {
+    await createProject({ name: 'e2e-project', path: projectPath });
+  });
+
+  it('create, resolve, consume approval across separate CLI processes', async () => {
+    const distPath = join(process.cwd(), 'dist/index.js');
+    const execSync = (await import('child_process')).execSync;
+
+    // Helper: run CLI and parse JSON output
+    // Handles non-zero exit codes (used for failure-path tests)
+    const cli = (args: string): any => {
+      const cmd = `node "${distPath}" --json ${args}`;
+      try {
+        const result = execSync(cmd, {
+          cwd: projectPath,
+          encoding: 'utf8',
+          timeout: 15000,
+        });
+        return JSON.parse(result.trim());
+      } catch (e: unknown) {
+        // Non-zero exit — try to parse JSON from stdout
+        const execError = e as { stdout?: string };
+        if (execError.stdout) {
+          try { return JSON.parse(execError.stdout.trim()); } catch {}
+        }
+        throw e;
+      }
+    };
+
+    // Propose an ADR first
+    const proposeResult = cli(
+      `decision propose --title "Cross-Process ADR" --type architecture --summary "Testing cross-process" --context "Need persistence" --decision "Use SQLite"`,
+    );
+    expect(proposeResult.ok).toBe(true);
+    const adrId = proposeResult.data.id;
+
+    // Process 1: Create approval
+    const createResult = cli(`approval create-adr --action accept --adr ${adrId}`);
+    expect(createResult.ok).toBe(true);
+    expect(createResult.data.status).toBe('pending');
+    const approvalId = createResult.data.id;
+    expect(approvalId).toBeTruthy();
+
+    // Process 2: Resolve approval (separate Node process)
+    const resolveResult = cli(`approval resolve ${approvalId} --approve --by "e2e-tester"`);
+    expect(resolveResult.ok).toBe(true);
+    expect(resolveResult.data.status).toBe('approved');
+
+    // Process 3: Accept ADR (separate Node process)
+    const acceptResult = cli(`decision accept ${adrId} --approval-id ${approvalId} --by "e2e-tester"`);
+    expect(acceptResult.ok).toBe(true);
+    expect(acceptResult.data.status).toBe('accepted');
+
+    // Process 4: Reuse — must fail
+    const adr2Result = cli(
+      `decision propose --title "Second ADR" --type architecture --summary "Test" --context "Test" --decision "Test"`,
+    );
+    expect(adr2Result.ok).toBe(true);
+    const adrId2 = adr2Result.data.id;
+
+    const reuseResult = cli(`decision accept ${adrId2} --approval-id ${approvalId} --by "e2e-tester"`);
+    expect(reuseResult.ok).toBe(false);
+    expect(reuseResult.error).toBeTruthy();
+  });
+});

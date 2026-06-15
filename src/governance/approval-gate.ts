@@ -84,6 +84,25 @@ export interface ApprovalResolution {
 }
 
 // ============================================================
+// ApprovalRepository Interface
+// ============================================================
+
+/**
+ * Repository contract for approval persistence.
+ * Production: SQLite-backed (cross-process).
+ * Tests: in-memory alternative via __test_clearStore().
+ */
+export interface ApprovalRepository {
+  create(approval: PendingApproval): void;
+  get(id: string): PendingApproval | undefined;
+  update(id: string, updates: Partial<PendingApproval>): PendingApproval | undefined;
+  consumeApproved(id: string, now: string): PendingApproval | undefined;
+  listPending(now: string): PendingApproval[];
+  listAll(): PendingApproval[];
+  clear(): void;
+}
+
+// ============================================================
 // Default Configuration
 // ============================================================
 
@@ -103,7 +122,7 @@ const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
  * The SqliteStore is lazily initialized on first access so the module
  * can be imported at any time without requiring a specific cwd.
  */
-class ApprovalStore {
+class ApprovalStore implements ApprovalRepository {
   private _db: SqliteStore | null = null;
 
   private getDb(): SqliteStore {
@@ -113,7 +132,7 @@ class ApprovalStore {
     return this._db;
   }
 
-  add(approval: PendingApproval): void {
+  create(approval: PendingApproval): void {
     this.getDb().createApproval(approval);
   }
 
@@ -125,7 +144,20 @@ class ApprovalStore {
     return this.getDb().updateApproval(id, updates);
   }
 
-  listPending(): PendingApproval[] {
+  /** Atomic single-use consumption (GOV3-03). */
+  consumeApproved(id: string, now: string): PendingApproval | undefined {
+    const approval = this.get(id);
+    if (!approval) return undefined;
+    if (approval.status !== 'approved') return undefined;
+    if (approval.consumed) return undefined;
+    if (approval.expiresAt < now) {
+      this.update(id, { status: 'expired', resolvedAt: now });
+      return undefined;
+    }
+    return this.update(id, { consumed: true, resolvedAt: now });
+  }
+
+  listPending(now: string): PendingApproval[] {
     return this.getDb().listPendingApprovals();
   }
 
@@ -264,7 +296,7 @@ export function submitApproval(params: {
     expiresAt: new Date(now.getTime() + ttl).toISOString(),
   };
 
-  store.add(approval);
+  store.create(approval);
   emitApprovalEvent('approval.requested', approval);
   return approval;
 }
@@ -323,33 +355,12 @@ export function resolveApproval(
 
 /**
  * Consume an approved approval (single-use, GOV3-03).
- * Marks it as consumed so it cannot be reused.
- * Returns the approval with modifiedInput if provided, or undefined if
- * the approval cannot be consumed (not found, not approved, already consumed, expired).
- *
- * Consumption is atomic: concurrent consumers will find consumed=true after
- * the first succeeds (SQLite single-writer guarantees serialized access).
+ * Uses the repository's atomic consumeApproved() for cross-process safety.
+ * Returns the consumed approval or undefined if not consumable.
  */
 export function consumeApproval(id: string): PendingApproval | undefined {
-  const approval = store.get(id);
-  if (!approval) return undefined;
-
-  // Reject if not approved
-  if (approval.status !== 'approved') return undefined;
-
-  // Reject if already consumed (single-use enforcement)
-  if (approval.consumed) return undefined;
-
-  // Reject if expired
-  const now = new Date();
-  if (approval.expiresAt < now.toISOString()) {
-    const expired = store.update(id, { status: 'expired', resolvedAt: now.toISOString() });
-    if (expired) emitApprovalEvent('approval.expired', expired);
-    return undefined;
-  }
-
-  // Mark consumed atomically and return
-  const consumed = store.update(id, { consumed: true, resolvedAt: now.toISOString() });
+  const now = new Date().toISOString();
+  const consumed = store.consumeApproved(id, now);
   if (consumed) emitApprovalEvent('approval.consumed', consumed);
   return consumed;
 }
@@ -405,7 +416,7 @@ export function getApproval(id: string): PendingApproval | undefined {
  * List all pending (unexpired) approvals.
  */
 export function listPendingApprovals(): PendingApproval[] {
-  return store.listPending();
+  return store.listPending(new Date().toISOString());
 }
 
 /**
