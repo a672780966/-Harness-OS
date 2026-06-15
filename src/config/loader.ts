@@ -287,7 +287,8 @@ function readEnvVars(): Partial<HarnessConfig> {
     config.cli = { ...config.cli, colorEnabled: false };
   }
   if (process.env.CI) {
-    config.cli = { ...config.cli, defaultOutputMode: 'quiet', colorEnabled: false, showProgress: false };
+    // P1-004: CI does NOT change output mode. Use --quiet or HARNESS_OUTPUT_MODE explicitly.
+    config.cli = { ...config.cli, colorEnabled: false, showProgress: false };
     config.runtime = { ...config.runtime, nonInteractive: true };
   }
 

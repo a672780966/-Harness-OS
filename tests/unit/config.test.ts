@@ -56,12 +56,16 @@ describe('loadConfig', () => {
     process.env.HARNESS_OUTPUT_MODE = 'quiet';
     const result = loadConfig();
     expect(result.config.cli?.defaultOutputMode).toBe('quiet');
+    delete process.env.HARNESS_OUTPUT_MODE;
   });
 
-  it('CI env sets quiet mode and non-interactive', () => {
+  it('CI env does not change output mode, but sets non-interactive', () => {
+    // Clear any HARNESS_OUTPUT_MODE from previous tests (P1-004)
+    delete process.env.HARNESS_OUTPUT_MODE;
     process.env.CI = 'true';
     const result = loadConfig();
-    expect(result.config.cli?.defaultOutputMode).toBe('quiet');
+    // P1-004: CI does NOT change defaultOutputMode
+    expect(result.config.cli?.defaultOutputMode).toBe('pretty');
     expect(result.config.cli?.colorEnabled).toBe(false);
     expect(result.config.runtime?.nonInteractive).toBe(true);
   });

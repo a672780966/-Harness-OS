@@ -257,11 +257,11 @@ describe('CLI-06: Key command output modes', () => {
     expect(detectOutputMode({})).toBe('pretty');
   });
 
-  it('CI env sets quiet mode', () => {
+  it('CI env does not set quiet mode', () => {
     const orig = process.env.CI;
     process.env.CI = 'true';
     try {
-      expect(detectOutputMode({})).toBe('quiet');
+      expect(detectOutputMode({})).toBe('pretty');
     } finally {
       process.env.CI = orig;
     }

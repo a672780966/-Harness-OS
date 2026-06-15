@@ -26,11 +26,13 @@ import { HARNESS_VERSION } from '../version.js';
  * Priority: CLI flag > env var > default
  */
 export function detectOutputMode(options?: { json?: boolean; quiet?: boolean }): OutputMode {
+  // Priority: --json > --quiet > HARNESS_OUTPUT_MODE env > pretty (default)
   if (options?.json) return 'json';
   if (options?.quiet) return 'quiet';
   if (process.env.HARNESS_OUTPUT_MODE === 'json') return 'json';
   if (process.env.HARNESS_OUTPUT_MODE === 'quiet') return 'quiet';
-  if (process.env.CI) return 'quiet';
+  // CI=true does NOT implicitly change default output mode.
+  // Use --quiet, --json, or HARNESS_OUTPUT_MODE explicitly.
   return 'pretty';
 }
 
