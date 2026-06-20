@@ -345,6 +345,33 @@ Planned for v1.1+:
 
 ---
 
+## v1.1 Real Loop (June 2026)
+
+**Status**: ✅ Closed (`real_loop_complete: true` | `mock_used: false`)
+
+v1.1 implements a **5-node real agent loop** — the first end-to-end execution where Hermes dispatches real agents (OpenCode, Codex) through a governed pipeline without mock or simulation.
+
+| Node | Type | Status | Executor |
+|------|------|--------|----------|
+| 001 — Fix P1 Gaps | `normal` | ✅ PASSED | OpenCode (DeepSeek) |
+| 002 — StarMap Completion | `normal` | ✅ PASSED (2 repairs) | OpenCode (DeepSeek) |
+| 003 — Repair Negative Sample | `repair_negative_sample` | ✅ CORRECTLY DETECTED | OpenCode (DeepSeek) |
+| 004 — Codex Final Review | `final_review` | ✅ APPROVED | Codex CLI (gpt-5.5) |
+| 005 — Merge Gate & StarMap | `final_gate` | ✅ DONE | Hermes handler |
+
+**Key innovations in v1.1**:
+- **Type-based dispatch** — `node_index.yaml` type field routes nodes to correct handler
+- **Codex Final Reviewer** — Dedicated handler calls Codex CLI directly, not as an executor node
+- **Repair negative sample validation** — Node designed to fail audit, proving repair detection works
+- **Evidence pack** — All artifacts under `.harness/evidence/v1_1_real_loop/`
+- **Hermes as pure orchestrator** — Dispatches but never writes business code
+
+Full report: [`docs/v1_1_real_loop_report.md`](docs/v1_1_real_loop_report.md)
+Evidence index: `.harness/evidence/v1_1_real_loop/EVIDENCE_INDEX.md`
+Architecture: [`docs/v1_1_architecture.md`](docs/v1_1_architecture.md)
+
+---
+
 ## License
 
 ISC
