@@ -22,6 +22,17 @@ from typing import Any, Dict, List, Optional
 # Add parent to path for direct invocation
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from harness.copilot.view_models import build_dashboard
+from harness.copilot.markdown_renderer import (
+    render_dashboard, render_modules, render_task_cards,
+    render_readiness, render_changes,
+)
+from harness.copilot.json_renderer import (
+    render_dashboard_json, render_modules_json,
+    render_task_cards_json, render_readiness_json, render_changes_json,
+    is_json_serializable,
+)
+
 from harness.copilot.schemas import (
     MergeReadinessState,
     now_iso,
@@ -262,6 +273,84 @@ def cmd_readiness(args: argparse.Namespace) -> None:
         print("\n" + json.dumps(merge_readiness_to_dict(readiness), indent=2))
 
 
+# ======================== UX Layer Commands ========================
+
+
+def cmd_dashboard(args: argparse.Namespace) -> None:
+    """Render the full Copilot dashboard."""
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    dashboard = build_dashboard(project_root, diff_ref=args.diff_ref)
+
+    if args.format == "json":
+        print(render_dashboard_json(dashboard))
+    elif args.format == "markdown":
+        print(render_dashboard(dashboard))
+    else:
+        # Default: markdown
+        print(render_dashboard(dashboard))
+
+
+def cmd_ux_modules(args: argparse.Namespace) -> None:
+    """Render module cards with user-friendly output."""
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    dashboard = build_dashboard(project_root, diff_ref=args.diff_ref)
+
+    if args.format == "json":
+        print(render_modules_json(dashboard.modules))
+    elif args.format == "markdown":
+        print(render_modules(dashboard.modules))
+    else:
+        print(render_modules(dashboard.modules))
+
+
+def cmd_ux_task_cards(args: argparse.Namespace) -> None:
+    """Render task cards with user-friendly output."""
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    dashboard = build_dashboard(project_root, diff_ref=args.diff_ref)
+    if not dashboard.task_cards:
+        print("No task cards generated.")
+        return
+
+    if args.format == "json":
+        print(render_task_cards_json(dashboard.task_cards))
+    elif args.format == "markdown":
+        print(render_task_cards(dashboard.task_cards))
+    else:
+        print(render_task_cards(dashboard.task_cards))
+
+
+def cmd_ux_readiness(args: argparse.Namespace) -> None:
+    """Render merge readiness with user-friendly output."""
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    dashboard = build_dashboard(project_root, diff_ref=args.diff_ref)
+    if not dashboard.readiness:
+        print("No merge readiness evaluation available.")
+        return
+
+    if args.format == "json":
+        print(render_readiness_json(dashboard.readiness))
+    elif args.format == "markdown":
+        print(render_readiness(dashboard.readiness))
+    else:
+        print(render_readiness(dashboard.readiness))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Harness Code Copilot — AI Coding Semantic Copilot CLI",
@@ -296,6 +385,32 @@ def main() -> None:
     p_readiness.add_argument("project_path", help="Path to project root")
     p_readiness.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
     p_readiness.set_defaults(func=cmd_readiness)
+
+    # ==================== UX Layer Commands ====================
+
+    # dashboard
+    p_dash = subparsers.add_parser("dashboard", help="Full project dashboard (UX)")
+    p_dash.add_argument("project_path", help="Path to project root")
+    p_dash.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_dash.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                        help="Output format (default: markdown)")
+    p_dash.set_defaults(func=cmd_dashboard)
+
+    # modules
+    p_mod = subparsers.add_parser("modules", help="Module cards (UX)")
+    p_mod.add_argument("project_path", help="Path to project root")
+    p_mod.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_mod.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                       help="Output format (default: markdown)")
+    p_mod.set_defaults(func=cmd_ux_modules)
+
+    # task-cards
+    p_tc = subparsers.add_parser("task-cards", help="Task cards (UX)")
+    p_tc.add_argument("project_path", help="Path to project root")
+    p_tc.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_tc.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_tc.set_defaults(func=cmd_ux_task_cards)
 
     args = parser.parse_args()
 
