@@ -403,6 +403,7 @@ def cmd_evidence(args: argparse.Namespace) -> None:
 def cmd_repair_cards(args: argparse.Namespace) -> None:
     """Show repair task cards from a loop run."""
     run_dir = os.path.abspath(args.loop_run_dir)
+    # ... same as before ...
     if not os.path.isdir(run_dir):
         print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
         sys.exit(1)
@@ -432,6 +433,115 @@ def cmd_repair_cards(args: argparse.Namespace) -> None:
         tc_list = TCLVM(cards=cards_vm_list)
         print(render_task_cards(tc_list))
 
+
+# =================== Phase 4: MVP Shell Commands ====================
+
+
+def cmd_shell(args: argparse.Namespace) -> None:
+    """Generate a local static HTML dashboard for a project."""
+    from harness.copilot.shell.shell_builder import build_project_shell
+
+    out_dir = args.out or os.path.join(args.project_path, ".harness", "copilot_dashboard")
+    result = build_project_shell(
+        project_path=args.project_path,
+        output_dir=out_dir,
+        diff_ref=args.diff_ref,
+    )
+
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✅ HTML dashboard generated")
+    print(f"   路径: file://{result['html_path']}")
+    print(f"   JSON: {result['json_path']}")
+    print(f"   输出目录: {result['output_dir']}")
+
+
+def cmd_shell_from_loop(args: argparse.Namespace) -> None:
+    """Generate a static HTML dashboard from a loop run directory."""
+    from harness.copilot.shell.loop_shell_builder import build_loop_shell
+
+    out_dir = args.out or os.path.join(args.loop_run_dir, "..", "..", "copilot_dashboard")
+    out_dir = os.path.abspath(out_dir)  # Resolve .. in path
+    result = build_loop_shell(
+        loop_run_dir=args.loop_run_dir,
+        output_dir=out_dir,
+    )
+
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✅ Loop dashboard generated")
+    print(f"   路径: file://{result['html_path']}")
+    print(f"   JSON: {result['json_path']}")
+    print(f"   输出目录: {result['output_dir']}")
+
+
+def cmd_export_task_card(args: argparse.Namespace) -> None:
+    """Export a task card as markdown."""
+    import json as _json
+    from harness.copilot.shell.copy_text_renderer import (
+        export_task_card_markdown,
+        export_all_task_cards_markdown,
+        render_task_card_copy_text,
+    )
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    # Build dashboard to get task cards
+    from harness.copilot.view_models import build_dashboard
+    dashboard = build_dashboard(project_root, diff_ref=args.diff_ref)
+
+    if not dashboard.task_cards or not dashboard.task_cards.cards:
+        print("No task cards available for export.")
+        sys.exit(1)
+
+    cards_dicts = [c.to_dict() for c in dashboard.task_cards.cards]
+
+    if args.card_index is not None:
+        # Export single card by index
+        try:
+            card = cards_dicts[args.card_index]
+        except IndexError:
+            print(f"Error: Card index {args.card_index} out of range (0-{len(cards_dicts)-1})", file=sys.stderr)
+            sys.exit(1)
+
+        md = export_task_card_markdown(card)
+
+        out_path = args.out
+        if not out_path:
+            # Default filename
+            safe_name = card.get("title", "task-card").replace(" ", "-").replace("/", "-")[:40]
+            out_path = os.path.join(os.getcwd(), f"{safe_name}.md")
+
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(md)
+        print(f"✅ Task card exported to: {out_path}")
+
+        # Also show copy text in terminal
+        print(f"\n--- Copy text ---")
+        print(render_task_card_copy_text(card))
+    else:
+        # Export all cards
+        md = export_all_task_cards_markdown(cards_dicts)
+        out_path = args.out or os.path.join(os.getcwd(), "task-cards.md")
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(md)
+        print(f"✅ All task cards exported to: {out_path}")
+
+
+def cmd_preview(args: argparse.Namespace) -> None:
+    """Start local read-only preview server for a dashboard directory."""
+    from harness.copilot.shell.preview_server import serve_preview
+    serve_preview(directory=args.dashboard_dir, port=args.port)
+
+
+# =================== Main ====================
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -516,6 +626,35 @@ def main() -> None:
     p_rc.add_argument("--format", choices=["markdown", "json"], default="markdown",
                       help="Output format (default: markdown)")
     p_rc.set_defaults(func=cmd_repair_cards)
+
+    # ==================== Phase 4: MVP Shell Commands ====================
+
+    # shell
+    p_shell = subparsers.add_parser("shell", help="Generate static HTML dashboard (Phase 4)")
+    p_shell.add_argument("project_path", help="Path to project root")
+    p_shell.add_argument("--out", "-o", default=None, help="Output directory")
+    p_shell.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_shell.set_defaults(func=cmd_shell)
+
+    # shell-from-loop
+    p_sfl = subparsers.add_parser("shell-from-loop", help="Generate HTML dashboard from loop artifacts (Phase 4)")
+    p_sfl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_sfl.add_argument("--out", "-o", default=None, help="Output directory")
+    p_sfl.set_defaults(func=cmd_shell_from_loop)
+
+    # export-task-card
+    p_etc = subparsers.add_parser("export-task-card", help="Export task card as markdown (Phase 4)")
+    p_etc.add_argument("project_path", help="Path to project root")
+    p_etc.add_argument("--out", "-o", default=None, help="Output file path")
+    p_etc.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_etc.add_argument("--card-index", type=int, default=None, help="Export single card by index (0-based)")
+    p_etc.set_defaults(func=cmd_export_task_card)
+
+    # preview
+    p_preview = subparsers.add_parser("preview", help="Start local read-only preview server (Phase 4)")
+    p_preview.add_argument("dashboard_dir", help="Path to dashboard output directory")
+    p_preview.add_argument("--port", type=int, default=8080, help="Local port (default: 8080)")
+    p_preview.set_defaults(func=cmd_preview)
 
     args = parser.parse_args()
 
