@@ -32,6 +32,12 @@ from harness.copilot.json_renderer import (
     render_task_cards_json, render_readiness_json, render_changes_json,
     is_json_serializable,
 )
+from harness.copilot.integration.loop_artifact_loader import load_loop_artifacts
+from harness.copilot.integration.loop_to_copilot_mapper import artifacts_to_dashboard
+from harness.copilot.integration.eval_mapper import eval_to_repair_task_cards
+from harness.copilot.integration.review_mapper import review_to_repair_task_cards
+from harness.copilot.integration.repair_history_mapper import repair_history_to_task_cards
+from harness.copilot.integration.final_gate_mapper import final_gate_to_readiness
 
 from harness.copilot.schemas import (
     MergeReadinessState,
@@ -351,6 +357,82 @@ def cmd_ux_readiness(args: argparse.Namespace) -> None:
         print(render_readiness(dashboard.readiness))
 
 
+# ==================== Integration Layer Commands ====================
+
+
+def cmd_from_loop(args: argparse.Namespace) -> None:
+    """Load loop artifacts and render Copilot dashboard."""
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    artifacts = load_loop_artifacts(run_dir)
+    if artifacts.load_errors:
+        print(f"Warning: {len(artifacts.load_errors)} load error(s)", file=sys.stderr)
+
+    dashboard = artifacts_to_dashboard(artifacts)
+
+    if args.format == "json":
+        print(render_dashboard_json(dashboard))
+    else:
+        print(render_dashboard(dashboard))
+
+
+def cmd_evidence(args: argparse.Namespace) -> None:
+    """Show evidence pack from a loop run."""
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    artifacts = load_loop_artifacts(run_dir)
+    dashboard = artifacts_to_dashboard(artifacts)
+
+    if dashboard.evidence:
+        if args.format == "json":
+            import json as _json
+            print(_json.dumps(dashboard.evidence.to_dict(), indent=2, ensure_ascii=False))
+        else:
+            from harness.copilot.markdown_renderer import render_evidence
+            print(render_evidence(dashboard.evidence))
+    else:
+        print("No evidence pack available.")
+
+
+def cmd_repair_cards(args: argparse.Namespace) -> None:
+    """Show repair task cards from a loop run."""
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    artifacts = load_loop_artifacts(run_dir)
+    eval_cards = eval_to_repair_task_cards(artifacts)
+    review_cards = review_to_repair_task_cards(artifacts)
+    history_cards = repair_history_to_task_cards(artifacts)
+
+    all_cards = eval_cards + review_cards + history_cards
+
+    if not all_cards:
+        print("No repair task cards. All checks passed."  if args.format != "json" else "[]")
+        return
+
+    if args.format == "json":
+        import json as _json
+        from harness.copilot.view_models import TaskCardViewModel
+        cards_data = [TaskCardViewModel.from_kernel(c).to_dict() for c in all_cards]
+        print(_json.dumps({"repair_cards": cards_data}, indent=2, ensure_ascii=False))
+    else:
+        from harness.copilot.view_models import TaskCardViewModel
+        cards_vm_list = [TaskCardViewModel.from_kernel(c) for c in all_cards]
+        from harness.copilot.markdown_renderer import render_task_cards
+        # Build a simple TaskCardListViewModel
+        from harness.copilot.view_models import TaskCardListViewModel as TCLVM
+        tc_list = TCLVM(cards=cards_vm_list)
+        print(render_task_cards(tc_list))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Harness Code Copilot — AI Coding Semantic Copilot CLI",
@@ -411,6 +493,29 @@ def main() -> None:
     p_tc.add_argument("--format", choices=["markdown", "json"], default="markdown",
                       help="Output format (default: markdown)")
     p_tc.set_defaults(func=cmd_ux_task_cards)
+
+    # ==================== Integration Layer Commands ====================
+
+    # from-loop
+    p_fl = subparsers.add_parser("from-loop", help="Dashboard from loop artifacts (Integration)")
+    p_fl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_fl.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_fl.set_defaults(func=cmd_from_loop)
+
+    # evidence
+    p_ev = subparsers.add_parser("evidence", help="Evidence pack from loop (Integration)")
+    p_ev.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_ev.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_ev.set_defaults(func=cmd_evidence)
+
+    # repair-cards
+    p_rc = subparsers.add_parser("repair-cards", help="Repair task cards from loop (Integration)")
+    p_rc.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_rc.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_rc.set_defaults(func=cmd_repair_cards)
 
     args = parser.parse_args()
 
