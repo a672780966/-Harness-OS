@@ -6,7 +6,7 @@
 > sealed_at: 2026-06-22 09:50 CST
 > sealed_by: Hermes Agent
 > branch: v1.1/hermes-local-env
-> commit: (see below)
+> commit: d317411
 
 ---
 
@@ -63,7 +63,7 @@
 
 | Field | Value |
 |-------|-------|
-| **tag** | `v1.1.1-mini-pilot-sealed` |
+| **tag** | `v1.1.1-mini-pilot-sealed` (at commit `d317411`) |
 | **base** | `v1.1-real-loop-sealed` (unchanged) |
 
 ## Verification

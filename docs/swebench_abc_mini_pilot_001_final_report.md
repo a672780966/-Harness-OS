@@ -361,6 +361,13 @@ This validates that the pipeline can handle the case where **eval passes but rev
 | `swebench_docker_eval.py` framework routing bug | ✅ Routing fixed, tested |
 | AGENTS.md drift (2 test failures) | ✅ Content restored, 153/153 pass |
 
-### Ready to Seal
+### Ready to Seal → Sealed ✅
 
-**Mini Pilot Final Report is now ready to seal.** All known blockers have been addressed in the v1.1.1 stabilization sprint.
+**Mini Pilot Final Report has been sealed.** All known blockers were addressed in the v1.1.1 stabilization sprint. Evidence archive created and tag `v1.1.1-mini-pilot-sealed` applied.
+
+| Field | Value |
+|-------|-------|
+| Seal commit | `d317411` |
+| Tag | `v1.1.1-mini-pilot-sealed` |
+| Evidence archive | `dist/swebench_abc_mini_pilot_001_final_evidence_f3aca38.tar.gz` |
+| SHA256 | `de88b255287899286ba13c74479d92e500a14a42e749835c1516f77c26c4f6c1` |
