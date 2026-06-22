@@ -541,6 +541,91 @@ def cmd_preview(args: argparse.Namespace) -> None:
     serve_preview(directory=args.dashboard_dir, port=args.port)
 
 
+# =================== Phase 5: Monitor Commands ====================
+
+
+def cmd_monitor(args: argparse.Namespace) -> None:
+    """Start project file monitoring."""
+    from harness.copilot.monitor import MonitorEvent, MonitorSession
+    from harness.copilot.monitor.watcher import ProjectWatcher
+    from harness.copilot.monitor.terminal_renderer import (
+        render_startup_message,
+        render_event,
+        render_status_line,
+    )
+    from harness.copilot.monitor.dashboard_refresher import refresh_dashboard
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    interval = args.interval
+    out_dir = os.path.abspath(args.out) if args.out else None
+
+    def on_event(event: MonitorEvent) -> None:
+        print(render_event(event))
+        # Optionally refresh dashboard
+        if out_dir and watcher.session:
+            refresh_dashboard(out_dir, watcher.session, project_root=project_root)
+
+    watcher = ProjectWatcher(project_root, interval=interval, on_event=on_event)
+
+    print(render_startup_message(project_root, interval))
+    print()
+
+    try:
+        watcher.run(max_polls=1 if getattr(args, 'once', False) else None)
+    except KeyboardInterrupt:
+        print(f"\n  {render_status_line(watcher.session)}")
+        print("  监控已停止。")
+
+    if out_dir:
+        result = refresh_dashboard(out_dir, watcher.session, project_root=project_root)
+        if result.get("success"):
+            print(f"  Dashboard: file://{result.get('state_path', '')}", file=sys.stderr)
+
+
+def cmd_monitor_loop(args: argparse.Namespace) -> None:
+    """Start loop artifact monitoring."""
+    from harness.copilot.monitor.watcher import LoopWatcher
+    from harness.copilot.monitor.terminal_renderer import (
+        render_startup_message,
+        render_event,
+        render_status_line,
+    )
+    from harness.copilot.monitor.dashboard_refresher import refresh_dashboard
+
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    interval = args.interval
+    out_dir = os.path.abspath(args.out) if args.out else None
+
+    def on_event(event) -> None:
+        print(render_event(event))
+        if out_dir and watcher.session:
+            refresh_dashboard(out_dir, watcher.session, loop_run_dir=run_dir)
+
+    watcher = LoopWatcher(run_dir, interval=interval, on_event=on_event)
+
+    print(render_startup_message(run_dir, interval))
+    print()
+
+    try:
+        watcher.run(max_polls=1 if getattr(args, 'once', False) else None)
+    except KeyboardInterrupt:
+        print(f"\n  {render_status_line(watcher.session)}")
+        print("  监控已停止。")
+
+    if out_dir:
+        result = refresh_dashboard(out_dir, watcher.session, loop_run_dir=run_dir)
+        if result.get("success"):
+            print(f"  Dashboard: {result.get('state_path', '')}", file=sys.stderr)
+
+
 # =================== Main ====================
 
 def main() -> None:
@@ -655,6 +740,24 @@ def main() -> None:
     p_preview.add_argument("dashboard_dir", help="Path to dashboard output directory")
     p_preview.add_argument("--port", type=int, default=8080, help="Local port (default: 8080)")
     p_preview.set_defaults(func=cmd_preview)
+
+    # ==================== Phase 5: Monitor Commands ====================
+
+    # monitor
+    p_mon = subparsers.add_parser("monitor", help="Start project file monitoring (Phase 5)")
+    p_mon.add_argument("project_path", help="Path to project root")
+    p_mon.add_argument("--interval", type=float, default=3.0, help="Poll interval in seconds (default: 3)")
+    p_mon.add_argument("--out", "-o", default=None, help="Dashboard output directory (optional)")
+    p_mon.add_argument("--once", action="store_true", help="Single poll then exit (for smoke test)")
+    p_mon.set_defaults(func=cmd_monitor)
+
+    # monitor-loop
+    p_ml = subparsers.add_parser("monitor-loop", help="Start loop artifact monitoring (Phase 5)")
+    p_ml.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_ml.add_argument("--interval", type=float, default=3.0, help="Poll interval in seconds (default: 3)")
+    p_ml.add_argument("--out", "-o", default=None, help="Dashboard output directory (optional)")
+    p_ml.add_argument("--once", action="store_true", help="Single poll then exit (for smoke test)")
+    p_ml.set_defaults(func=cmd_monitor_loop)
 
     args = parser.parse_args()
 
