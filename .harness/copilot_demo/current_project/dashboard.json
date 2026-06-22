@@ -1,0 +1,420 @@
+{
+  "project_name": "-Harness-OS",
+  "project_root": "/home/ctyun/-Harness-OS",
+  "branch": "v1.2/engineering-copilot-ux",
+  "overall_risk_level": "high",
+  "risk_color": "red",
+  "agent_phase": "idle",
+  "agent_phase_label": "待命",
+  "uncommitted_changes": 17,
+  "module_count": 10,
+  "generated_at": "2026-06-22T14:02:53.240520+00:00",
+  "modules": [
+    {
+      "name": "Harness-OS-P0-Fix-Requirements",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — Harness-OS-P0-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "Harness-OS-P0-Fix-Requirements/03_SECRET_REDACTION_FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path",
+            "Configuration file: requirements"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "Harness-OS-Third-Round-Fix-Requirements",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — Harness-OS-Third-Round-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "Harness-OS-Third-Round-Fix-Requirements/02_SECRET_REDACTOR_FULL_CHAIN_FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path",
+            "Configuration file: requirements"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "docs",
+      "file_count": 24,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — docs",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "fix-reports",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — fix-reports 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "fix-reports/AUD-P0-003-SECRET-REDACTION-FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "harness",
+      "file_count": 36,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — harness",
+      "dependencies": [],
+      "dependents": [
+        "tests"
+      ],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    },
+    {
+      "name": "harness_os_docs",
+      "file_count": 22,
+      "risk_level": "medium",
+      "risk_color": "yellow",
+      "risk_score": 0.5,
+      "risk_description": "⚡ 中等风险 — harness_os_docs 模块需关注，建议检查变更范围。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "harness_os_docs/18_MIGRATION_VERSIONING.md",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'migration' in path"
+          ]
+        }
+      ],
+      "primary_language": "Unknown"
+    },
+    {
+      "name": "root",
+      "file_count": 15,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — root 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "TypeScript"
+    },
+    {
+      "name": "src",
+      "file_count": 67,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — src 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "TypeScript"
+    },
+    {
+      "name": "templates",
+      "file_count": 1,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — templates",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "tests",
+      "file_count": 73,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — tests 模块变更安全。",
+      "dependencies": [
+        "harness"
+      ],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "TypeScript"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": "harness",
+      "summary": "Added 1063 lines across 11 files",
+      "intent": "新增代码",
+      "files_changed": [
+        "harness/copilot/cli.py",
+        "harness/copilot/monitor/__init__.py",
+        "harness/copilot/monitor/__pycache__/__init__.cpython-311.pyc",
+        "harness/copilot/monitor/__pycache__/dashboard_refresher.cpython-311.pyc",
+        "harness/copilot/monitor/__pycache__/snapshot.cpython-311.pyc",
+        "harness/copilot/monitor/__pycache__/terminal_renderer.cpython-311.pyc",
+        "harness/copilot/monitor/__pycache__/watcher.cpython-311.pyc",
+        "harness/copilot/monitor/dashboard_refresher.py",
+        "harness/copilot/monitor/snapshot.py",
+        "harness/copilot/monitor/terminal_renderer.py",
+        "harness/copilot/monitor/watcher.py"
+      ],
+      "lines_changed_str": "+1063/-0",
+      "has_risks": true,
+      "risk_warnings": [
+        "harness/copilot/monitor/snapshot.py: Substantial change (285 lines)",
+        "harness/copilot/monitor/watcher.py: Substantial change (307 lines)"
+      ]
+    },
+    {
+      "module": "tests",
+      "summary": "Added 724 lines across 6 files",
+      "intent": "测试用例变更",
+      "files_changed": [
+        "tests/copilot/test_dashboard_refresher.py",
+        "tests/copilot/test_loop_monitor_watcher.py",
+        "tests/copilot/test_monitor_event.py",
+        "tests/copilot/test_monitor_readonly.py",
+        "tests/copilot/test_monitor_snapshot.py",
+        "tests/copilot/test_monitor_watcher.py"
+      ],
+      "lines_changed_str": "+724/-0",
+      "has_risks": false,
+      "risk_warnings": []
+    }
+  ],
+  "suggestions": {
+    "suggestions": [
+      {
+        "suggestion": "Add tests for AGENTS.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "AGENTS.md"
+      },
+      {
+        "suggestion": "Add tests for BENCHMARK.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "BENCHMARK.md"
+      },
+      {
+        "suggestion": "Add tests for CLAUDE.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "CLAUDE.md"
+      },
+      {
+        "suggestion": "Consider splitting 'tests' into smaller modules",
+        "reason": "Module has 73 files and 1 dependencies",
+        "priority_label": "⚪ 低优先级",
+        "confidence_label": "30%",
+        "file_path": "/home/ctyun/-Harness-OS/tests"
+      }
+    ]
+  },
+  "task_cards": {
+    "cards": [
+      {
+        "title": "High-risk changes in 'harness'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "",
+        "description": "Module 'harness' has 1063+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: snapshot.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "harness/copilot/monitor/snapshot.py",
+        "description": "File 'harness/copilot/monitor/snapshot.py' flagged: Substantial change (285 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: watcher.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "harness/copilot/monitor/watcher.py",
+        "description": "File 'harness/copilot/monitor/watcher.py' flagged: Substantial change (307 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High-risk changes in 'tests'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "",
+        "description": "Module 'tests' has 724+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'harness'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "",
+        "description": "Added 1063 lines across 11 files",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'tests'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "tests",
+        "target_file": "",
+        "description": "Added 724 lines across 6 files",
+        "is_blocking": false,
+        "risk_label": "✅ 低风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for AGENTS.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "AGENTS.md",
+        "description": "Add tests for AGENTS.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for BENCHMARK.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "BENCHMARK.md",
+        "description": "Add tests for BENCHMARK.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for CLAUDE.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "CLAUDE.md",
+        "description": "Add tests for CLAUDE.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Consider splitting 'tests' into smaller modules",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "⚪ 低优先级",
+        "module": "tests",
+        "target_file": "/home/ctyun/-Harness-OS/tests",
+        "description": "Consider splitting 'tests' into smaller modules\n\nReason: Module has 73 files and 1 dependencies",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      }
+    ],
+    "summary": {
+      "total_cards": 10,
+      "by_type": {
+        "risk_alert": 4,
+        "fix_review": 2,
+        "fix_test": 4
+      },
+      "by_state": {
+        "pending": 10
+      },
+      "by_priority": {
+        "high": 5,
+        "medium": 4,
+        "low": 1
+      },
+      "blocking_count": 2,
+      "summary_line": "10 cards: 10 pending, 0 completed, 2 blocking"
+    }
+  },
+  "readiness": {
+    "state": "block",
+    "state_label": "禁止合并 🔴",
+    "state_icon": "🔴",
+    "summary": "Merge blocked: 6 blocking issue(s). 10 task card(s) still pending. 2 high-risk file(s) detected. Human review recommended.",
+    "blocking_issues": [
+      "BLOCKED: High-risk changes in 'harness' (priority=high)",
+      "BLOCKED: High-risk changes in 'tests' (priority=high)",
+      "BLOCKED: High-risk changes in 'harness' (level=high)",
+      "BLOCKED: High-risk changes in 'tests' (level=high)",
+      "Test results not yet available",
+      "Codex approval pending"
+    ],
+    "is_blocked": true,
+    "is_ready": false,
+    "review_required": true,
+    "pending_cards": 10,
+    "high_risk_count": 2
+  },
+  "evidence": {
+    "pack_id": "pack_387b625d2f91",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "integrity_hash": "d59d7947c30d4ef4cff04af74656b778e0251daa4e024dcb6ab77a78501756e4"
+  },
+  "companion": {
+    "is_active": false,
+    "mode": "idle",
+    "status_text": "等待中",
+    "waiting_since": ""
+  }
+}
