@@ -322,6 +322,52 @@ def _evidence_section_html(evidence_data: Any) -> str:
     return _section_html("evidence", "证据包", "🔐", body)
 
 
+def _agent_state_section_html(agent_state_data: Any) -> str:
+    """Render agent lifecycle state section."""
+    if not agent_state_data:
+        return ""
+    if hasattr(agent_state_data, "to_dict"):
+        agent_state_data = agent_state_data.to_dict()
+    elif not isinstance(agent_state_data, dict):
+        return ""
+
+    state = agent_state_data.get("state", "idle")
+    confidence = agent_state_data.get("confidence", 0.0)
+    summary = agent_state_data.get("summary", "")
+    severity = agent_state_data.get("severity", "low")
+    blocking = agent_state_data.get("blocking", False)
+    source_events = agent_state_data.get("source_events", [])
+    recommended_action = agent_state_data.get("recommended_action", "")
+
+    icon_map = {
+        "idle": "💤", "planning": "📋", "implementing": "🔧",
+        "testing": "🧪", "repairing": "🔨", "reviewing": "👁️",
+        "waiting_for_user": "⏳", "completed": "✅", "failed": "❌", "blocked": "🚫",
+    }
+    icon = icon_map.get(state, "❓")
+    blocking_text = "是 🚫" if blocking else "否 ✅"
+    events_text = ", ".join(source_events[:5]) if source_events else "—"
+    action_text = _escape_html(recommended_action) if recommended_action else "—"
+
+    body = f"""<div class="agent-state-card">
+  <div class="as-header">
+    <span class="as-icon">{icon}</span>
+    <span class="as-state-name">{_escape_html(state.upper())}</span>
+    <span class="as-severity severity-{_escape_html(severity)}">{_escape_html(severity.upper())}</span>
+  </div>
+  <div class="as-summary">{_escape_html(summary)}</div>
+  <div class="as-details">
+    <div class="detail-row"><span class="detail-label">置信度</span><span class="detail-value">{confidence:.0%}</span></div>
+    <div class="detail-row"><span class="detail-label">严重度</span><span class="detail-value">{_escape_html(severity)}</span></div>
+    <div class="detail-row"><span class="detail-label">阻塞合并</span><span class="detail-value">{blocking_text}</span></div>
+    <div class="detail-row"><span class="detail-label">触发事件</span><span class="detail-value">{_escape_html(events_text)}</span></div>
+    <div class="detail-row"><span class="detail-label">建议操作</span><span class="detail-value">{action_text}</span></div>
+  </div>
+</div>"""
+
+    return _section_html("agent-state", "Agent 状态", "🤖", body)
+
+
 def _companion_section_html(companion_data: Any) -> str:
     """Render waiting companion placeholder."""
     if not companion_data:
@@ -406,6 +452,7 @@ def _tab_nav_html(sections: List[str]) -> str:
     """Render tab navigation."""
     icons = {
         "overview": "📊",
+        "agent-state": "🤖",
         "modules": "🧩",
         "changes": "📝",
         "suggestions": "💡",
@@ -417,6 +464,7 @@ def _tab_nav_html(sections: List[str]) -> str:
     }
     labels = {
         "overview": "概览",
+        "agent-state": "Agent状态",
         "modules": "模块",
         "changes": "变更",
         "suggestions": "建议",
@@ -498,7 +546,7 @@ def render_html_dashboard(
         Complete HTML string with embedded CSS and JS.
     """
     sections_order = [
-        "overview", "modules", "changes", "suggestions",
+        "overview", "agent-state", "modules", "changes", "suggestions",
         "task-cards", "readiness", "evidence", "companion",
     ]
     return _build_html(dashboard_state, title, sections_order)
@@ -520,7 +568,7 @@ def render_loop_html_dashboard(
         Complete HTML string with embedded CSS and JS.
     """
     sections_order = [
-        "overview", "loop-detail", "modules", "changes",
+        "overview", "agent-state", "loop-detail", "modules", "changes",
         "task-cards", "readiness", "evidence", "companion",
     ]
     return _build_html(dashboard_state, title, sections_order, loop_artifacts=loop_artifacts)
@@ -553,6 +601,11 @@ def _build_html(
     sections_html["readiness"] = _readiness_section_html(dashboard_state.get("readiness"))
     sections_html["evidence"] = _evidence_section_html(dashboard_state.get("evidence"))
     sections_html["companion"] = _companion_section_html(dashboard_state.get("companion"))
+
+    if dashboard_state.get("agent_state"):
+        sections_html["agent-state"] = _agent_state_section_html(dashboard_state.get("agent_state"))
+    else:
+        sections_html["agent-state"] = ""
 
     if loop_artifacts:
         sections_html["loop-detail"] = _loop_detail_section_html(loop_artifacts)

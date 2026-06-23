@@ -135,3 +135,45 @@ def render_status_line(session) -> str:
         f"监控中 · 已检测 {events_since_start} 个事件 · "
         f"{_ANSI_GREEN}Ctrl+C{_ANSI_RESET} 停止"
     )
+
+
+def render_agent_status(session, color: bool = True) -> str:
+    """Render inferred agent lifecycle state from the monitor session.
+
+    Args:
+        session: MonitorSession with accumulated events.
+        color: Whether to use ANSI color codes.
+
+    Returns:
+        One-line agent status string.
+    """
+    from ..agent_state.inference import infer_latest_from_events
+    from ..agent_state.timeline import summarize_state
+
+    if not session.events:
+        if color:
+            return f"{_ANSI_GRAY}💤 Agent 状态: 待命 (无事件){_ANSI_RESET}"
+        return "💤 Agent 状态: 待命 (无事件)"
+
+    events_dicts = [e.to_dict() for e in session.events]
+    astate = infer_latest_from_events(events_dicts)
+    summary = summarize_state(astate)
+    icon = {
+        "idle": "💤", "planning": "📋", "implementing": "🔧",
+        "testing": "🧪", "repairing": "🔨", "reviewing": "👁️",
+        "waiting_for_user": "⏳", "completed": "✅", "failed": "❌", "blocked": "🚫",
+    }.get(astate.state, "❓")
+
+    if color:
+        severity_color = {
+            "low": _ANSI_GRAY,
+            "medium": _ANSI_YELLOW,
+            "high": _ANSI_RED,
+            "critical": _ANSI_RED + _ANSI_BOLD,
+        }.get(astate.severity, _ANSI_GRAY)
+        return (
+            f"{_ANSI_BOLD}{icon} Agent{_ANSI_RESET} "
+            f"{severity_color}{summary}{_ANSI_RESET} "
+            f"{_ANSI_GRAY}(置信度: {astate.confidence:.0%}){_ANSI_RESET}"
+        )
+    return f"{icon} Agent: {summary} (置信度: {astate.confidence:.0%})"

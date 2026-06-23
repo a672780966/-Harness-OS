@@ -29,6 +29,27 @@ def render_dashboard(dashboard: CopilotDashboardState) -> str:
     lines.append(f"- **整体风险**: {_render_risk_badge(dashboard.overall_risk_level)}")
     lines.append("")
 
+    # Agent State section (Phase 6B)
+    if dashboard.agent_state:
+        astate = dashboard.agent_state
+        icon_map = {
+            "idle": "💤", "planning": "📋", "implementing": "🔧",
+            "testing": "🧪", "repairing": "🔨", "reviewing": "👁️",
+            "waiting_for_user": "⏳", "completed": "✅", "failed": "❌", "blocked": "🚫",
+        }
+        icon = icon_map.get(astate.get("state", ""), "❓")
+        lines.append(f"## Agent 生命周期状态")
+        lines.append("")
+        lines.append(f"{icon} **状态**: {astate.get('summary', '未知')}")
+        lines.append(f"- **置信度**: {astate.get('confidence', 0):.0%}")
+        lines.append(f"- **严重度**: {astate.get('severity', 'low')}")
+        lines.append(f"- **阻塞合并**: {'是 🚫' if astate.get('blocking', False) else '否 ✅'}")
+        if astate.get("source_events"):
+            lines.append(f"- **触发事件**: {', '.join(astate['source_events'][:5])}")
+        if astate.get("recommended_action"):
+            lines.append(f"- **建议操作**: {astate['recommended_action']}")
+        lines.append("")
+
     # Merge readiness
     if dashboard.readiness:
         lines.append(_render_readiness_section(dashboard.readiness))

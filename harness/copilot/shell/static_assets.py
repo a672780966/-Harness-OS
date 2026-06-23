@@ -362,6 +362,67 @@ pre {
   font-size: 13px;
 }
 .detail-value { flex: 1; font-size: 13px; }
+
+/* Agent State Card */
+.agent-state-card {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 20px;
+}
+.agent-state-card .as-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.agent-state-card .as-icon { font-size: 32px; }
+.agent-state-card .as-state-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.agent-state-card .as-severity {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.agent-state-card .as-severity.severity-low { background: #1b362a; color: var(--accent-green); }
+.agent-state-card .as-severity.severity-medium { background: #3b2e0f; color: var(--accent-orange); }
+.agent-state-card .as-severity.severity-high { background: #3b1a18; color: var(--accent-red); }
+.agent-state-card .as-severity.severity-critical { background: #4a0f0d; color: #ff7777; }
+.agent-state-card .as-summary {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+.agent-state-card .as-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+}
+.agent-state-card .as-details .detail-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: none;
+}
+.agent-state-card .as-details .detail-label {
+  flex: 0 0 80px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.agent-state-card .as-details .detail-value {
+  flex: 1;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .agent-state-card .as-details { grid-template-columns: 1fr; }
+}
 """
 
 __all__ = ["DASHBOARD_CSS"]

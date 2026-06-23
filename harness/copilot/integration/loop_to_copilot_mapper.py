@@ -109,6 +109,15 @@ def artifacts_to_dashboard(
     # Waiting companion placeholder
     state.companion = WaitingCompanionViewModel()
 
+    # --- Agent State (Phase 6B) ---
+    from ..agent_state.inference import infer_from_loop_artifacts
+    from ..agent_state.timeline import summarize_state
+    astate = infer_from_loop_artifacts(artifacts)
+    state.agent_state = astate.to_dict()
+    state.agent_phase = astate.state
+    state.agent_phase_label = summarize_state(astate)
+    # ------------------------------
+
     return state
 
 

@@ -6,6 +6,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+import os
+
 from .schemas import (
     ProjectSemanticMap, ModuleCard, AgentExecutionState, AgentPhase,
     RecentChangeExplanation, ChangeSuggestion, TaskCard, MergeReadiness,
@@ -48,6 +50,7 @@ class CopilotDashboardState:
     task_cards: "TaskCardListViewModel | None" = None
     readiness: "MergeReadinessViewModel | None" = None
     evidence: "EvidencePackViewModel | None" = None
+    agent_state: Dict[str, Any] = field(default_factory=dict)
     companion: "WaitingCompanionViewModel | None" = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -68,6 +71,7 @@ class CopilotDashboardState:
             "task_cards": self.task_cards.to_dict() if self.task_cards else None,
             "readiness": self.readiness.to_dict() if self.readiness else None,
             "evidence": self.evidence.to_dict() if self.evidence else None,
+            "agent_state": self.agent_state,
             "companion": self.companion.to_dict() if self.companion else None,
         }
 
@@ -96,9 +100,51 @@ def build_dashboard(project_root: str, diff_ref: str = "HEAD~1") -> CopilotDashb
     else:
         state.branch = "not a git repo"
 
-    # Agent phase (hardcoded to idle for now — real agent state comes from Loop Kernel)
-    state.agent_phase = AgentPhase.IDLE.value
-    state.agent_phase_label = "待命"
+    # --- Agent State Inference (Phase 6B) ---
+    from .agent_state import AgentState, AgentStateEnum, infer_severity
+    from .agent_state.timeline import summarize_state
+    from .agent_state.inference import infer_latest_from_events
+
+    # Build synthetic monitor-like events from project state
+    inference_events: list[dict] = []
+    if state.uncommitted_changes > 0:
+        inference_events.append({
+            "event_type": "project_diff_changed",
+            "summary": f"{state.uncommitted_changes} uncommitted files",
+            "old_value": None,
+            "new_value": state.uncommitted_changes,
+        })
+
+    # Check for test result files
+    test_results_dir = os.path.join(project_root, "test-results")
+    if os.path.isdir(test_results_dir):
+        inference_events.append({
+            "event_type": "test_result_changed",
+            "summary": "test-results directory present",
+            "new_value": "present",
+        })
+
+    # Check for review artifacts
+    review_dir = os.path.join(project_root, "review_envelopes")
+    if os.path.isdir(review_dir):
+        inference_events.append({
+            "event_type": "review_result_changed",
+            "summary": "review envelopes present",
+        })
+
+    # Check for final gate result
+    if os.path.isfile(os.path.join(project_root, "final_gate_result.md")):
+        inference_events.append({
+            "event_type": "final_gate_changed",
+            "summary": "final gate result present",
+            "new_value": "pass",
+        })
+
+    astate = infer_latest_from_events(inference_events)
+    state.agent_state = astate.to_dict()
+    state.agent_phase = astate.state
+    state.agent_phase_label = summarize_state(astate)
+    # ----------------------------------------
 
     # Module ViewModels
     for mod in sem_map.modules:

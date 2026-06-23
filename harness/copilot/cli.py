@@ -6,6 +6,8 @@ Usage:
   harness copilot diff-summary <project_path> [--diff-ref=<ref>]
   harness copilot task-card <project_path> [--diff-ref=<ref>]
   harness copilot readiness <project_path> [--diff-ref=<ref>]
+  harness copilot agent-state <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+  harness copilot agent-state-from-loop <loop_run_dir> [--format=markdown|json]
 
 All commands are read-only. No code modification, no external agent control.
 """
@@ -541,6 +543,58 @@ def cmd_preview(args: argparse.Namespace) -> None:
     serve_preview(directory=args.dashboard_dir, port=args.port)
 
 
+# =================== Phase 6B: Agent State CLI Commands ====================
+
+
+def cmd_agent_state(args: argparse.Namespace) -> None:
+    """Show inferred agent lifecycle state for a project."""
+    from harness.copilot.view_models import build_dashboard
+    from harness.copilot.agent_state.renderer import render_agent_state
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    dashboard = build_dashboard(project_root, diff_ref=args.diff_ref)
+    agent_state_dict = dashboard.agent_state
+
+    if not agent_state_dict:
+        from harness.copilot.agent_state import AgentState
+        agent_state_dict = AgentState().to_dict()
+
+    # Convert dict back to AgentState for the renderer
+    from harness.copilot.agent_state import AgentState as AS
+    astate = AS(
+        state=agent_state_dict.get("state", "idle"),
+        confidence=agent_state_dict.get("confidence", 0.0),
+        source_events=agent_state_dict.get("source_events", []),
+        summary=agent_state_dict.get("summary", ""),
+        recommended_action=agent_state_dict.get("recommended_action", ""),
+        severity=agent_state_dict.get("severity", "low"),
+        blocking=agent_state_dict.get("blocking", False),
+        timestamp=agent_state_dict.get("timestamp", ""),
+    )
+
+    print(render_agent_state(astate, format=args.format))
+
+
+def cmd_agent_state_from_loop(args: argparse.Namespace) -> None:
+    """Show inferred agent lifecycle state from a loop run directory."""
+    from harness.copilot.agent_state.inference import infer_from_loop_artifacts
+    from harness.copilot.agent_state.renderer import render_agent_state
+    from harness.copilot.integration.loop_artifact_loader import load_loop_artifacts
+
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    artifacts = load_loop_artifacts(run_dir)
+    astate = infer_from_loop_artifacts(artifacts)
+    print(render_agent_state(astate, format=args.format))
+
+
 # =================== Phase 5: Monitor Commands ====================
 
 
@@ -552,6 +606,7 @@ def cmd_monitor(args: argparse.Namespace) -> None:
         render_startup_message,
         render_event,
         render_status_line,
+        render_agent_status,
     )
     from harness.copilot.monitor.dashboard_refresher import refresh_dashboard
 
@@ -565,6 +620,9 @@ def cmd_monitor(args: argparse.Namespace) -> None:
 
     def on_event(event: MonitorEvent) -> None:
         print(render_event(event))
+        # Show agent state after each event
+        if watcher.session:
+            print(f"  {render_agent_status(watcher.session)}")
         # Optionally refresh dashboard
         if out_dir and watcher.session:
             refresh_dashboard(out_dir, watcher.session, project_root=project_root)
@@ -578,6 +636,8 @@ def cmd_monitor(args: argparse.Namespace) -> None:
         watcher.run(max_polls=1 if getattr(args, 'once', False) else None)
     except KeyboardInterrupt:
         print(f"\n  {render_status_line(watcher.session)}")
+        if watcher.session:
+            print(f"  {render_agent_status(watcher.session)}")
         print("  监控已停止。")
 
     if out_dir:
@@ -593,6 +653,7 @@ def cmd_monitor_loop(args: argparse.Namespace) -> None:
         render_startup_message,
         render_event,
         render_status_line,
+        render_agent_status,
     )
     from harness.copilot.monitor.dashboard_refresher import refresh_dashboard
 
@@ -606,6 +667,9 @@ def cmd_monitor_loop(args: argparse.Namespace) -> None:
 
     def on_event(event) -> None:
         print(render_event(event))
+        # Show agent state after each event
+        if watcher.session:
+            print(f"  {render_agent_status(watcher.session)}")
         if out_dir and watcher.session:
             refresh_dashboard(out_dir, watcher.session, loop_run_dir=run_dir)
 
@@ -618,6 +682,8 @@ def cmd_monitor_loop(args: argparse.Namespace) -> None:
         watcher.run(max_polls=1 if getattr(args, 'once', False) else None)
     except KeyboardInterrupt:
         print(f"\n  {render_status_line(watcher.session)}")
+        if watcher.session:
+            print(f"  {render_agent_status(watcher.session)}")
         print("  监控已停止。")
 
     if out_dir:
@@ -740,6 +806,23 @@ def main() -> None:
     p_preview.add_argument("dashboard_dir", help="Path to dashboard output directory")
     p_preview.add_argument("--port", type=int, default=8080, help="Local port (default: 8080)")
     p_preview.set_defaults(func=cmd_preview)
+
+    # ==================== Phase 6B: Agent State Commands ====================
+
+    # agent-state
+    p_as = subparsers.add_parser("agent-state", help="Show inferred agent lifecycle state (Phase 6B)")
+    p_as.add_argument("project_path", help="Path to project root")
+    p_as.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_as.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_as.set_defaults(func=cmd_agent_state)
+
+    # agent-state-from-loop
+    p_asfl = subparsers.add_parser("agent-state-from-loop", help="Show agent state from loop artifacts (Phase 6B)")
+    p_asfl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_asfl.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                        help="Output format (default: markdown)")
+    p_asfl.set_defaults(func=cmd_agent_state_from_loop)
 
     # ==================== Phase 5: Monitor Commands ====================
 
