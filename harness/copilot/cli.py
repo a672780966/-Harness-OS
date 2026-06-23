@@ -12,6 +12,7 @@ Usage:
   harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]
   harness copilot pr-comment <project_path> [--format=markdown|json]
   harness copilot pr-comment-from-loop <loop_run_dir> [--format=markdown|json]
+  harness copilot provider-status [--check] [--format=markdown|json]
 
 All commands are read-only. No code modification, no external agent control.
 """
@@ -677,6 +678,61 @@ def cmd_pr_comment_from_loop(args: argparse.Namespace) -> None:
     print(render_pr_comment(pack, format=args.format))
 
 
+# =================== Provider Reliability Guard Commands ====================
+
+
+def cmd_provider_status(args: argparse.Namespace) -> None:
+    """Show provider reliability guard status."""
+    from harness.copilot.provider_guard import (
+        get_diagnosis_summary,
+        is_provider_degraded,
+        run_canary_check,
+    )
+
+    summary = get_diagnosis_summary()
+
+    if args.check:
+        print("🔄 Running canary check...", file=sys.stderr)
+        success, detail, _ = run_canary_check()
+        summary = get_diagnosis_summary()
+        print(f"   {'✅' if success else '❌'} {detail}", file=sys.stderr)
+        print(file=sys.stderr)
+
+    state_icon = {
+        "healthy": "✅",
+        "degraded": "⚠️ ",
+        "failed": "❌",
+        "unknown": "❓",
+    }.get(summary["provider_health_state"], "❓")
+
+    print(f"{state_icon} Provider Reliability Guard Status")
+    print(f"   State:                {summary['provider_health_state']}")
+    print(f"   Model:                {summary['model'] or '(not set)'}")
+    print(f"   Degraded:             {summary['degraded']}")
+    print(f"   Can proceed to Phase: {summary['can_proceed_to_long_phase']}")
+    print(f"")
+    print(f"   Endpoint check:       {summary['endpoint_healthcheck']}")
+    print(f"   Model inference:      {summary['model_inference_healthcheck']}")
+    print(f"   Failure type:         {summary['failure_type']}")
+    print(f"")
+    print(f"   Consecutive failures: {summary['consecutive_failures']}")
+    print(f"   Last check:           {summary['last_check_at'] or '(never)'}")
+    print(f"   Last success:         {summary['last_success_at'] or '(never)'}")
+    print(f"   Last failure:         {summary['last_failure_at'] or '(never)'}")
+    if summary["last_failure_detail"]:
+        print(f"   Last failure detail:  {summary['last_failure_detail']}")
+    if summary["last_failure_has_http_status"]:
+        print(f"   Last HTTP status:     {summary['last_failure_http_status']}")
+    print(f"")
+    print(f"   Guard config:")
+    for k, v in summary["guard_config"].items():
+        print(f"     {k}: {v}")
+
+    if args.format == "json" or args.json:
+        import json as _json
+        print(_json.dumps(summary, indent=2, ensure_ascii=False))
+
+
 # =================== Phase 5: Monitor Commands ====================
 
 
@@ -935,6 +991,13 @@ def main() -> None:
     p_pcfl.add_argument("--format", choices=["markdown", "json"], default="markdown",
                         help="Output format (default: markdown)")
     p_pcfl.set_defaults(func=cmd_pr_comment_from_loop)
+
+    # Provider Reliability Guard
+    p_ps = subparsers.add_parser("provider-status", help="Show provider reliability guard status")
+    p_ps.add_argument("--check", action="store_true", help="Force a canary check")
+    p_ps.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_ps.set_defaults(func=cmd_provider_status)
 
     # ==================== Phase 5: Monitor Commands ====================
 
