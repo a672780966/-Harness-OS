@@ -12,7 +12,9 @@ Usage:
   harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]
   harness copilot pr-comment <project_path> [--format=markdown|json]
   harness copilot pr-comment-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot provider-status [--check] [--format=markdown|json]
+  harness copilot live-events <project_path>
+  harness copilot live-events-from-loop <loop_run_dir>
+  harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]
 
 All commands are read-only. No code modification, no external agent control.
 """
@@ -678,6 +680,104 @@ def cmd_pr_comment_from_loop(args: argparse.Namespace) -> None:
     print(render_pr_comment(pack, format=args.format))
 
 
+# =================== Phase 8A: Live Event Stream Commands ====================
+
+
+def cmd_live_events(args: argparse.Namespace) -> None:
+    """Capture current project state as live event(s)."""
+    from harness.copilot.live.project_stream import capture_project_live_events
+    from harness.copilot.live.renderer import render_events_json
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    events = capture_project_live_events(project_root, diff_ref=args.diff_ref)
+    print(render_events_json(events))
+
+
+def cmd_live_events_from_loop(args: argparse.Namespace) -> None:
+    """Capture current loop artifact state as live event(s)."""
+    from harness.copilot.live.loop_stream import capture_loop_live_events
+    from harness.copilot.live.renderer import render_events_json
+
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    events = capture_loop_live_events(run_dir)
+    print(render_events_json(events))
+
+
+def cmd_live_server(args: argparse.Namespace) -> None:
+    """Start local-only SSE live event server."""
+    from harness.copilot.live.sse_server import serve
+
+    host = args.host
+    if host != "127.0.0.1":
+        print("Warning: live-server is local-only. Forcing 127.0.0.1.", file=sys.stderr)
+        host = "127.0.0.1"
+
+    # Populate event bus with initial project state
+    project_root = os.path.abspath(args.project_path)
+    if os.path.isdir(project_root):
+        from harness.copilot.live.project_stream import capture_project_live_events
+        capture_project_live_events(project_root, bus=None)
+
+    serve(host=host, port=args.port, once=args.once)
+
+
+# =================== Phase 8B: Live Dashboard UI Commands ====================
+
+
+def cmd_live_dashboard(args: argparse.Namespace) -> None:
+    """Generate a live dashboard HTML page for a project."""
+    from harness.copilot.live.live_dashboard import build_live_dashboard
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    out_dir = os.path.abspath(args.out) if args.out else os.path.join(project_root, ".harness", "live_dashboard")
+    result = build_live_dashboard(project_root, diff_ref=args.diff_ref, output_dir=out_dir)
+
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✅ Live dashboard generated")
+    print(f"   路径: file://{result['html_path']}")
+    print(f"   JSON: {result['json_path']}")
+    print(f"   输出目录: {result['output_dir']}")
+    print(f"   初始事件数: {len(result.get('initial_state', {}).get('events', []))}")
+
+
+def cmd_live_dashboard_from_loop(args: argparse.Namespace) -> None:
+    """Generate a live dashboard HTML page from a loop run directory."""
+    from harness.copilot.live.live_dashboard import build_live_dashboard_from_loop
+
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    out_dir = os.path.abspath(args.out) if args.out else os.path.join(run_dir, "..", "..", "live_dashboard")
+    out_dir = os.path.abspath(out_dir)
+    result = build_live_dashboard_from_loop(run_dir, output_dir=out_dir)
+
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✅ Live loop dashboard generated")
+    print(f"   路径: file://{result['html_path']}")
+    print(f"   JSON: {result['json_path']}")
+    print(f"   输出目录: {result['output_dir']}")
+
+
 # =================== Provider Reliability Guard Commands ====================
 
 
@@ -991,6 +1091,42 @@ def main() -> None:
     p_pcfl.add_argument("--format", choices=["markdown", "json"], default="markdown",
                         help="Output format (default: markdown)")
     p_pcfl.set_defaults(func=cmd_pr_comment_from_loop)
+
+    # ==================== Phase 8A: Live Event Stream Commands ====================
+
+    # live-events
+    p_le = subparsers.add_parser("live-events", help="Capture project live events (Phase 8A)")
+    p_le.add_argument("project_path", help="Path to project root")
+    p_le.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_le.set_defaults(func=cmd_live_events)
+
+    # live-events-from-loop
+    p_lefl = subparsers.add_parser("live-events-from-loop", help="Capture loop live events (Phase 8A)")
+    p_lefl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_lefl.set_defaults(func=cmd_live_events_from_loop)
+
+    # live-server
+    p_ls = subparsers.add_parser("live-server", help="Start local SSE live event server (Phase 8A)")
+    p_ls.add_argument("project_path", help="Path to project root")
+    p_ls.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+    p_ls.add_argument("--port", type=int, default=8765, help="Listen port (default: 8765)")
+    p_ls.add_argument("--once", action="store_true", help="Handle one request then exit")
+    p_ls.set_defaults(func=cmd_live_server)
+
+    # ==================== Phase 8B: Live Dashboard UI Commands ====================
+
+    # live-dashboard
+    p_ld = subparsers.add_parser("live-dashboard", help="Generate live dashboard HTML (Phase 8B)")
+    p_ld.add_argument("project_path", help="Path to project root")
+    p_ld.add_argument("--out", "-o", default=None, help="Output directory")
+    p_ld.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_ld.set_defaults(func=cmd_live_dashboard)
+
+    # live-dashboard-from-loop
+    p_ldfl = subparsers.add_parser("live-dashboard-from-loop", help="Generate live dashboard from loop (Phase 8B)")
+    p_ldfl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_ldfl.add_argument("--out", "-o", default=None, help="Output directory")
+    p_ldfl.set_defaults(func=cmd_live_dashboard_from_loop)
 
     # Provider Reliability Guard
     p_ps = subparsers.add_parser("provider-status", help="Show provider reliability guard status")
