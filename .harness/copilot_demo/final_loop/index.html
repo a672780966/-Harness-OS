@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness Code Copilot — Loop Run Dashboard</title>
+<style>
+/* Harness Code Copilot Dashboard — Dark Theme */
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --accent-blue: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-red: #f85149;
+  --accent-orange: #d29922;
+  --accent-purple: #bc8cff;
+  --accent-cyan: #39d2c0;
+  --pass-color: #3fb950;
+  --block-color: #f85149;
+  --review-color: #d29922;
+  --code-bg: #1c2128;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  padding: 0;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* Header */
+.header {
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.header .meta {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.header .meta span { margin-right: 20px; }
+
+/* Risk badges */
+.risk-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.risk-badge.low { background: #1b362a; color: var(--accent-green); }
+.risk-badge.medium { background: #3b2e0f; color: var(--accent-orange); }
+.risk-badge.high, .risk-badge.critical { background: #3b1a18; color: var(--accent-red); }
+.risk-badge.unknown { background: var(--bg-tertiary); color: var(--text-muted); }
+
+/* Section */
+.section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-body { padding: 16px 20px; }
+
+/* Merge readiness card */
+.readiness-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.readiness-card .icon { font-size: 36px; }
+.readiness-card .status { font-size: 20px; font-weight: 600; }
+.readiness-card .summary { font-size: 14px; color: var(--text-secondary); }
+
+.readiness-card.pass { background: #1b362a; border: 1px solid #2d6a3f; }
+.readiness-card.block { background: #3b1a18; border: 1px solid #6b2a26; }
+.readiness-card.review_needed { background: #3b2e0f; border: 1px solid #6b5516; }
+
+/* Issues list */
+.issues-list { margin-top: 12px; }
+.issue-item {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--accent-red);
+}
+
+/* Grids */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Stat cards */
+.stat-card {
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .value {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.stat-card .label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+/* Module card */
+.module-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.module-card .module-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.module-card .module-details { font-size: 13px; color: var(--text-secondary); }
+.module-card .module-details p { margin: 4px 0; }
+.module-card .hr-files { margin-top: 8px; }
+.module-card .hr-file {
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+/* Change item */
+.change-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.change-item:last-child { border-bottom: none; }
+.change-item .change-module {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.change-item .change-summary { font-size: 14px; color: var(--text-secondary); }
+.change-item .change-intent {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--accent-blue);
+  margin-top: 4px;
+}
+
+/* Task card */
+.task-card {
+  background: var(--bg-tertiary);
+  border-left: 4px solid var(--accent-blue);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.task-card.blocking { border-left-color: var(--accent-red); }
+.task-card .tc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.task-card .tc-title { font-size: 16px; font-weight: 600; }
+.task-card .tc-type {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--accent-blue);
+  color: #fff;
+}
+.task-card.blocking .tc-type { background: var(--accent-red); }
+.task-card .tc-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+.task-card .tc-meta { font-size: 12px; color: var(--text-muted); }
+.task-card .tc-meta span { margin-right: 12px; }
+
+/* Suggestion */
+.suggestion-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item .sugg-text { font-size: 14px; margin-bottom: 4px; }
+.suggestion-item .sugg-reason { font-size: 13px; color: var(--text-secondary); }
+
+/* Evidence */
+.evidence-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.evidence-stat {
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+.evidence-stat .ev-value { font-size: 24px; font-weight: 700; }
+.evidence-stat .ev-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+.evidence-stat.pass .ev-value { color: var(--accent-green); }
+.evidence-stat.fail .ev-value { color: var(--accent-red); }
+
+/* Companion placeholder */
+.companion-placeholder {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+.companion-placeholder .companion-icon { font-size: 48px; margin-bottom: 12px; }
+.companion-placeholder p { font-size: 14px; margin-top: 8px; }
+
+/* Code blocks */
+code, pre {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+}
+pre {
+  background: var(--code-bg);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Tab navigation */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.tab-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.tab-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+}
+
+/* Copy button */
+.copy-btn {
+  float: right;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.copy-btn:hover { background: var(--accent-blue); color: #fff; }
+
+/* Waiting status indicator */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.status-dot.active { background: var(--accent-green); animation: pulse 2s infinite; }
+.status-dot.idle { background: var(--text-muted); }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Export box */
+.export-box {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.export-box pre {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Detail label/value */
+.detail-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label {
+  flex: 0 0 180px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.detail-value { flex: 1; font-size: 13px; }
+
+/* Agent State Card */
+.agent-state-card {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 20px;
+}
+.agent-state-card .as-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.agent-state-card .as-icon { font-size: 32px; }
+.agent-state-card .as-state-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.agent-state-card .as-severity {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.agent-state-card .as-severity.severity-low { background: #1b362a; color: var(--accent-green); }
+.agent-state-card .as-severity.severity-medium { background: #3b2e0f; color: var(--accent-orange); }
+.agent-state-card .as-severity.severity-high { background: #3b1a18; color: var(--accent-red); }
+.agent-state-card .as-severity.severity-critical { background: #4a0f0d; color: #ff7777; }
+.agent-state-card .as-summary {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+.agent-state-card .as-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+}
+.agent-state-card .as-details .detail-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: none;
+}
+.agent-state-card .as-details .detail-label {
+  flex: 0 0 80px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.agent-state-card .as-details .detail-value {
+  flex: 1;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .agent-state-card .as-details { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="tabs"><button class="tab-btn active" data-tab="overview">📊 概览</button><button class="tab-btn " data-tab="agent-state">🤖 Agent状态</button><button class="tab-btn " data-tab="loop-detail">🔄 Loop详情</button><button class="tab-btn " data-tab="modules">🧩 模块</button><button class="tab-btn " data-tab="changes">📝 变更</button><button class="tab-btn " data-tab="task-cards">📋 任务卡</button><button class="tab-btn " data-tab="readiness">🔀 合并就绪</button><button class="tab-btn " data-tab="evidence">🔐 证据</button><button class="tab-btn " data-tab="companion">⏳ 等待陪伴</button></div>
+<div id="tab-overview" class="tab-content active">
+<div class="section"><div class="header">
+  <h1>Harness Code Copilot Dashboard</h1>
+  <div class="meta">
+    <span>📁 django__django-11885</span>
+    <span>🔀 tier_C</span>
+    <span>🤖 阻塞 — 检查 review 意见并修复</span>
+    <span>📄 0 未提交</span>
+    <span>🧩 1 模块</span>
+    <span><span class="risk-badge low">LOW</span></span>
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">生成: 2026-06-23T11:04:21.317547+00:00 | 路径: <code>/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full</code></div>
+</div><div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"><div class="stat-card"><div class="value">1</div><div class="label">模块</div></div><div class="stat-card"><div class="value" style="color:var(--accent-orange)">0</div><div class="label">未提交文件</div></div><div class="stat-card"><div class="value">1</div><div class="label">任务卡</div></div><div class="stat-card"><div class="value" style="color:var(--accent-cyan)">4</div><div class="label">证据条目</div></div></div><div class="readiness-card pass">
+  <div class="icon">✅</div>
+  <div>
+    <div class="status">可以合并 ✅</div>
+    <div class="summary">✅ Final Gate 已通过，可以准备合并。</div>
+    
+  </div>
+</div></div>
+</div>
+<div id="tab-agent-state" class="tab-content">
+<div class="section">
+  <div class="section-header">🤖 Agent 状态</div>
+  <div class="section-body">
+<div class="agent-state-card">
+  <div class="as-header">
+    <span class="as-icon">🚫</span>
+    <span class="as-state-name">BLOCKED</span>
+    <span class="as-severity severity-critical">CRITICAL</span>
+  </div>
+  <div class="as-summary">Codex 审查拒绝，需要修复 review blocking issue</div>
+  <div class="as-details">
+    <div class="detail-row"><span class="detail-label">置信度</span><span class="detail-value">90%</span></div>
+    <div class="detail-row"><span class="detail-label">严重度</span><span class="detail-value">critical</span></div>
+    <div class="detail-row"><span class="detail-label">阻塞合并</span><span class="detail-value">是 🚫</span></div>
+    <div class="detail-row"><span class="detail-label">触发事件</span><span class="detail-value">final_gate_result, final_review_envelope</span></div>
+    <div class="detail-row"><span class="detail-label">建议操作</span><span class="detail-value">检查 review 意见并修复</span></div>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-loop-detail" class="tab-content">
+<div class="section">
+  <div class="section-header">🔄 Loop 运行详情</div>
+  <div class="section-body">
+<div class="detail-row"><div class="detail-label">运行目录</div><div class="detail-value"><code>/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full</code></div></div>
+<div class="detail-row"><div class="detail-label">已加载 Artifacts</div><div class="detail-value">无</div></div>
+<div class="detail-row"><div class="detail-label">Metrics</div><div class="detail-value">instance_id: django__django-11885 | task_id: swebench_abc_mini_pilot_001 | tier: C | difficulty: hard | tier_type: harness_real_loop | full_real_loop: True</div></div>
+<div class="detail-row"><div class="detail-label">加载错误</div><div class="detail-value">0</div></div>
+
+  </div>
+</div>
+</div>
+<div id="tab-modules" class="tab-content">
+<div class="section">
+  <div class="section-header">🧩 模块卡片</div>
+  <div class="section-body">
+<div class="module-card">
+  <div class="module-name">
+    <span>django-11885</span>
+    <span><span class="risk-badge low">LOW</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 4 文件 | 🗣 Python</p>
+    <p>✅ 低风险 — django__django-11885 执行通过</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-changes" class="tab-content">
+<div class="section">
+  <div class="section-header">📝 最近修改</div>
+  <div class="section-body">
+<div class="change-item">
+  <div class="change-module">django__django-11885</div>
+  <div class="change-summary">Loop: real_loop_complete (4 files, patch: 91 lines)</div>
+  <span class="change-intent">Agent 完成循环并获批准，可以准备合并</span>
+  <span style="margin-left:8px;font-size:12px;color:var(--text-muted)">📄 无 | +91</span>
+  
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-task-cards" class="tab-content">
+<div class="section">
+  <div class="section-header">📋 任务卡</div>
+  <div class="section-body">
+<div class="task-card blocking">
+  <div class="tc-header">
+    <div class="tc-title">修复回合 round_1 (Eval-triggered)</div>
+    <div class="tc-type">fix_test</div>
+  </div>
+  <div class="tc-desc">修复回合 round_1: 测试结果 0/0 通过 ❌</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 django__django-11885</span>
+    
+    <span>🚫 阻塞合并</span>
+    <span>🟠 高风险</span>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-readiness" class="tab-content">
+<div class="section">
+  <div class="section-header">🔀 合并就绪度</div>
+  <div class="section-body">
+<div class="readiness-card pass">
+  <div class="icon">✅</div>
+  <div>
+    <div class="status">可以合并 ✅</div>
+    <div class="summary">✅ Final Gate 已通过，可以准备合并。</div>
+    
+  </div>
+</div><div class="grid-3" style="margin-top:12px">
+  <div class="stat-card"><div class="value" style="color:var(--accent-green)">无需审查</div><div class="label">审查要求</div></div>
+  <div class="stat-card"><div class="value" style="color:var(--accent-green)">0</div><div class="label">待处理卡</div></div>
+  <div class="stat-card"><div class="value" style="color:var(--accent-green)">0</div><div class="label">高风险文件</div></div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-evidence" class="tab-content">
+<div class="section">
+  <div class="section-header">🔐 证据包</div>
+  <div class="section-body">
+<div class="evidence-grid">
+  <div class="evidence-stat"><div class="ev-value">4</div><div class="ev-label">总计</div></div>
+  <div class="evidence-stat pass"><div class="ev-value">4</div><div class="ev-label">通过</div></div>
+  <div class="evidence-stat fail"><div class="ev-value">0</div><div class="ev-label">失败</div></div>
+  <div class="evidence-stat"><div class="ev-value" style="font-size:14px;word-break:break-all">4304830bc4499024...</div><div class="ev-label">SHA256</div></div>
+</div>
+<div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+  <code>Pack: pack_bfd0cc22407f</code>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-companion" class="tab-content">
+<div class="section">
+  <div class="section-header">⏳ 等待陪伴</div>
+  <div class="section-body">
+<div class="companion-placeholder">
+  <div class="companion-icon">⏳</div>
+  <div>
+    <span class="status-dot idle"></span>
+    <strong>等待中</strong>
+    <span style="color:var(--text-muted);font-size:13px;margin-left:8px">(idle)</span>
+  </div>
+  <p>等待陪伴模式尚未接入音乐服务。当前仅显示 Agent / 项目状态提醒占位。</p>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:4px">仅占位 — 无音乐 API · 无音频播放 · 无凭据 · 无下载缓存</p>
+  
+</div>
+  </div>
+</div>
+</div>
+
+
+<script id="dashboard-data" type="application/json">
+{
+  "project_name": "django__django-11885",
+  "project_root": "/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full",
+  "branch": "tier_C",
+  "overall_risk_level": "low",
+  "risk_color": "green",
+  "agent_phase": "blocked",
+  "agent_phase_label": "阻塞 — 检查 review 意见并修复",
+  "uncommitted_changes": 0,
+  "module_count": 1,
+  "generated_at": "2026-06-23T11:04:21.317547+00:00",
+  "modules": [
+    {
+      "name": "django-11885",
+      "file_count": 4,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.1,
+      "risk_description": "✅ 低风险 — django__django-11885 执行通过",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": "django__django-11885",
+      "summary": "Loop: real_loop_complete (4 files, patch: 91 lines)",
+      "intent": "Agent 完成循环并获批准，可以准备合并",
+      "files_changed": [],
+      "lines_changed_str": "+91",
+      "has_risks": false,
+      "risk_warnings": []
+    }
+  ],
+  "suggestions": null,
+  "task_cards": {
+    "cards": [
+      {
+        "title": "修复回合 round_1 (Eval-triggered)",
+        "card_type": "fix_test",
+        "state": "blocked",
+        "priority_label": "🟠 高优先级",
+        "module": "django__django-11885",
+        "target_file": "",
+        "description": "修复回合 round_1: 测试结果 0/0 通过 ❌",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "🚫 已阻塞"
+      }
+    ],
+    "summary": {
+      "total_cards": 1,
+      "blocking_count": 1,
+      "by_state": {
+        "pending": 0
+      }
+    }
+  },
+  "readiness": {
+    "state": "pass",
+    "state_label": "可以合并 ✅",
+    "state_icon": "✅",
+    "summary": "✅ Final Gate 已通过，可以准备合并。",
+    "blocking_issues": [],
+    "is_blocked": false,
+    "is_ready": true,
+    "review_required": false,
+    "pending_cards": 0,
+    "high_risk_count": 0
+  },
+  "evidence": {
+    "pack_id": "pack_bfd0cc22407f",
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "integrity_hash": "4304830bc44990249303b7e2153fe7ebdc8f71df1b7b6e7b914b491f5b147be1"
+  },
+  "agent_state": {
+    "state": "blocked",
+    "confidence": 0.9,
+    "source_events": [
+      "final_gate_result",
+      "final_review_envelope"
+    ],
+    "summary": "Codex 审查拒绝，需要修复 review blocking issue",
+    "recommended_action": "检查 review 意见并修复",
+    "severity": "critical",
+    "blocking": true,
+    "timestamp": ""
+  },
+  "companion": {
+    "is_active": false,
+    "mode": "idle",
+    "status_text": "等待中",
+    "waiting_since": ""
+  }
+}
+</script>
+
+</div>
+<div class="footer">
+Harness Code Copilot — Read-only Local Dashboard &middot; 无外部服务 &middot; 无自动修改 &middot; 仅供查看
+</div>
+<script>
+(function() {
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      var tab = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+      if (tab) tab.classList.add('active');
+    });
+  });
+  // Copy button handler
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      if (target) {
+        var text = target.textContent;
+        navigator.clipboard.writeText(text).then(function() {
+          btn.textContent = '已复制!';
+          setTimeout(function() { btn.textContent = '复制'; }, 2000);
+        });
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

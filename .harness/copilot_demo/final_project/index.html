@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness Code Copilot Dashboard</title>
+<style>
+/* Harness Code Copilot Dashboard — Dark Theme */
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --accent-blue: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-red: #f85149;
+  --accent-orange: #d29922;
+  --accent-purple: #bc8cff;
+  --accent-cyan: #39d2c0;
+  --pass-color: #3fb950;
+  --block-color: #f85149;
+  --review-color: #d29922;
+  --code-bg: #1c2128;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  padding: 0;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* Header */
+.header {
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.header .meta {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.header .meta span { margin-right: 20px; }
+
+/* Risk badges */
+.risk-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.risk-badge.low { background: #1b362a; color: var(--accent-green); }
+.risk-badge.medium { background: #3b2e0f; color: var(--accent-orange); }
+.risk-badge.high, .risk-badge.critical { background: #3b1a18; color: var(--accent-red); }
+.risk-badge.unknown { background: var(--bg-tertiary); color: var(--text-muted); }
+
+/* Section */
+.section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-body { padding: 16px 20px; }
+
+/* Merge readiness card */
+.readiness-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.readiness-card .icon { font-size: 36px; }
+.readiness-card .status { font-size: 20px; font-weight: 600; }
+.readiness-card .summary { font-size: 14px; color: var(--text-secondary); }
+
+.readiness-card.pass { background: #1b362a; border: 1px solid #2d6a3f; }
+.readiness-card.block { background: #3b1a18; border: 1px solid #6b2a26; }
+.readiness-card.review_needed { background: #3b2e0f; border: 1px solid #6b5516; }
+
+/* Issues list */
+.issues-list { margin-top: 12px; }
+.issue-item {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--accent-red);
+}
+
+/* Grids */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Stat cards */
+.stat-card {
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .value {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.stat-card .label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+/* Module card */
+.module-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.module-card .module-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.module-card .module-details { font-size: 13px; color: var(--text-secondary); }
+.module-card .module-details p { margin: 4px 0; }
+.module-card .hr-files { margin-top: 8px; }
+.module-card .hr-file {
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+/* Change item */
+.change-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.change-item:last-child { border-bottom: none; }
+.change-item .change-module {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.change-item .change-summary { font-size: 14px; color: var(--text-secondary); }
+.change-item .change-intent {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  background: var(--bg-tertiary);
+  color: var(--accent-blue);
+  margin-top: 4px;
+}
+
+/* Task card */
+.task-card {
+  background: var(--bg-tertiary);
+  border-left: 4px solid var(--accent-blue);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.task-card.blocking { border-left-color: var(--accent-red); }
+.task-card .tc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.task-card .tc-title { font-size: 16px; font-weight: 600; }
+.task-card .tc-type {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--accent-blue);
+  color: #fff;
+}
+.task-card.blocking .tc-type { background: var(--accent-red); }
+.task-card .tc-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+.task-card .tc-meta { font-size: 12px; color: var(--text-muted); }
+.task-card .tc-meta span { margin-right: 12px; }
+
+/* Suggestion */
+.suggestion-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item .sugg-text { font-size: 14px; margin-bottom: 4px; }
+.suggestion-item .sugg-reason { font-size: 13px; color: var(--text-secondary); }
+
+/* Evidence */
+.evidence-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.evidence-stat {
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+.evidence-stat .ev-value { font-size: 24px; font-weight: 700; }
+.evidence-stat .ev-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+.evidence-stat.pass .ev-value { color: var(--accent-green); }
+.evidence-stat.fail .ev-value { color: var(--accent-red); }
+
+/* Companion placeholder */
+.companion-placeholder {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+.companion-placeholder .companion-icon { font-size: 48px; margin-bottom: 12px; }
+.companion-placeholder p { font-size: 14px; margin-top: 8px; }
+
+/* Code blocks */
+code, pre {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+}
+pre {
+  background: var(--code-bg);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Tab navigation */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.tab-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.tab-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+}
+
+/* Copy button */
+.copy-btn {
+  float: right;
+  padding: 4px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+.copy-btn:hover { background: var(--accent-blue); color: #fff; }
+
+/* Waiting status indicator */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.status-dot.active { background: var(--accent-green); animation: pulse 2s infinite; }
+.status-dot.idle { background: var(--text-muted); }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Export box */
+.export-box {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.export-box pre {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Detail label/value */
+.detail-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-label {
+  flex: 0 0 180px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.detail-value { flex: 1; font-size: 13px; }
+
+/* Agent State Card */
+.agent-state-card {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 20px;
+}
+.agent-state-card .as-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.agent-state-card .as-icon { font-size: 32px; }
+.agent-state-card .as-state-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.agent-state-card .as-severity {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.agent-state-card .as-severity.severity-low { background: #1b362a; color: var(--accent-green); }
+.agent-state-card .as-severity.severity-medium { background: #3b2e0f; color: var(--accent-orange); }
+.agent-state-card .as-severity.severity-high { background: #3b1a18; color: var(--accent-red); }
+.agent-state-card .as-severity.severity-critical { background: #4a0f0d; color: #ff7777; }
+.agent-state-card .as-summary {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+.agent-state-card .as-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+}
+.agent-state-card .as-details .detail-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: none;
+}
+.agent-state-card .as-details .detail-label {
+  flex: 0 0 80px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.agent-state-card .as-details .detail-value {
+  flex: 1;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .agent-state-card .as-details { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="tabs"><button class="tab-btn active" data-tab="overview">📊 概览</button><button class="tab-btn " data-tab="agent-state">🤖 Agent状态</button><button class="tab-btn " data-tab="modules">🧩 模块</button><button class="tab-btn " data-tab="changes">📝 变更</button><button class="tab-btn " data-tab="suggestions">💡 建议</button><button class="tab-btn " data-tab="task-cards">📋 任务卡</button><button class="tab-btn " data-tab="readiness">🔀 合并就绪</button><button class="tab-btn " data-tab="evidence">🔐 证据</button><button class="tab-btn " data-tab="companion">⏳ 等待陪伴</button></div>
+<div id="tab-overview" class="tab-content active">
+<div class="section"><div class="header">
+  <h1>Harness Code Copilot Dashboard</h1>
+  <div class="meta">
+    <span>📁 -Harness-OS</span>
+    <span>🔀 v1.2/engineering-copilot-ux</span>
+    <span>🤖 正在修改代码 — 等待代码修改完成</span>
+    <span>📄 26 未提交</span>
+    <span>🧩 10 模块</span>
+    <span><span class="risk-badge high">HIGH</span></span>
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">生成: 2026-06-23T11:04:19.820129+00:00 | 路径: <code>/home/ctyun/-Harness-OS</code></div>
+</div><div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"><div class="stat-card"><div class="value">10</div><div class="label">模块</div></div><div class="stat-card"><div class="value" style="color:var(--accent-orange)">26</div><div class="label">未提交文件</div></div><div class="stat-card"><div class="value">15</div><div class="label">任务卡</div></div><div class="stat-card"><div class="value" style="color:var(--accent-cyan)">0</div><div class="label">证据条目</div></div></div><div class="readiness-card block">
+  <div class="icon">🔴</div>
+  <div>
+    <div class="status">禁止合并 🔴</div>
+    <div class="summary">Merge blocked: 12 blocking issue(s). 15 task card(s) still pending. 5 high-risk file(s) detected. Human review recommended.</div>
+    <div class="issues-list"><div class="issue-item">⚠ BLOCKED: High-risk changes in '.harness' (priority=high)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (priority=critical)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (priority=critical)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'harness' (priority=high)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'tests' (priority=high)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in '.harness' (level=high)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (level=critical)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (level=critical)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'harness' (level=high)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'tests' (level=high)</div><div class="issue-item">⚠ Test results not yet available</div><div class="issue-item">⚠ Codex approval pending</div></div>
+  </div>
+</div></div>
+</div>
+<div id="tab-agent-state" class="tab-content">
+<div class="section">
+  <div class="section-header">🤖 Agent 状态</div>
+  <div class="section-body">
+<div class="agent-state-card">
+  <div class="as-header">
+    <span class="as-icon">🔧</span>
+    <span class="as-state-name">IMPLEMENTING</span>
+    <span class="as-severity severity-low">LOW</span>
+  </div>
+  <div class="as-summary">Agent 正在修改代码</div>
+  <div class="as-details">
+    <div class="detail-row"><span class="detail-label">置信度</span><span class="detail-value">60%</span></div>
+    <div class="detail-row"><span class="detail-label">严重度</span><span class="detail-value">low</span></div>
+    <div class="detail-row"><span class="detail-label">阻塞合并</span><span class="detail-value">否 ✅</span></div>
+    <div class="detail-row"><span class="detail-label">触发事件</span><span class="detail-value">project_diff_changed</span></div>
+    <div class="detail-row"><span class="detail-label">建议操作</span><span class="detail-value">等待代码修改完成</span></div>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-modules" class="tab-content">
+<div class="section">
+  <div class="section-header">🧩 模块卡片</div>
+  <div class="section-body">
+<div class="module-card">
+  <div class="module-name">
+    <span>Harness-OS-P0-Fix-Requirements</span>
+    <span><span class="risk-badge high">HIGH</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 6 文件 | 🗣 Markdown</p>
+    <p>⚠️ 高风险 — Harness-OS-P0-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    <div class="hr-files"><strong>高风险文件:</strong><div class="hr-file">📄 Harness-OS-P0-Fix-Requirements/03_SECRET_REDACTION_FIX.md (风险分: 0.8)</div></div>
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>Harness-OS-Third-Round-Fix-Requirements</span>
+    <span><span class="risk-badge high">HIGH</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 6 文件 | 🗣 Markdown</p>
+    <p>⚠️ 高风险 — Harness-OS-Third-Round-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    <div class="hr-files"><strong>高风险文件:</strong><div class="hr-file">📄 Harness-OS-Third-Round-Fix-Requirements/02_SECRET_REDACTOR_FULL_CHAIN_FIX.md (风险分: 0.8)</div></div>
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>docs</span>
+    <span><span class="risk-badge unknown">UNKNOWN</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 31 文件 | 🗣 Markdown</p>
+    <p>风险未知 — docs</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>fix-reports</span>
+    <span><span class="risk-badge high">HIGH</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 6 文件 | 🗣 Markdown</p>
+    <p>⚠️ 高风险 — fix-reports 模块包含敏感文件或大范围变更，建议重点审查。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    <div class="hr-files"><strong>高风险文件:</strong><div class="hr-file">📄 fix-reports/AUD-P0-003-SECRET-REDACTION-FIX.md (风险分: 0.8)</div></div>
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>harness</span>
+    <span><span class="risk-badge low">LOW</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 59 文件 | 🗣 Python</p>
+    <p>✅ 低风险 — harness 模块变更安全。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: tests</p>
+    
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>harness_os_docs</span>
+    <span><span class="risk-badge medium">MEDIUM</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 22 文件 | 🗣 Markdown</p>
+    <p>⚡ 中等风险 — harness_os_docs 模块需关注，建议检查变更范围。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    <div class="hr-files"><strong>高风险文件:</strong><div class="hr-file">📄 harness_os_docs/18_MIGRATION_VERSIONING.md (风险分: 0.5)</div></div>
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>root</span>
+    <span><span class="risk-badge low">LOW</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 15 文件 | 🗣 Markdown</p>
+    <p>✅ 低风险 — root 模块变更安全。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>src</span>
+    <span><span class="risk-badge low">LOW</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 67 文件 | 🗣 Markdown</p>
+    <p>✅ 低风险 — src 模块变更安全。</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>templates</span>
+    <span><span class="risk-badge unknown">UNKNOWN</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 1 文件 | 🗣 Markdown</p>
+    <p>风险未知 — templates</p>
+    <p>⬅ 依赖: 无</p>
+    <p>➡ 被依赖: 无</p>
+    
+  </div>
+</div><div class="module-card">
+  <div class="module-name">
+    <span>tests</span>
+    <span><span class="risk-badge low">LOW</span></span>
+  </div>
+  <div class="module-details">
+    <p>📄 96 文件 | 🗣 Python</p>
+    <p>✅ 低风险 — tests 模块变更安全。</p>
+    <p>⬅ 依赖: harness</p>
+    <p>➡ 被依赖: 无</p>
+    
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-changes" class="tab-content">
+<div class="section">
+  <div class="section-header">📝 最近修改</div>
+  <div class="section-body">
+<div class="change-item">
+  <div class="change-module">.harness</div>
+  <div class="change-summary">Added 1340 lines across 4 files</div>
+  <span class="change-intent">新增代码</span>
+  <span style="margin-left:8px;font-size:12px;color:var(--text-muted)">📄 .harness/copilot_demo/phase8_live_loop/dashboard_state.json, .harness/copilot_demo/phase8_live_loop/index.html, .harness/copilot_demo/phase8_live_project/dashboard_state.json, .harness/copilot_demo/phase8_live_project/index.html | +1340/-0</span>
+  <div class="issue-item" style="color:var(--accent-orange);font-size:12px">⚠ .harness/copilot_demo/phase8_live_loop/index.html: Large change (581 lines)</div><div class="issue-item" style="color:var(--accent-orange);font-size:12px">⚠ .harness/copilot_demo/phase8_live_project/index.html: Large change (592 lines)</div>
+</div><div class="change-item">
+  <div class="change-module">harness</div>
+  <div class="change-summary">Changed 11 files (+1671/-1 lines)</div>
+  <span class="change-intent">新增代码</span>
+  <span style="margin-left:8px;font-size:12px;color:var(--text-muted)">📄 harness/copilot/cli.py, harness/copilot/live/__init__.py, harness/copilot/live/event_bus.py, harness/copilot/live/live_dashboard.py, harness/copilot/live/live_event.py... | +1671/-1</span>
+  <div class="issue-item" style="color:var(--accent-orange);font-size:12px">⚠ harness/copilot/live/live_dashboard.py: Substantial change (236 lines)</div><div class="issue-item" style="color:var(--accent-orange);font-size:12px">⚠ harness/copilot/live/static_live_assets.py: Substantial change (384 lines)</div>
+</div><div class="change-item">
+  <div class="change-module">tests</div>
+  <div class="change-summary">Added 885 lines across 9 files</div>
+  <span class="change-intent">测试用例变更</span>
+  <span style="margin-left:8px;font-size:12px;color:var(--text-muted)">📄 tests/copilot/test_live_cli.py, tests/copilot/test_live_dashboard_cli.py, tests/copilot/test_live_dashboard_readonly.py, tests/copilot/test_live_dashboard_ui.py, tests/copilot/test_live_event_bus.py... | +885/-0</span>
+  <div class="issue-item" style="color:var(--accent-orange);font-size:12px">⚠ tests/copilot/test_live_event_schema.py: Contains security/infra keyword: 'schema'</div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-suggestions" class="tab-content">
+<div class="section">
+  <div class="section-header">💡 建议</div>
+  <div class="section-body">
+<div class="suggestion-item">
+  <div class="sugg-text">Add tests for AGENTS.md</div>
+  <div class="sugg-reason">📌 Test coverage gap — add tests for untested source file</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+    <span>🟡 中优先级</span> | <span>置信度: 60%</span>
+    | <code>AGENTS.md</code>
+  </div>
+</div><div class="suggestion-item">
+  <div class="sugg-text">Add tests for BENCHMARK.md</div>
+  <div class="sugg-reason">📌 Test coverage gap — add tests for untested source file</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+    <span>🟡 中优先级</span> | <span>置信度: 60%</span>
+    | <code>BENCHMARK.md</code>
+  </div>
+</div><div class="suggestion-item">
+  <div class="sugg-text">Add tests for CLAUDE.md</div>
+  <div class="sugg-reason">📌 Test coverage gap — add tests for untested source file</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+    <span>🟡 中优先级</span> | <span>置信度: 60%</span>
+    | <code>CLAUDE.md</code>
+  </div>
+</div><div class="suggestion-item">
+  <div class="sugg-text">Consider splitting 'tests' into smaller modules</div>
+  <div class="sugg-reason">📌 Module has 96 files and 1 dependencies</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+    <span>⚪ 低优先级</span> | <span>置信度: 30%</span>
+    | <code>/home/ctyun/-Harness-OS/tests</code>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-task-cards" class="tab-content">
+<div class="section">
+  <div class="section-header">📋 任务卡</div>
+  <div class="section-body">
+<div class="task-card blocking">
+  <div class="tc-header">
+    <div class="tc-title">High-risk changes in '.harness'</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">Module '.harness' has 1340+/0- changes classified as high risk.</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 .harness</span>
+    
+    <span>🚫 阻塞合并</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card blocking">
+  <div class="tc-header">
+    <div class="tc-title">Critical: index.html</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">File '.harness/copilot_demo/phase8_live_loop/index.html' has critical risk score (0.7).</div>
+  <div class="tc-meta">
+    <span>🔴 紧急</span>
+    <span>🧩 .harness</span>
+    <span>📄 <code>.harness/copilot_demo/phase8_live_loop/index.html</code></span>
+    <span>🚫 阻塞合并</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card blocking">
+  <div class="tc-header">
+    <div class="tc-title">Critical: index.html</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">File '.harness/copilot_demo/phase8_live_project/index.html' has critical risk score (0.7).</div>
+  <div class="tc-meta">
+    <span>🔴 紧急</span>
+    <span>🧩 .harness</span>
+    <span>📄 <code>.harness/copilot_demo/phase8_live_project/index.html</code></span>
+    <span>🚫 阻塞合并</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card blocking">
+  <div class="tc-header">
+    <div class="tc-title">High-risk changes in 'harness'</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">Module 'harness' has 1671+/1- changes classified as high risk.</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 harness</span>
+    
+    <span>🚫 阻塞合并</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">High risk: live_dashboard.py</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">File 'harness/copilot/live/live_dashboard.py' flagged: Substantial change (236 lines)</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 harness</span>
+    <span>📄 <code>harness/copilot/live/live_dashboard.py</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">High risk: static_live_assets.py</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">File 'harness/copilot/live/static_live_assets.py' flagged: Substantial change (384 lines)</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 harness</span>
+    <span>📄 <code>harness/copilot/live/static_live_assets.py</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card blocking">
+  <div class="tc-header">
+    <div class="tc-title">High-risk changes in 'tests'</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">Module 'tests' has 885+/0- changes classified as high risk.</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 tests</span>
+    
+    <span>🚫 阻塞合并</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">High risk: test_live_event_schema.py</div>
+    <div class="tc-type">risk_alert</div>
+  </div>
+  <div class="tc-desc">File 'tests/copilot/test_live_event_schema.py' flagged: Contains security/infra keyword: 'schema'</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 tests</span>
+    <span>📄 <code>tests/copilot/test_live_event_schema.py</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟠 高风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Review changes in '.harness'</div>
+    <div class="tc-type">fix_review</div>
+  </div>
+  <div class="tc-desc">Added 1340 lines across 4 files</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 .harness</span>
+    
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Review changes in 'harness'</div>
+    <div class="tc-type">fix_review</div>
+  </div>
+  <div class="tc-desc">Changed 11 files (+1671/-1 lines)</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 harness</span>
+    
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Review changes in 'tests'</div>
+    <div class="tc-type">fix_review</div>
+  </div>
+  <div class="tc-desc">Added 885 lines across 9 files</div>
+  <div class="tc-meta">
+    <span>🟠 高优先级</span>
+    <span>🧩 tests</span>
+    
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Add tests for AGENTS.md</div>
+    <div class="tc-type">fix_test</div>
+  </div>
+  <div class="tc-desc">Add tests for AGENTS.md
+
+Reason: Test coverage gap — add tests for untested source file</div>
+  <div class="tc-meta">
+    <span>🟡 中优先级</span>
+    <span>🧩 root</span>
+    <span>📄 <code>AGENTS.md</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Add tests for BENCHMARK.md</div>
+    <div class="tc-type">fix_test</div>
+  </div>
+  <div class="tc-desc">Add tests for BENCHMARK.md
+
+Reason: Test coverage gap — add tests for untested source file</div>
+  <div class="tc-meta">
+    <span>🟡 中优先级</span>
+    <span>🧩 root</span>
+    <span>📄 <code>BENCHMARK.md</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Add tests for CLAUDE.md</div>
+    <div class="tc-type">fix_test</div>
+  </div>
+  <div class="tc-desc">Add tests for CLAUDE.md
+
+Reason: Test coverage gap — add tests for untested source file</div>
+  <div class="tc-meta">
+    <span>🟡 中优先级</span>
+    <span>🧩 root</span>
+    <span>📄 <code>CLAUDE.md</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div><div class="task-card ">
+  <div class="tc-header">
+    <div class="tc-title">Consider splitting 'tests' into smaller modules</div>
+    <div class="tc-type">fix_test</div>
+  </div>
+  <div class="tc-desc">Consider splitting 'tests' into smaller modules
+
+Reason: Module has 96 files and 1 dependencies</div>
+  <div class="tc-meta">
+    <span>⚪ 低优先级</span>
+    <span>🧩 tests</span>
+    <span>📄 <code>/home/ctyun/-Harness-OS/tests</code></span>
+    <span>✅ 非阻塞</span>
+    <span>🟡 中风险</span>
+  </div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-readiness" class="tab-content">
+<div class="section">
+  <div class="section-header">🔀 合并就绪度</div>
+  <div class="section-body">
+<div class="readiness-card block">
+  <div class="icon">🔴</div>
+  <div>
+    <div class="status">禁止合并 🔴</div>
+    <div class="summary">Merge blocked: 12 blocking issue(s). 15 task card(s) still pending. 5 high-risk file(s) detected. Human review recommended.</div>
+    <div class="issues-list"><div class="issue-item">⚠ BLOCKED: High-risk changes in '.harness' (priority=high)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (priority=critical)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (priority=critical)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'harness' (priority=high)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'tests' (priority=high)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in '.harness' (level=high)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (level=critical)</div><div class="issue-item">⚠ BLOCKED: Critical: index.html (level=critical)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'harness' (level=high)</div><div class="issue-item">⚠ BLOCKED: High-risk changes in 'tests' (level=high)</div><div class="issue-item">⚠ Test results not yet available</div><div class="issue-item">⚠ Codex approval pending</div></div>
+  </div>
+</div><div class="grid-3" style="margin-top:12px">
+  <div class="stat-card"><div class="value" style="color:var(--accent-orange)">需要审查</div><div class="label">审查要求</div></div>
+  <div class="stat-card"><div class="value" style="color:var(--accent-orange)">15</div><div class="label">待处理卡</div></div>
+  <div class="stat-card"><div class="value" style="color:var(--accent-red)">5</div><div class="label">高风险文件</div></div>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-evidence" class="tab-content">
+<div class="section">
+  <div class="section-header">🔐 证据包</div>
+  <div class="section-body">
+<div class="evidence-grid">
+  <div class="evidence-stat"><div class="ev-value">0</div><div class="ev-label">总计</div></div>
+  <div class="evidence-stat pass"><div class="ev-value">0</div><div class="ev-label">通过</div></div>
+  <div class="evidence-stat fail"><div class="ev-value">0</div><div class="ev-label">失败</div></div>
+  <div class="evidence-stat"><div class="ev-value" style="font-size:14px;word-break:break-all">d82f4e80a16f3918...</div><div class="ev-label">SHA256</div></div>
+</div>
+<div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+  <code>Pack: pack_71bdbcf6db52</code>
+</div>
+  </div>
+</div>
+</div>
+<div id="tab-companion" class="tab-content">
+<div class="section">
+  <div class="section-header">⏳ 等待陪伴</div>
+  <div class="section-body">
+<div class="companion-placeholder">
+  <div class="companion-icon">⏳</div>
+  <div>
+    <span class="status-dot idle"></span>
+    <strong>等待中</strong>
+    <span style="color:var(--text-muted);font-size:13px;margin-left:8px">(idle)</span>
+  </div>
+  <p>等待陪伴模式尚未接入音乐服务。当前仅显示 Agent / 项目状态提醒占位。</p>
+  <p style="font-size:12px;color:var(--text-muted);margin-top:4px">仅占位 — 无音乐 API · 无音频播放 · 无凭据 · 无下载缓存</p>
+  
+</div>
+  </div>
+</div>
+</div>
+
+
+<script id="dashboard-data" type="application/json">
+{
+  "project_name": "-Harness-OS",
+  "project_root": "/home/ctyun/-Harness-OS",
+  "branch": "v1.2/engineering-copilot-ux",
+  "overall_risk_level": "high",
+  "risk_color": "red",
+  "agent_phase": "implementing",
+  "agent_phase_label": "正在修改代码 — 等待代码修改完成",
+  "uncommitted_changes": 26,
+  "module_count": 10,
+  "generated_at": "2026-06-23T11:04:19.820129+00:00",
+  "modules": [
+    {
+      "name": "Harness-OS-P0-Fix-Requirements",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — Harness-OS-P0-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "Harness-OS-P0-Fix-Requirements/03_SECRET_REDACTION_FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path",
+            "Configuration file: requirements"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "Harness-OS-Third-Round-Fix-Requirements",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — Harness-OS-Third-Round-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "Harness-OS-Third-Round-Fix-Requirements/02_SECRET_REDACTOR_FULL_CHAIN_FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path",
+            "Configuration file: requirements"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "docs",
+      "file_count": 31,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — docs",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "fix-reports",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — fix-reports 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "fix-reports/AUD-P0-003-SECRET-REDACTION-FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "harness",
+      "file_count": 59,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — harness 模块变更安全。",
+      "dependencies": [],
+      "dependents": [
+        "tests"
+      ],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    },
+    {
+      "name": "harness_os_docs",
+      "file_count": 22,
+      "risk_level": "medium",
+      "risk_color": "yellow",
+      "risk_score": 0.5,
+      "risk_description": "⚡ 中等风险 — harness_os_docs 模块需关注，建议检查变更范围。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "harness_os_docs/18_MIGRATION_VERSIONING.md",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'migration' in path"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "root",
+      "file_count": 15,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — root 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "src",
+      "file_count": 67,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — src 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "templates",
+      "file_count": 1,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — templates",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "tests",
+      "file_count": 96,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — tests 模块变更安全。",
+      "dependencies": [
+        "harness"
+      ],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": ".harness",
+      "summary": "Added 1340 lines across 4 files",
+      "intent": "新增代码",
+      "files_changed": [
+        ".harness/copilot_demo/phase8_live_loop/dashboard_state.json",
+        ".harness/copilot_demo/phase8_live_loop/index.html",
+        ".harness/copilot_demo/phase8_live_project/dashboard_state.json",
+        ".harness/copilot_demo/phase8_live_project/index.html"
+      ],
+      "lines_changed_str": "+1340/-0",
+      "has_risks": true,
+      "risk_warnings": [
+        ".harness/copilot_demo/phase8_live_loop/index.html: Large change (581 lines)",
+        ".harness/copilot_demo/phase8_live_project/index.html: Large change (592 lines)"
+      ]
+    },
+    {
+      "module": "harness",
+      "summary": "Changed 11 files (+1671/-1 lines)",
+      "intent": "新增代码",
+      "files_changed": [
+        "harness/copilot/cli.py",
+        "harness/copilot/live/__init__.py",
+        "harness/copilot/live/event_bus.py",
+        "harness/copilot/live/live_dashboard.py",
+        "harness/copilot/live/live_event.py",
+        "harness/copilot/live/live_html_renderer.py",
+        "harness/copilot/live/loop_stream.py",
+        "harness/copilot/live/project_stream.py",
+        "harness/copilot/live/renderer.py",
+        "harness/copilot/live/sse_server.py",
+        "harness/copilot/live/static_live_assets.py"
+      ],
+      "lines_changed_str": "+1671/-1",
+      "has_risks": true,
+      "risk_warnings": [
+        "harness/copilot/live/live_dashboard.py: Substantial change (236 lines)",
+        "harness/copilot/live/static_live_assets.py: Substantial change (384 lines)"
+      ]
+    },
+    {
+      "module": "tests",
+      "summary": "Added 885 lines across 9 files",
+      "intent": "测试用例变更",
+      "files_changed": [
+        "tests/copilot/test_live_cli.py",
+        "tests/copilot/test_live_dashboard_cli.py",
+        "tests/copilot/test_live_dashboard_readonly.py",
+        "tests/copilot/test_live_dashboard_ui.py",
+        "tests/copilot/test_live_event_bus.py",
+        "tests/copilot/test_live_event_schema.py",
+        "tests/copilot/test_live_readonly.py",
+        "tests/copilot/test_loop_live_stream.py",
+        "tests/copilot/test_project_live_stream.py"
+      ],
+      "lines_changed_str": "+885/-0",
+      "has_risks": true,
+      "risk_warnings": [
+        "tests/copilot/test_live_event_schema.py: Contains security/infra keyword: 'schema'"
+      ]
+    }
+  ],
+  "suggestions": {
+    "suggestions": [
+      {
+        "suggestion": "Add tests for AGENTS.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "AGENTS.md"
+      },
+      {
+        "suggestion": "Add tests for BENCHMARK.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "BENCHMARK.md"
+      },
+      {
+        "suggestion": "Add tests for CLAUDE.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "CLAUDE.md"
+      },
+      {
+        "suggestion": "Consider splitting 'tests' into smaller modules",
+        "reason": "Module has 96 files and 1 dependencies",
+        "priority_label": "⚪ 低优先级",
+        "confidence_label": "30%",
+        "file_path": "/home/ctyun/-Harness-OS/tests"
+      }
+    ]
+  },
+  "task_cards": {
+    "cards": [
+      {
+        "title": "High-risk changes in '.harness'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": ".harness",
+        "target_file": "",
+        "description": "Module '.harness' has 1340+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Critical: index.html",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🔴 紧急",
+        "module": ".harness",
+        "target_file": ".harness/copilot_demo/phase8_live_loop/index.html",
+        "description": "File '.harness/copilot_demo/phase8_live_loop/index.html' has critical risk score (0.7).",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Critical: index.html",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🔴 紧急",
+        "module": ".harness",
+        "target_file": ".harness/copilot_demo/phase8_live_project/index.html",
+        "description": "File '.harness/copilot_demo/phase8_live_project/index.html' has critical risk score (0.7).",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High-risk changes in 'harness'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "",
+        "description": "Module 'harness' has 1671+/1- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: live_dashboard.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "harness/copilot/live/live_dashboard.py",
+        "description": "File 'harness/copilot/live/live_dashboard.py' flagged: Substantial change (236 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: static_live_assets.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "harness/copilot/live/static_live_assets.py",
+        "description": "File 'harness/copilot/live/static_live_assets.py' flagged: Substantial change (384 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High-risk changes in 'tests'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "",
+        "description": "Module 'tests' has 885+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: test_live_event_schema.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "tests/copilot/test_live_event_schema.py",
+        "description": "File 'tests/copilot/test_live_event_schema.py' flagged: Contains security/infra keyword: 'schema'",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in '.harness'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": ".harness",
+        "target_file": "",
+        "description": "Added 1340 lines across 4 files",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'harness'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "",
+        "description": "Changed 11 files (+1671/-1 lines)",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'tests'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "",
+        "description": "Added 885 lines across 9 files",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for AGENTS.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "AGENTS.md",
+        "description": "Add tests for AGENTS.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for BENCHMARK.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "BENCHMARK.md",
+        "description": "Add tests for BENCHMARK.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for CLAUDE.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "CLAUDE.md",
+        "description": "Add tests for CLAUDE.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Consider splitting 'tests' into smaller modules",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "⚪ 低优先级",
+        "module": "tests",
+        "target_file": "/home/ctyun/-Harness-OS/tests",
+        "description": "Consider splitting 'tests' into smaller modules\n\nReason: Module has 96 files and 1 dependencies",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      }
+    ],
+    "summary": {
+      "total_cards": 15,
+      "by_type": {
+        "risk_alert": 8,
+        "fix_review": 3,
+        "fix_test": 4
+      },
+      "by_state": {
+        "pending": 15
+      },
+      "by_priority": {
+        "high": 9,
+        "critical": 2,
+        "medium": 3,
+        "low": 1
+      },
+      "blocking_count": 5,
+      "summary_line": "15 cards: 15 pending, 0 completed, 5 blocking"
+    }
+  },
+  "readiness": {
+    "state": "block",
+    "state_label": "禁止合并 🔴",
+    "state_icon": "🔴",
+    "summary": "Merge blocked: 12 blocking issue(s). 15 task card(s) still pending. 5 high-risk file(s) detected. Human review recommended.",
+    "blocking_issues": [
+      "BLOCKED: High-risk changes in '.harness' (priority=high)",
+      "BLOCKED: Critical: index.html (priority=critical)",
+      "BLOCKED: Critical: index.html (priority=critical)",
+      "BLOCKED: High-risk changes in 'harness' (priority=high)",
+      "BLOCKED: High-risk changes in 'tests' (priority=high)",
+      "BLOCKED: High-risk changes in '.harness' (level=high)",
+      "BLOCKED: Critical: index.html (level=critical)",
+      "BLOCKED: Critical: index.html (level=critical)",
+      "BLOCKED: High-risk changes in 'harness' (level=high)",
+      "BLOCKED: High-risk changes in 'tests' (level=high)",
+      "Test results not yet available",
+      "Codex approval pending"
+    ],
+    "is_blocked": true,
+    "is_ready": false,
+    "review_required": true,
+    "pending_cards": 15,
+    "high_risk_count": 5
+  },
+  "evidence": {
+    "pack_id": "pack_71bdbcf6db52",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "integrity_hash": "d82f4e80a16f39180cc29a2d2f4da81b43368fa757a27f9f64a0157a523e3f8f"
+  },
+  "agent_state": {
+    "state": "implementing",
+    "confidence": 0.6,
+    "source_events": [
+      "project_diff_changed"
+    ],
+    "summary": "Agent 正在修改代码",
+    "recommended_action": "等待代码修改完成",
+    "severity": "low",
+    "blocking": false,
+    "timestamp": ""
+  },
+  "companion": {
+    "is_active": false,
+    "mode": "idle",
+    "status_text": "等待中",
+    "waiting_since": ""
+  }
+}
+</script>
+
+</div>
+<div class="footer">
+Harness Code Copilot — Read-only Local Dashboard &middot; 无外部服务 &middot; 无自动修改 &middot; 仅供查看
+</div>
+<script>
+(function() {
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      var tab = document.getElementById('tab-' + btn.getAttribute('data-tab'));
+      if (tab) tab.classList.add('active');
+    });
+  });
+  // Copy button handler
+  document.querySelectorAll('.copy-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      if (target) {
+        var text = target.textContent;
+        navigator.clipboard.writeText(text).then(function() {
+          btn.textContent = '已复制!';
+          setTimeout(function() { btn.textContent = '复制'; }, 2000);
+        });
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
