@@ -1,0 +1,81 @@
+{
+  "project_name": "Competitive-Product-Intelligence-System",
+  "branch": "main",
+  "generated_at": "2026-06-23T11:28:11.Z",
+  "agent_state": {
+    "state": "idle",
+    "confidence": 0.0,
+    "source_events": [],
+    "summary": "无事件 — 状态未知",
+    "recommended_action": "",
+    "severity": "low",
+    "blocking": false,
+    "timestamp": ""
+  },
+  "merge_readiness": {
+    "state": "block",
+    "state_label": "禁止合并 🔴",
+    "state_icon": "🔴",
+    "summary": "Merge blocked: 4 blocking issue(s). 11 task card(s) still pending. 2 high-risk file(s) detected. Human review recommended.",
+    "blocking_issues": [
+      "BLOCKED: High-risk changes in 'openclaw-plugins' (priority=high)",
+      "BLOCKED: High-risk changes in 'scripts' (priority=high)",
+      "BLOCKED: Critical: verify-deploy.sh (priority=critical)",
+      "Test results not yet available"
+    ],
+    "is_blocked": true,
+    "is_ready": false,
+    "review_required": true,
+    "pending_cards": 11,
+    "high_risk_count": 2
+  },
+  "risk_level": "critical",
+  "blocking": true,
+  "recommended_action": "",
+  "events": [
+    {
+      "event_id": "live-202606231128113412-0001",
+      "timestamp": "2026-06-23T11:28:11.Z",
+      "source": "project",
+      "event_type": "project_state_update",
+      "agent_state": {
+        "state": "idle",
+        "confidence": 0.0,
+        "source_events": [],
+        "summary": "无事件 — 状态未知",
+        "recommended_action": "",
+        "severity": "low",
+        "blocking": false,
+        "timestamp": ""
+      },
+      "merge_readiness": {
+        "state": "block",
+        "state_label": "禁止合并 🔴",
+        "state_icon": "🔴",
+        "summary": "Merge blocked: 4 blocking issue(s). 11 task card(s) still pending. 2 high-risk file(s) detected. Human review recommended.",
+        "blocking_issues": [
+          "BLOCKED: High-risk changes in 'openclaw-plugins' (priority=high)",
+          "BLOCKED: High-risk changes in 'scripts' (priority=high)",
+          "BLOCKED: Critical: verify-deploy.sh (priority=critical)",
+          "Test results not yet available"
+        ],
+        "is_blocked": true,
+        "is_ready": false,
+        "review_required": true,
+        "pending_cards": 11,
+        "high_risk_count": 2
+      },
+      "risk_level": "critical",
+      "summary": "Agent: 无事件 — 状态未知 | 禁止合并 🔴",
+      "recommended_action": "",
+      "blocking": true,
+      "readonly": true,
+      "payload": {
+        "branch": "main",
+        "project_name": "Competitive-Product-Intelligence-System",
+        "uncommitted_changes": 0,
+        "module_count": 8
+      }
+    }
+  ]
+}

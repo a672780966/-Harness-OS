@@ -1,0 +1,545 @@
+{
+  "pack_version": "1.0",
+  "generated_at": "2026-06-23T11:28:09.919907+00:00",
+  "project_name": "Competitive-Product-Intelligence-System",
+  "project_root": "/home/ctyun/dogfood/Competitive-Product-Intelligence-System",
+  "branch": "main",
+  "source_path": "/home/ctyun/dogfood/Competitive-Product-Intelligence-System",
+  "summary": "项目: Competitive-Product-Intelligence-System | 分支: main | Agent: 无事件 — 状态未知 | 合并: 禁止合并 🔴 | 变更模块: 8 | 变更文件: ~15",
+  "agent_state": {
+    "state": "idle",
+    "confidence": 0.0,
+    "source_events": [],
+    "summary": "无事件 — 状态未知",
+    "recommended_action": "",
+    "severity": "low",
+    "blocking": false,
+    "timestamp": ""
+  },
+  "readiness": {
+    "state": "block",
+    "state_label": "禁止合并 🔴",
+    "state_icon": "🔴",
+    "summary": "Merge blocked: 4 blocking issue(s). 11 task card(s) still pending. 2 high-risk file(s) detected. Human review recommended.",
+    "blocking_issues": [
+      "BLOCKED: High-risk changes in 'openclaw-plugins' (priority=high)",
+      "BLOCKED: High-risk changes in 'scripts' (priority=high)",
+      "BLOCKED: Critical: verify-deploy.sh (priority=critical)",
+      "Test results not yet available"
+    ],
+    "is_blocked": true,
+    "is_ready": false,
+    "review_required": true,
+    "pending_cards": 11,
+    "high_risk_count": 2
+  },
+  "risk_checklist": [
+    {
+      "id": "db_migration",
+      "label": "数据库/迁移",
+      "description": "检查是否包含数据库 schema 变更、数据迁移或 SQL 修改",
+      "icon": "🗄️",
+      "checked": false,
+      "matched": ""
+    },
+    {
+      "id": "auth_permission",
+      "label": "权限/认证",
+      "description": "检查是否涉及认证逻辑、权限控制、角色或 CORS 变更",
+      "icon": "🔐",
+      "checked": false,
+      "matched": ""
+    },
+    {
+      "id": "destructive_change",
+      "label": "删除/破坏性修改",
+      "description": "检查是否存在文件删除、API 签名变更或破坏性重构",
+      "icon": "⚠️",
+      "checked": true,
+      "matched": ""
+    },
+    {
+      "id": "test_coverage_gap",
+      "label": "测试覆盖缺口",
+      "description": "检查变更是否缺少对应测试覆盖",
+      "icon": "🧪",
+      "checked": true,
+      "matched": "test; High-risk changes in 'openclaw-plugins'; High risk: publish-validator.test.js"
+    },
+    {
+      "id": "external_service",
+      "label": "外部服务/API",
+      "description": "检查是否引入新的外部服务调用或 API 依赖",
+      "icon": "🌐",
+      "checked": false,
+      "matched": ""
+    },
+    {
+      "id": "config_secret",
+      "label": "配置/密钥",
+      "description": "检查是否修改了配置文件、环境变量或硬编码密钥",
+      "icon": "🔑",
+      "checked": false,
+      "matched": ""
+    },
+    {
+      "id": "new_dependency",
+      "label": "新增依赖",
+      "description": "检查是否新增了第三方依赖或包引用",
+      "icon": "📦",
+      "checked": true,
+      "matched": "package.json"
+    }
+  ],
+  "modules": [
+    {
+      "name": "backend",
+      "file_count": 82,
+      "risk_level": "medium",
+      "risk_color": "yellow",
+      "risk_score": 0.5,
+      "risk_description": "⚡ 中等风险 — backend 模块需关注，建议检查变更范围。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "backend/tests/test_product_versioning.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        },
+        {
+          "path": "backend/app/extractors/product_extractor.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        },
+        {
+          "path": "backend/app/services/product_service.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        },
+        {
+          "path": "backend/app/repositories/product_repository.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        },
+        {
+          "path": "backend/app/models/product_version.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        },
+        {
+          "path": "backend/app/models/product_evidence.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        },
+        {
+          "path": "backend/app/models/product.py",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        }
+      ],
+      "primary_language": "TOML"
+    },
+    {
+      "name": "docs",
+      "file_count": 1,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.0,
+      "risk_description": "✅ 低风险 — docs 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "examples",
+      "file_count": 5,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.0,
+      "risk_description": "✅ 低风险 — examples 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "JSON"
+    },
+    {
+      "name": "frontend",
+      "file_count": 22,
+      "risk_level": "medium",
+      "risk_color": "yellow",
+      "risk_score": 0.5,
+      "risk_description": "⚡ 中等风险 — frontend 模块需关注，建议检查变更范围。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "frontend/src/features/products/ProductList.tsx",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'prod' in path"
+          ]
+        }
+      ],
+      "primary_language": "TypeScript"
+    },
+    {
+      "name": "openclaw-agents-v2",
+      "file_count": 6,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.0,
+      "risk_description": "✅ 低风险 — openclaw-agents-v2 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "openclaw-plugins",
+      "file_count": 4,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — openclaw-plugins 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "JSON"
+    },
+    {
+      "name": "root",
+      "file_count": 4,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — root 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "YAML"
+    },
+    {
+      "name": "scripts",
+      "file_count": 4,
+      "risk_level": "medium",
+      "risk_color": "yellow",
+      "risk_score": 0.6,
+      "risk_description": "⚡ 中等风险 — scripts 模块需关注，建议检查变更范围。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "scripts/verify-deploy.sh",
+          "score": 0.6,
+          "reasons": [
+            "Contains 'deploy' in path"
+          ]
+        }
+      ],
+      "primary_language": "Shell"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": "root",
+      "summary": "Changed 1 file (+90/-52 lines)",
+      "intent": "代码修改（混合）",
+      "files_changed": [
+        "CODEX-CLOUD-HANDOFF.md"
+      ],
+      "lines_changed_str": "+90/-52",
+      "has_risks": false,
+      "risk_warnings": []
+    },
+    {
+      "module": "examples",
+      "summary": "Added 69 lines across 5 files",
+      "intent": "新增代码",
+      "files_changed": [
+        "examples/failed-publish-result.json",
+        "examples/partial-publish-result.json",
+        "examples/task-evidence.json",
+        "examples/task-publish.json",
+        "examples/valid-publish-result.json"
+      ],
+      "lines_changed_str": "+69/-0",
+      "has_risks": false,
+      "risk_warnings": []
+    },
+    {
+      "module": "openclaw-plugins",
+      "summary": "Changed 6 files (+362/-6 lines)",
+      "intent": "测试用例变更",
+      "files_changed": [
+        "openclaw-plugins/cpis-json-gate/dist/index.js",
+        "openclaw-plugins/cpis-json-gate/dist/validator.js",
+        "openclaw-plugins/cpis-json-gate/install-on-lx.sh",
+        "openclaw-plugins/cpis-json-gate/openclaw.plugin.json",
+        "openclaw-plugins/cpis-json-gate/package.json",
+        "openclaw-plugins/cpis-json-gate/test/publish-validator.test.js"
+      ],
+      "lines_changed_str": "+362/-6",
+      "has_risks": true,
+      "risk_warnings": [
+        "openclaw-plugins/cpis-json-gate/test/publish-validator.test.js: Substantial change (206 lines)"
+      ]
+    },
+    {
+      "module": "scripts",
+      "summary": "Added 156 lines across 3 files",
+      "intent": "新增代码",
+      "files_changed": [
+        "scripts/build-zip.sh",
+        "scripts/send-task-utf8.sh",
+        "scripts/verify-deploy.sh"
+      ],
+      "lines_changed_str": "+156/-0",
+      "has_risks": true,
+      "risk_warnings": [
+        "scripts/verify-deploy.sh: Contains security/infra keyword: 'deploy'"
+      ]
+    }
+  ],
+  "task_cards": {
+    "cards": [
+      {
+        "title": "High-risk changes in 'openclaw-plugins'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "openclaw-plugins",
+        "target_file": "",
+        "description": "Module 'openclaw-plugins' has 362+/6- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: publish-validator.test.js",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "openclaw-plugins",
+        "target_file": "openclaw-plugins/cpis-json-gate/test/publish-validator.test.js",
+        "description": "File 'openclaw-plugins/cpis-json-gate/test/publish-validator.test.js' flagged: Substantial change (206 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High-risk changes in 'scripts'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "scripts",
+        "target_file": "",
+        "description": "Module 'scripts' has 156+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Critical: verify-deploy.sh",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🔴 紧急",
+        "module": "scripts",
+        "target_file": "scripts/verify-deploy.sh",
+        "description": "File 'scripts/verify-deploy.sh' has critical risk score (0.7).",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'root'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "",
+        "description": "Changed 1 file (+90/-52 lines)",
+        "is_blocking": false,
+        "risk_label": "✅ 低风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'examples'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "examples",
+        "target_file": "",
+        "description": "Added 69 lines across 5 files",
+        "is_blocking": false,
+        "risk_label": "✅ 低风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'openclaw-plugins'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "openclaw-plugins",
+        "target_file": "",
+        "description": "Changed 6 files (+362/-6 lines)",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'scripts'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "scripts",
+        "target_file": "",
+        "description": "Added 156 lines across 3 files",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for backend/alembic/env.py",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "backend",
+        "target_file": "backend/alembic/env.py",
+        "description": "Add tests for backend/alembic/env.py\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for backend/alembic/versions/001_initial_schema.py",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "backend",
+        "target_file": "backend/alembic/versions/001_initial_schema.py",
+        "description": "Add tests for backend/alembic/versions/001_initial_schema.py\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for backend/app/analyzers/report_generator.py",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "backend",
+        "target_file": "backend/app/analyzers/report_generator.py",
+        "description": "Add tests for backend/app/analyzers/report_generator.py\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      }
+    ],
+    "summary": {
+      "total_cards": 11,
+      "by_type": {
+        "risk_alert": 4,
+        "fix_review": 4,
+        "fix_test": 3
+      },
+      "by_state": {
+        "pending": 11
+      },
+      "by_priority": {
+        "high": 5,
+        "critical": 1,
+        "medium": 5
+      },
+      "blocking_count": 3,
+      "summary_line": "11 cards: 11 pending, 0 completed, 3 blocking"
+    }
+  },
+  "evidence": {
+    "pack_id": "pack_4566ba18817b",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "integrity_hash": "f4fac0f2a5d266a76350ef1c0547beea8212950bdbee685c6fd4723d22755e58"
+  },
+  "evidence_files": [],
+  "reviewer_actions": [
+    {
+      "priority": "🔴 紧急",
+      "action": "解决阻塞问题后再合并",
+      "reasoning": "合并就绪度为 block，存在 4 个阻塞项",
+      "category": "merge_blocker"
+    },
+    {
+      "priority": "🔴 紧急",
+      "action": "处理阻塞问题: BLOCKED: High-risk changes in 'openclaw-plugins' (priority=high)",
+      "reasoning": "该问题阻止安全合并",
+      "category": "blocking_issue"
+    },
+    {
+      "priority": "🔴 紧急",
+      "action": "处理阻塞问题: BLOCKED: High-risk changes in 'scripts' (priority=high)",
+      "reasoning": "该问题阻止安全合并",
+      "category": "blocking_issue"
+    },
+    {
+      "priority": "🔴 紧急",
+      "action": "处理阻塞问题: BLOCKED: Critical: verify-deploy.sh (priority=critical)",
+      "reasoning": "该问题阻止安全合并",
+      "category": "blocking_issue"
+    },
+    {
+      "priority": "🔴 紧急",
+      "action": "处理阻塞问题: Test results not yet available",
+      "reasoning": "该问题阻止安全合并",
+      "category": "blocking_issue"
+    },
+    {
+      "priority": "🟠 高优先级",
+      "action": "完成 11 个待处理任务卡",
+      "reasoning": "仍有 11 张任务卡处于待处理状态",
+      "category": "pending_tasks"
+    },
+    {
+      "priority": "🟠 高优先级",
+      "action": "审查 2 个高风险文件的变更",
+      "reasoning": "高风险文件包含敏感逻辑修改",
+      "category": "high_risk_review"
+    },
+    {
+      "priority": "✅ 正常",
+      "action": "确认 Agent 最终状态 (无事件 — 状态未知)",
+      "reasoning": "Agent 置信度: 0%",
+      "category": "agent_acknowledge"
+    },
+    {
+      "priority": "🟡 中优先级",
+      "action": "审查 3 个标记的风险项",
+      "reasoning": "风险检查清单中有标记需要关注的项目",
+      "category": "risk_review"
+    },
+    {
+      "priority": "🟠 高优先级",
+      "action": "缺少证据包，建议补充测试结果和审查记录",
+      "reasoning": "没有可用的证据条目，PR 缺少验证材料",
+      "category": "evidence_gap"
+    }
+  ],
+  "readonly": true,
+  "no_external_api": true
+}

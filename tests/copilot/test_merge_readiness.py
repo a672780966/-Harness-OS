@@ -66,21 +66,25 @@ class TestEvaluateMergeReadiness:
         assert mr.state == MergeReadinessState.BLOCK
 
     def test_review_needed_no_codex(self):
+        """Without Codex approval and loop context, review is needed."""
         mr = evaluate_merge_readiness(
             task_cards=[],
             risk_alerts=[],
             tests_passed=True,
             codex_approved=None,
+            has_loop_artifacts=True,  # loop context — Codex gate is relevant
         )
         assert mr.state == MergeReadinessState.REVIEW_NEEDED
         assert mr.review_required is True
 
     def test_codex_rejected(self):
+        """Codex rejection blocks merge in loop context."""
         mr = evaluate_merge_readiness(
             task_cards=[],
             risk_alerts=[],
             tests_passed=True,
             codex_approved=False,
+            has_loop_artifacts=True,
         )
         assert mr.review_required is True
 

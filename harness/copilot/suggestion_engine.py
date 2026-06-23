@@ -67,8 +67,33 @@ def _find_todo_comments(file_path: str, content: str) -> List[str]:
 def _find_test_coverage_gaps(
     sem_map: ProjectSemanticMap,
 ) -> List[Dict[str, Any]]:
-    """Find source files without corresponding test files."""
+    """Find source files without corresponding test files.
+
+    Only source-code file extensions are considered.
+    Documentation, config, data, and lock files are excluded.
+    """
     gaps: List[Dict[str, Any]] = []
+
+    # Extensions that CAN have unit tests
+    SOURCE_EXTENSIONS = {
+        ".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+        ".go", ".rs", ".java", ".rb", ".php", ".cs", ".swift",
+        ".kt", ".scala", ".c", ".cpp", ".h", ".hpp",
+    }
+
+    # Extensions that should NEVER trigger a "missing test" suggestion
+    NON_SOURCE_EXTENSIONS = {
+        ".md", ".mdx", ".rst", ".txt", ".log",
+        ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+        ".xml", ".html", ".css", ".scss", ".less",
+        ".sh", ".bash", ".zsh", ".ps1", ".bat",
+        ".lock", ".svg", ".png", ".jpg", ".ico",
+        ".env", ".env.example", ".dockerfile",
+        ".gitignore", ".gitkeep", ".editorconfig",
+        ".prettierrc", ".eslintrc", ".babelrc",
+        ".npmrc", ".yarnrc",
+    }
+
     test_suffixes = {"_test", ".test.", "_spec.", ".spec.", "_tests"}
 
     source_files: Set[str] = set()
@@ -77,9 +102,19 @@ def _find_test_coverage_gaps(
     for mod in sem_map.modules:
         for fe in mod.files:
             lower = fe.path.lower()
+            ext = Path(lower).suffix
+            # Skip non-source files
+            if ext in NON_SOURCE_EXTENSIONS:
+                continue
+            # Also skip files like "CLAUDE.md", "Dockerfile" without recognizable ext
+            base = Path(lower).name
+            if base in ("claude.md", "codex-cloud-handoff.md", "readme.md",
+                        "license", "changelog", "contributing", "makefile",
+                        "dockerfile", "docker-compose.yml", "docker-compose.yaml"):
+                continue
             if any(s in lower for s in test_suffixes) or "/test" in lower or "/tests" in lower:
                 test_files.add(fe.path)
-            else:
+            elif ext in SOURCE_EXTENSIONS or not ext:
                 source_files.add(fe.path)
 
     for sf in sorted(source_files):

@@ -20,34 +20,67 @@ def evaluate_merge_readiness(
     tests_passed: Optional[bool] = None,
     codex_approved: Optional[bool] = None,
     branch_name: Optional[str] = None,
+    has_loop_artifacts: bool = False,
 ) -> MergeReadiness:
-    """Evaluate merge readiness from task cards, alerts, and test results."""
+    """Evaluate merge readiness from task cards, alerts, and test results.
+
+    Args:
+        task_cards: List of task cards.
+        risk_alerts: List of risk alerts.
+        tests_passed: Whether tests passed. None = not yet run.
+        codex_approved: Whether Codex approved. None = not yet reviewed.
+            Only treated as a gate when has_loop_artifacts=True.
+        branch_name: Current git branch.
+        has_loop_artifacts: True if the project has Hermes Loop review artifacts.
+            Codex approval is only required when this is True.
+    """
     blocking_issues: List[str] = []
     pending_cards = 0
     high_risk_files: List[str] = []
     review_required = False
 
     # Check task cards
+    seen_blocking_signatures: set = set()
+
+    def _dedup_key(text: str) -> str:
+        """Normalize a blocking issue text for dedup comparison.
+        Strips (priority=...) and (level=...) suffixes so that
+        the same issue reported under different severity keys
+        is not double-counted.
+        """
+        import re
+        # Remove trailing (priority=xxx) or (level=xxx)
+        key = re.sub(r"\s*\((?:priority|level)=[^)]+\)\s*$", "", text)
+        return key.strip().lower()
+
     for card in task_cards:
         if card.state.value in ("pending", "in_progress"):
             pending_cards += 1
             if card.merge_readiness == MergeReadinessState.BLOCK:
-                blocking_issues.append(
-                    f"BLOCKED: {card.title} "
-                    f"(priority={card.priority.value})"
-                )
+                issues_to_check = card.blocking_issues if card.blocking_issues else [card.title]
+                for issue in issues_to_check:
+                    dk = _dedup_key(issue)
+                    if dk not in seen_blocking_signatures:
+                        seen_blocking_signatures.add(dk)
+                        blocking_issues.append(
+                            f"BLOCKED: {issue} "
+                            f"(priority={card.priority.value})"
+                        )
 
         if card.risk_score >= 0.7:
             if card.target_file:
                 high_risk_files.append(card.target_file)
 
-    # Check risk alerts
+    # Check risk alerts (skip if already covered by a task card)
     for alert in risk_alerts:
         if alert.is_blocking:
-            blocking_issues.append(
-                f"BLOCKED: {alert.title} "
-                f"(level={alert.level.value})"
-            )
+            dk = _dedup_key(alert.title)
+            if dk not in seen_blocking_signatures:
+                seen_blocking_signatures.add(dk)
+                blocking_issues.append(
+                    f"BLOCKED: {alert.title} "
+                    f"(level={alert.level.value})"
+                )
         if alert.file_path and alert.file_path not in high_risk_files:
             high_risk_files.append(alert.file_path)
 
@@ -58,13 +91,14 @@ def evaluate_merge_readiness(
         review_required = True
         blocking_issues.append("Test results not yet available")
 
-    # Codex approval
-    if codex_approved is False:
-        blocking_issues.append("Codex review rejected")
-        review_required = True
-    elif codex_approved is None:
-        review_required = True
-        blocking_issues.append("Codex approval pending")
+    # Codex approval (only required when loop artifacts exist)
+    if has_loop_artifacts:
+        if codex_approved is False:
+            blocking_issues.append("Codex review rejected")
+            review_required = True
+        elif codex_approved is None:
+            review_required = True
+            blocking_issues.append("Codex approval pending")
 
     # Determine state
     if blocking_issues and any("BLOCKED" in i for i in blocking_issues):

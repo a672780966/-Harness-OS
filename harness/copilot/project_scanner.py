@@ -40,6 +40,7 @@ def guess_language(file_path: str) -> str:
     ext_map = {
         ".py": "Python", ".js": "JavaScript", ".ts": "TypeScript",
         ".tsx": "TypeScript React", ".jsx": "JavaScript React",
+        ".mjs": "JavaScript", ".cjs": "JavaScript",
         ".go": "Go", ".rs": "Rust", ".java": "Java",
         ".c": "C", ".cpp": "C++", ".h": "C/C++ Header",
         ".cs": "C#", ".rb": "Ruby", ".php": "PHP",
@@ -192,6 +193,9 @@ def scan_project(project_root: str) -> ProjectSemanticMap:
         elif mod_risk >= 0.4:
             risk_level = RiskLevel.MEDIUM
         elif mod_risk >= 0.1:
+            risk_level = RiskLevel.LOW
+        elif mod_risk == 0.0 and len(file_entries) > 0:
+            # Module has files but none triggered risk keywords — low risk
             risk_level = RiskLevel.LOW
 
         mc = ModuleCard(

@@ -32,6 +32,14 @@ def render_agent_state(state: AgentState, format: str = "markdown") -> str:
         f"   - 严重度: {state.severity}",
         f"   - 阻塞合并: {'是 🚫' if state.blocking else '否 ✅'}",
     ]
+    if state.state in ("idle", "unknown", "") or not state.source_events:
+        lines.append("")
+        lines.append(
+            "   > 📌 当前未检测到活动中的 Agent loop、测试结果或代码变更事件。"
+        )
+        lines.append(
+            "   > 对于 clean clone / 只读扫描项目，idle 是预期状态。"
+        )
     if state.source_events:
         lines.append(f"   - 触发事件: {', '.join(state.source_events[:5])}")
     if state.recommended_action:
