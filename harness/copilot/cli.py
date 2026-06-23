@@ -8,6 +8,10 @@ Usage:
   harness copilot readiness <project_path> [--diff-ref=<ref>]
   harness copilot agent-state <project_path> [--diff-ref=<ref>] [--format=markdown|json]
   harness copilot agent-state-from-loop <loop_run_dir> [--format=markdown|json]
+  harness copilot pr-pack <project_path> [--out=<dir>]
+  harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]
+  harness copilot pr-comment <project_path> [--format=markdown|json]
+  harness copilot pr-comment-from-loop <loop_run_dir> [--format=markdown|json]
 
 All commands are read-only. No code modification, no external agent control.
 """
@@ -595,6 +599,84 @@ def cmd_agent_state_from_loop(args: argparse.Namespace) -> None:
     print(render_agent_state(astate, format=args.format))
 
 
+# =================== Phase 7: PR/MR Integration Lite Commands ====================
+
+
+def cmd_pr_pack(args: argparse.Namespace) -> None:
+    """Export local PR review pack for a project."""
+    from harness.copilot.pr_integration.pr_pack import build_pr_pack, export_pr_pack
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    out_dir = os.path.abspath(args.out) if args.out else os.path.join(project_root, ".harness", "pr_pack")
+    pack = build_pr_pack(project_root, diff_ref=args.diff_ref)
+    result = export_pr_pack(pack, out_dir)
+
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✅ PR pack exported to: {out_dir}")
+    print(f"   文件数: {len(result['files'])}")
+    for fp in result["files"]:
+        print(f"   - {fp}")
+
+
+def cmd_pr_pack_from_loop(args: argparse.Namespace) -> None:
+    """Export local PR review pack from a loop run directory."""
+    from harness.copilot.pr_integration.pr_pack import build_pr_pack_from_loop, export_pr_pack
+
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    out_dir = os.path.abspath(args.out) if args.out else os.path.join(run_dir, "..", "..", "pr_pack")
+    out_dir = os.path.abspath(out_dir)
+    pack = build_pr_pack_from_loop(run_dir)
+    result = export_pr_pack(pack, out_dir)
+
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✅ Loop PR pack exported to: {out_dir}")
+    print(f"   文件数: {len(result['files'])}")
+    for fp in result["files"]:
+        print(f"   - {fp}")
+
+
+def cmd_pr_comment(args: argparse.Namespace) -> None:
+    """Generate PR comment text from a project."""
+    from harness.copilot.pr_integration.pr_pack import build_pr_pack
+    from harness.copilot.pr_integration.pr_comment_renderer import render_pr_comment
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    pack = build_pr_pack(project_root, diff_ref=args.diff_ref)
+    print(render_pr_comment(pack, format=args.format))
+
+
+def cmd_pr_comment_from_loop(args: argparse.Namespace) -> None:
+    """Generate PR comment text from a loop run directory."""
+    from harness.copilot.pr_integration.pr_pack import build_pr_pack_from_loop
+    from harness.copilot.pr_integration.pr_comment_renderer import render_pr_comment
+
+    run_dir = os.path.abspath(args.loop_run_dir)
+    if not os.path.isdir(run_dir):
+        print(f"Error: '{run_dir}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    pack = build_pr_pack_from_loop(run_dir)
+    print(render_pr_comment(pack, format=args.format))
+
+
 # =================== Phase 5: Monitor Commands ====================
 
 
@@ -823,6 +905,36 @@ def main() -> None:
     p_asfl.add_argument("--format", choices=["markdown", "json"], default="markdown",
                         help="Output format (default: markdown)")
     p_asfl.set_defaults(func=cmd_agent_state_from_loop)
+
+    # ==================== Phase 7: PR/MR Integration Commands ====================
+
+    # pr-pack
+    p_pp = subparsers.add_parser("pr-pack", help="Export local PR review pack (Phase 7)")
+    p_pp.add_argument("project_path", help="Path to project root")
+    p_pp.add_argument("--out", "-o", default=None, help="Output directory")
+    p_pp.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_pp.set_defaults(func=cmd_pr_pack)
+
+    # pr-pack-from-loop
+    p_ppfl = subparsers.add_parser("pr-pack-from-loop", help="Export PR pack from loop artifacts (Phase 7)")
+    p_ppfl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_ppfl.add_argument("--out", "-o", default=None, help="Output directory")
+    p_ppfl.set_defaults(func=cmd_pr_pack_from_loop)
+
+    # pr-comment
+    p_pc = subparsers.add_parser("pr-comment", help="Generate PR comment markdown (Phase 7)")
+    p_pc.add_argument("project_path", help="Path to project root")
+    p_pc.add_argument("--diff-ref", default="HEAD~1", help="Git diff base ref")
+    p_pc.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                      help="Output format (default: markdown)")
+    p_pc.set_defaults(func=cmd_pr_comment)
+
+    # pr-comment-from-loop
+    p_pcfl = subparsers.add_parser("pr-comment-from-loop", help="Generate PR comment from loop artifacts (Phase 7)")
+    p_pcfl.add_argument("loop_run_dir", help="Path to loop run directory")
+    p_pcfl.add_argument("--format", choices=["markdown", "json"], default="markdown",
+                        help="Output format (default: markdown)")
+    p_pcfl.set_defaults(func=cmd_pr_comment_from_loop)
 
     # ==================== Phase 5: Monitor Commands ====================
 
