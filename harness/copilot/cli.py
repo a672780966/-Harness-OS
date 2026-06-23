@@ -15,6 +15,15 @@ Usage:
   harness copilot live-events <project_path>
   harness copilot live-events-from-loop <loop_run_dir>
   harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]
+  harness copilot live-dashboard <project_path> [--out=<dir>]
+  harness copilot live-dashboard-from-loop <loop_run_dir> [--out=<dir>]
+  harness copilot provider-status [--check] [--format=markdown|json]
+  harness copilot config init
+  harness copilot config show [--project=<path>]
+  harness copilot config path [--project=<path>]
+  harness copilot config validate [--project=<path>]
+  harness copilot doctor
+  harness copilot version
 
 All commands are read-only. No code modification, no external agent control.
 """
@@ -833,6 +842,88 @@ def cmd_provider_status(args: argparse.Namespace) -> None:
         print(_json.dumps(summary, indent=2, ensure_ascii=False))
 
 
+# =================== Foundation: Config / Doctor / Version Commands ====================
+
+
+def cmd_config_init(args: argparse.Namespace) -> None:
+    """Initialize global config file at ~/.harness/config.yaml."""
+    from harness.config.loader import write_default_global_config
+    force = getattr(args, "force", False)
+    try:
+        path = write_default_global_config(force=force)
+        print(f"✅ Config initialized: {path}")
+    except FileExistsError as e:
+        print(f"⚠️  {e}")
+        print("   Use --force to overwrite.")
+        sys.exit(1)
+
+
+def cmd_config_show(args: argparse.Namespace) -> None:
+    """Show effective (merged) configuration."""
+    from harness.config.resolver import resolve_config
+    import json
+    cfg = resolve_config(
+        project_root=getattr(args, "project", None),
+    )
+    print(json.dumps(cfg.to_dict(), indent=2, ensure_ascii=False))
+
+
+def cmd_config_path(args: argparse.Namespace) -> None:
+    """Show config file paths."""
+    from harness.config.paths import resolve_effective_paths
+    paths = resolve_effective_paths(
+        project_root=getattr(args, "project", None),
+    )
+    print(f"Global config: {paths['global_config_path']}")
+    print(f"  Exists: {paths['global_config_exists']}")
+    print(f"Project config: {paths['project_config_path']}")
+    print(f"  Exists: {paths['project_config_exists']}")
+
+
+def cmd_config_validate(args: argparse.Namespace) -> None:
+    """Validate configuration for safety and completeness."""
+    from harness.config.validator import validate_config
+    result = validate_config(
+        project_root=getattr(args, "project", None),
+    )
+    if result["errors"]:
+        for err in result["errors"]:
+            print(f"❌ ERROR: {err}")
+    if result["warnings"]:
+        for warn in result["warnings"]:
+            print(f"⚠️  WARNING: {warn}")
+    if result["info"]:
+        for info in result["info"]:
+            print(f"ℹ️  {info}")
+    if result["security_issues"]:
+        print("")
+        for si in result["security_issues"]:
+            print(f"🔒 {si}")
+    print("")
+    if result["valid"]:
+        print("✅ Configuration is valid.")
+    else:
+        print("❌ Configuration has errors.")
+        sys.exit(1)
+
+
+def cmd_doctor(args: argparse.Namespace) -> None:
+    """Run runtime doctor checks."""
+    from harness.runtime.doctor import run_doctor, doctor_summary
+    results = run_doctor()
+    print("\n" + doctor_summary(results))
+
+
+def cmd_version(args: argparse.Namespace) -> None:
+    """Show Harness Copilot version."""
+    from harness.runtime.version import get_version_info, format_version
+    info = get_version_info()
+    print(format_version(info))
+    if args.json:
+        import json as _json
+        print(_json.dumps(info, indent=2))
+
+
 # =================== Phase 5: Monitor Commands ====================
 
 
@@ -1135,6 +1226,33 @@ def main() -> None:
                       help="Output format (default: markdown)")
     p_ps.set_defaults(func=cmd_provider_status)
 
+    # Foundation: Config / Doctor / Version
+    p_cfg_init = subparsers.add_parser("config", help="Manage configuration")
+    p_cfg_sub = p_cfg_init.add_subparsers(dest="config_command", help="Config sub-command")
+
+    p_cfg_init_cmd = p_cfg_sub.add_parser("init", help="Initialize global config")
+    p_cfg_init_cmd.add_argument("--force", action="store_true", help="Overwrite existing config")
+    p_cfg_init_cmd.set_defaults(func=cmd_config_init)
+
+    p_cfg_show = p_cfg_sub.add_parser("show", help="Show effective configuration")
+    p_cfg_show.add_argument("--project", default=None, help="Project root path")
+    p_cfg_show.set_defaults(func=cmd_config_show)
+
+    p_cfg_path = p_cfg_sub.add_parser("path", help="Show config file paths")
+    p_cfg_path.add_argument("--project", default=None, help="Project root path")
+    p_cfg_path.set_defaults(func=cmd_config_path)
+
+    p_cfg_val = p_cfg_sub.add_parser("validate", help="Validate configuration")
+    p_cfg_val.add_argument("--project", default=None, help="Project root path")
+    p_cfg_val.set_defaults(func=cmd_config_validate)
+
+    p_doc = subparsers.add_parser("doctor", help="Run runtime doctor checks")
+    p_doc.set_defaults(func=cmd_doctor)
+
+    p_ver = subparsers.add_parser("version", help="Show version info")
+    p_ver.add_argument("--json", action="store_true", help="Output JSON")
+    p_ver.set_defaults(func=cmd_version)
+
     # ==================== Phase 5: Monitor Commands ====================
 
     # monitor
@@ -1157,6 +1275,11 @@ def main() -> None:
 
     if not args.command:
         parser.print_help()
+        sys.exit(1)
+
+    # Handle config subcommand dispatch
+    if args.command == "config" and not getattr(args, "config_command", None):
+        p_cfg_init.print_help()
         sys.exit(1)
 
     args.func(args)
