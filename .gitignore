@@ -3,6 +3,13 @@ node_modules/
 
 # Build output
 dist/
+dist/*.tar.gz
+dist/*.zip
+
+# Large generated archives (prevent accidental Git tracking)
+*.tar.gz
+*.tgz
+*.zip
 
 # Python
 __pycache__/
