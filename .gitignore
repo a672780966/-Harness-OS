@@ -3,10 +3,25 @@ node_modules/
 
 # Build output
 dist/
+dist/*.tar.gz
+dist/*.zip
+
+# Large generated archives (prevent accidental Git tracking)
+*.tar.gz
+*.tgz
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
 
 # Harness OS local runtime state
 .project/state/runtime.json
 .harness/
+!.harness/evaluations/
 .project/tasks/active/
 .project/context/
 .project/sessions/
@@ -42,13 +57,12 @@ Thumbs.db
 # Test coverage
 coverage/
 
-# Claude Code runtime data
-.claude/tool-trace.jsonl
-.claude/current-session-state.json
-.claude/last-session-state.json
-.claude/hook-errors.log
-.claude/observations.jsonl
-.claude/hooks/*.bak
+# Local tool caches / agent workdirs
+.ocr/
+.claude/
+.agents/
+.specify/
+.codex/
 
 # Editor
 .vscode/

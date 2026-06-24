@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness Copilot — Live Dashboard</title>
+<style>
+/* Harness Copilot Live Dashboard — Dark Theme */
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --accent-blue: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-red: #f85149;
+  --accent-orange: #d29922;
+  --accent-purple: #bc8cff;
+  --accent-cyan: #39d2c0;
+  --card-bg: #1c2128;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  padding: 0;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+.header {
+  padding: 24px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header h1 { font-size: 24px; font-weight: 600; }
+.header-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.badge-local { background: #1b362a; color: var(--accent-green); border: 1px solid #2d6a3f; }
+.badge-readonly { background: #1b2d3b; color: var(--accent-blue); border: 1px solid #1f5480; }
+.badge-live { background: #3b2e0f; color: var(--accent-orange); border: 1px solid #6b5516; animation: pulse 2s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 768px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  min-height: 80px;
+}
+.card-header {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Agent State Card */
+.agent-state-card .as-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.agent-state-card .as-icon { font-size: 40px; }
+.agent-state-card .as-text { font-size: 16px; font-weight: 500; }
+.agent-state-card .as-severity {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.as-severity.low { background: #1b362a; color: var(--accent-green); }
+.as-severity.medium { background: #3b2e0f; color: var(--accent-orange); }
+.as-severity.high { background: #3b1a18; color: var(--accent-red); }
+.as-severity.critical { background: #4a0f0d; color: #ff7777; }
+
+/* Readiness Card */
+.readiness-card .rc-value { font-size: 22px; font-weight: 700; }
+.readiness-card.pass .rc-value { color: var(--accent-green); }
+.readiness-card.block .rc-value { color: var(--accent-red); }
+.readiness-card.review_needed .rc-value { color: var(--accent-orange); }
+
+/* Risk Level */
+.risk-level.low { color: var(--accent-green); }
+.risk-level.medium { color: var(--accent-orange); }
+.risk-level.high, .risk-level.critical { color: var(--accent-red); }
+
+/* Blocking status */
+.blocking-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.blocking-badge.blocked { background: #3b1a18; color: var(--accent-red); }
+.blocking-badge.ok { background: #1b362a; color: var(--accent-green); }
+
+/* Event Timeline */
+.timeline {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.timeline-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.timeline-item:last-child { border-bottom: none; }
+.timeline-item .tl-time {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 70px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 11px;
+}
+.timeline-item .tl-icon { flex-shrink: 0; }
+.timeline-item .tl-text { flex: 1; word-break: break-word; }
+.timeline-item.blocking { background: #3b1a1822; }
+.timeline-item:hover { background: var(--bg-tertiary); }
+
+/* Timestamp */
+.timestamp {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+  padding: 8px 0;
+}
+
+/* Connection status */
+.conn-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.conn-status.connected { background: #1b362a; color: var(--accent-green); }
+.conn-status.disconnected { background: #3b1a18; color: var(--accent-red); }
+.conn-status .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.conn-status.connected .dot { background: var(--accent-green); }
+.conn-status.disconnected .dot { background: var(--accent-red); }
+
+/* Recommended Action */
+.action-box {
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  border-left: 4px solid var(--accent-blue);
+}
+
+/* Stat cards */
+.stat-card {
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-card .value { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.stat-card .label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; }
+
+/* Scrollbar */
+.timeline::-webkit-scrollbar { width: 6px; }
+.timeline::-webkit-scrollbar-track { background: var(--bg-secondary); }
+.timeline::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>📡 django__django-11885</h1>
+    <div style="font-size:13px;color:var(--text-muted);margin-top:4px">
+      🔀 <code>tier_C</code>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-local">🏠 Local</span>
+    <span class="badge badge-readonly">🔒 Read-only</span>
+    <span class="badge badge-live" id="live-badge">🔴 Live</span>
+  </div>
+</div>
+
+<!-- Status Grid -->
+<div class="grid-4" style="margin-bottom:20px">
+
+  <!-- Agent State -->
+  <div class="card agent-state-card">
+    <div class="card-header">🤖 Agent 状态</div>
+    <div class="as-main">
+      <div class="as-icon">🚫</div>
+      <div>
+        <div class="as-text" id="as-state">Codex 审查拒绝，需要修复 review blocking issue</div>
+        <span class="as-severity critical" id="as-severity">CRITICAL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Merge Readiness -->
+  <div class="card readiness-card pass">
+    <div class="card-header">🔀 合并就绪度</div>
+    <div>
+      <span id="mr-icon" style="font-size:24px">✅</span>
+      <span class="rc-value" id="mr-state">可以合并 ✅</span>
+    </div>
+  </div>
+
+  <!-- Risk Level -->
+  <div class="card">
+    <div class="card-header">⚠️ 风险等级</div>
+    <div class="risk-level critical" id="risk-level" style="font-size:28px;font-weight:700">
+      CRITICAL
+    </div>
+  </div>
+
+  <!-- Blocking Status -->
+  <div class="card">
+    <div class="card-header">🚫 阻塞状态</div>
+    <div>
+      <span class="blocking-badge blocked" id="blocking-status">
+        🚫 已阻塞
+      </span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Recommended Action & Connection Status -->
+<div class="grid-2" style="margin-bottom:20px">
+  <div class="card">
+    <div class="card-header">💡 建议操作</div>
+    <div class="action-box" id="recommended-action">检查 review 意见并修复</div>
+  </div>
+  <div class="card">
+    <div class="card-header">📡 连接状态</div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <span class="conn-status disconnected" id="conn-status">
+        <span class="dot"></span> 连接中...
+      </span>
+      <span style="font-size:12px;color:var(--text-muted)">
+        事件数: <strong id="event-count">1</strong>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Event Timeline -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header">📋 Live Event Timeline</div>
+  <div class="timeline" id="live-events">
+    <div id="no-events" style="padding:16px;color:var(--text-muted);text-align:center">
+      等待事件...
+    </div>
+  </div>
+  <div class="timestamp">
+    Last updated: <span id="last-updated">10:24:25</span>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  Harness Copilot — Live Dashboard &middot; Local-only &middot; Read-only &middot; 无外部服务 &middot; 无 Agent 控制
+</div>
+
+<!-- Embedded data -->
+<script id="dashboard-data" type="application/json">
+{
+  "project_name": "django__django-11885",
+  "branch": "tier_C",
+  "generated_at": "2026-06-23T10:24:25.Z",
+  "agent_state": {
+    "state": "blocked",
+    "confidence": 0.9,
+    "source_events": [
+      "final_gate_result",
+      "final_review_envelope"
+    ],
+    "summary": "Codex 审查拒绝，需要修复 review blocking issue",
+    "recommended_action": "检查 review 意见并修复",
+    "severity": "critical",
+    "blocking": true,
+    "timestamp": ""
+  },
+  "merge_readiness": {
+    "state": "pass",
+    "state_label": "可以合并 ✅",
+    "state_icon": "✅",
+    "summary": "✅ Final Gate 已通过，可以准备合并。",
+    "blocking_issues": [],
+    "is_blocked": false,
+    "is_ready": true,
+    "review_required": false,
+    "pending_cards": 0,
+    "high_risk_count": 0
+  },
+  "risk_level": "critical",
+  "blocking": true,
+  "recommended_action": "检查 review 意见并修复",
+  "events": [
+    {
+      "event_id": "live-202606231024258087-0001",
+      "timestamp": "2026-06-23T10:24:25.Z",
+      "source": "loop",
+      "event_type": "loop_state_update",
+      "agent_state": {
+        "state": "blocked",
+        "confidence": 0.9,
+        "source_events": [
+          "final_gate_result",
+          "final_review_envelope"
+        ],
+        "summary": "Codex 审查拒绝，需要修复 review blocking issue",
+        "recommended_action": "检查 review 意见并修复",
+        "severity": "critical",
+        "blocking": true,
+        "timestamp": ""
+      },
+      "merge_readiness": {
+        "state": "pass",
+        "state_label": "可以合并 ✅",
+        "state_icon": "✅",
+        "summary": "✅ Final Gate 已通过，可以准备合并。",
+        "blocking_issues": [],
+        "is_blocked": false,
+        "is_ready": true,
+        "review_required": false,
+        "pending_cards": 0,
+        "high_risk_count": 0
+      },
+      "risk_level": "critical",
+      "summary": "Loop: Codex 审查拒绝，需要修复 review blocking issue",
+      "recommended_action": "检查 review 意见并修复",
+      "blocking": true,
+      "readonly": true,
+      "payload": {
+        "run_dir": "/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full",
+        "instance_id": "django__django-11885",
+        "tier": "C",
+        "load_errors": 0,
+        "evidence_present": true
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Initial events as fallback -->
+<script id="initial-events" type="application/json">
+[{"event_id": "live-202606231024258087-0001", "timestamp": "2026-06-23T10:24:25.Z", "source": "loop", "event_type": "loop_state_update", "agent_state": {"state": "blocked", "confidence": 0.9, "source_events": ["final_gate_result", "final_review_envelope"], "summary": "Codex 审查拒绝，需要修复 review blocking issue", "recommended_action": "检查 review 意见并修复", "severity": "critical", "blocking": true, "timestamp": ""}, "merge_readiness": {"state": "pass", "state_label": "可以合并 ✅", "state_icon": "✅", "summary": "✅ Final Gate 已通过，可以准备合并。", "blocking_issues": [], "is_blocked": false, "is_ready": true, "review_required": false, "pending_cards": 0, "high_risk_count": 0}, "risk_level": "critical", "summary": "Loop: Codex 审查拒绝，需要修复 review blocking issue", "recommended_action": "检查 review 意见并修复", "blocking": true, "readonly": true, "payload": {"run_dir": "/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full", "instance_id": "django__django-11885", "tier": "C", "load_errors": 0, "evidence_present": true}}]
+</script>
+
+<!-- Live dashboard JS -->
+<script>
+
+(function() {
+  var container = document.getElementById('live-events');
+  var counter = document.getElementById('event-count');
+  var connStatus = document.getElementById('conn-status');
+  var lastUpdated = document.getElementById('last-updated');
+  var count = 0;
+
+  function updateTime() {
+    if (lastUpdated) {
+      lastUpdated.textContent = new Date().toISOString().slice(11, 19);
+    }
+    if (counter) counter.textContent = count;
+  }
+
+  function renderEvent(evt) {
+    var item = document.createElement('div');
+    item.className = 'timeline-item';
+    if (evt.blocking) item.classList.add('blocking');
+
+    var ts = (evt.timestamp || '').slice(11, 19) || '';
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'tl-time';
+    timeDiv.textContent = ts;
+
+    var icons = {
+      'project_state_update': '📡',
+      'loop_state_update': '🔄',
+      'project_error': '❌',
+      'loop_error': '❌'
+    };
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'tl-icon';
+    iconSpan.textContent = icons[evt.event_type] || '📌';
+
+    var textSpan = document.createElement('span');
+    textSpan.className = 'tl-text';
+    textSpan.textContent = evt.summary || evt.event_type;
+
+    item.appendChild(timeDiv);
+    item.appendChild(iconSpan);
+    item.appendChild(textSpan);
+    container.appendChild(item);
+    container.scrollTop = container.scrollHeight;
+
+    count++;
+    updateTime();
+  }
+
+  function trySSE() {
+    var es = null;
+    try {
+      es = new EventSource('/events');
+    } catch(e) { return false; }
+
+    es.onopen = function() {
+      if (connStatus) {
+        connStatus.className = 'conn-status connected';
+        connStatus.innerHTML = '<span class="dot"></span> 已连接';
+      }
+    };
+
+    es.onmessage = function(e) {
+      try {
+        var evt = JSON.parse(e.data);
+        renderEvent(evt);
+      } catch(err) {}
+    };
+
+    es.onerror = function() {
+      if (connStatus) {
+        connStatus.className = 'conn-status disconnected';
+        connStatus.innerHTML = '<span class="dot"></span> 已断开';
+      }
+      es.close();
+    };
+    return true;
+  }
+
+  function tryFetch() {
+    fetch('/latest')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.events) {
+          data.events.forEach(function(evt) { renderEvent(evt); });
+        }
+      })
+      .catch(function() {});
+  }
+
+  // Attempt SSE; fallback to polling
+  if (!trySSE()) {
+    tryFetch();
+    setInterval(tryFetch, 5000);
+  }
+
+  // Update dashboard-state.json data
+  function refreshState() {
+    fetch('/latest?count=1')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.events && data.events.length > 0) {
+          var latest = data.events[data.events.length - 1];
+          updateCards(latest);
+        }
+      })
+      .catch(function() {});
+  }
+
+  function updateCards(evt) {
+    if (!evt) return;
+    var as = evt.agent_state || {};
+    var mr = evt.merge_readiness || {};
+
+    var stateEl = document.getElementById('as-state');
+    var severityEl = document.getElementById('as-severity');
+    if (stateEl && as.summary) stateEl.textContent = as.summary;
+    if (severityEl && as.severity) {
+      severityEl.textContent = as.severity.toUpperCase();
+      severityEl.className = 'as-severity ' + as.severity;
+    }
+
+    var mrStateEl = document.getElementById('mr-state');
+    var mrIconEl = document.getElementById('mr-icon');
+    if (mrStateEl && mr.state_label) mrStateEl.textContent = mr.state_label;
+    if (mrIconEl && mr.state_icon) mrIconEl.textContent = mr.state_icon;
+
+    var blockingEl = document.getElementById('blocking-status');
+    if (blockingEl) {
+      if (evt.blocking) {
+        blockingEl.className = 'blocking-badge blocked';
+        blockingEl.textContent = '🚫 已阻塞';
+      } else {
+        blockingEl.className = 'blocking-badge ok';
+        blockingEl.textContent = '✅ 正常';
+      }
+    }
+
+    var riskEl = document.getElementById('risk-level');
+    if (riskEl && evt.risk_level) {
+      riskEl.textContent = evt.risk_level.toUpperCase();
+      riskEl.className = 'risk-level ' + evt.risk_level;
+    }
+
+    var actionEl = document.getElementById('recommended-action');
+    if (actionEl) {
+      actionEl.textContent = evt.recommended_action || '无待处理操作';
+    }
+  }
+
+  // Initial poll after 1 second
+  setTimeout(function() {
+    refreshState();
+    setInterval(refreshState, 3000);
+  }, 1000);
+})();
+
+</script>
+
+</div>
+</body>
+</html>

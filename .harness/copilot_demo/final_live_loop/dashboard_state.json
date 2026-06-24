@@ -1,0 +1,78 @@
+{
+  "project_name": "django__django-11885",
+  "branch": "tier_C",
+  "generated_at": "2026-06-23T11:04:24.Z",
+  "agent_state": {
+    "state": "blocked",
+    "confidence": 0.9,
+    "source_events": [
+      "final_gate_result",
+      "final_review_envelope"
+    ],
+    "summary": "Codex 审查拒绝，需要修复 review blocking issue",
+    "recommended_action": "检查 review 意见并修复",
+    "severity": "critical",
+    "blocking": true,
+    "timestamp": ""
+  },
+  "merge_readiness": {
+    "state": "pass",
+    "state_label": "可以合并 ✅",
+    "state_icon": "✅",
+    "summary": "✅ Final Gate 已通过，可以准备合并。",
+    "blocking_issues": [],
+    "is_blocked": false,
+    "is_ready": true,
+    "review_required": false,
+    "pending_cards": 0,
+    "high_risk_count": 0
+  },
+  "risk_level": "critical",
+  "blocking": true,
+  "recommended_action": "检查 review 意见并修复",
+  "events": [
+    {
+      "event_id": "live-202606231104240767-0001",
+      "timestamp": "2026-06-23T11:04:24.Z",
+      "source": "loop",
+      "event_type": "loop_state_update",
+      "agent_state": {
+        "state": "blocked",
+        "confidence": 0.9,
+        "source_events": [
+          "final_gate_result",
+          "final_review_envelope"
+        ],
+        "summary": "Codex 审查拒绝，需要修复 review blocking issue",
+        "recommended_action": "检查 review 意见并修复",
+        "severity": "critical",
+        "blocking": true,
+        "timestamp": ""
+      },
+      "merge_readiness": {
+        "state": "pass",
+        "state_label": "可以合并 ✅",
+        "state_icon": "✅",
+        "summary": "✅ Final Gate 已通过，可以准备合并。",
+        "blocking_issues": [],
+        "is_blocked": false,
+        "is_ready": true,
+        "review_required": false,
+        "pending_cards": 0,
+        "high_risk_count": 0
+      },
+      "risk_level": "critical",
+      "summary": "Loop: Codex 审查拒绝，需要修复 review blocking issue",
+      "recommended_action": "检查 review 意见并修复",
+      "blocking": true,
+      "readonly": true,
+      "payload": {
+        "run_dir": "/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full",
+        "instance_id": "django__django-11885",
+        "tier": "C",
+        "load_errors": 0,
+        "evidence_present": true
+      }
+    }
+  ]
+}

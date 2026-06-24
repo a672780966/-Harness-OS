@@ -1,0 +1,86 @@
+{
+  "project_name": "django__django-11885",
+  "project_root": "/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full",
+  "branch": "tier_C",
+  "overall_risk_level": "low",
+  "risk_color": "green",
+  "agent_phase": "done",
+  "agent_phase_label": "已完成",
+  "uncommitted_changes": 0,
+  "module_count": 1,
+  "generated_at": "2026-06-22T14:02:53.499140+00:00",
+  "modules": [
+    {
+      "name": "django-11885",
+      "file_count": 4,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.1,
+      "risk_description": "✅ 低风险 — django__django-11885 执行通过",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": "django__django-11885",
+      "summary": "Loop: real_loop_complete (4 files, patch: 91 lines)",
+      "intent": "Agent 完成循环并获批准，可以准备合并",
+      "files_changed": [],
+      "lines_changed_str": "+91",
+      "has_risks": false,
+      "risk_warnings": []
+    }
+  ],
+  "suggestions": null,
+  "task_cards": {
+    "cards": [
+      {
+        "title": "修复回合 round_1 (Eval-triggered)",
+        "card_type": "fix_test",
+        "state": "blocked",
+        "priority_label": "🟠 高优先级",
+        "module": "django__django-11885",
+        "target_file": "",
+        "description": "修复回合 round_1: 测试结果 0/0 通过 ❌",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "🚫 已阻塞"
+      }
+    ],
+    "summary": {
+      "total_cards": 1,
+      "blocking_count": 1,
+      "by_state": {
+        "pending": 0
+      }
+    }
+  },
+  "readiness": {
+    "state": "pass",
+    "state_label": "可以合并 ✅",
+    "state_icon": "✅",
+    "summary": "✅ Final Gate 已通过，可以准备合并。",
+    "blocking_issues": [],
+    "is_blocked": false,
+    "is_ready": true,
+    "review_required": false,
+    "pending_cards": 0,
+    "high_risk_count": 0
+  },
+  "evidence": {
+    "pack_id": "pack_5a6e90782dee",
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "integrity_hash": "c5effa28d73cc658b2317d8a3ec5915bcf32ca1acd21982dcb6a525095fb7042"
+  },
+  "companion": {
+    "is_active": false,
+    "mode": "idle",
+    "status_text": "等待中",
+    "waiting_since": ""
+  }
+}

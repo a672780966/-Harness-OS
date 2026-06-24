@@ -1,0 +1,89 @@
+{
+  "project_name": "-Harness-OS",
+  "branch": "v1.2/engineering-copilot-ux",
+  "generated_at": "2026-06-23T10:24:21.Z",
+  "agent_state": {
+    "state": "implementing",
+    "confidence": 0.6,
+    "source_events": [
+      "project_diff_changed"
+    ],
+    "summary": "Agent 正在修改代码",
+    "recommended_action": "等待代码修改完成",
+    "severity": "low",
+    "blocking": false,
+    "timestamp": ""
+  },
+  "merge_readiness": {
+    "state": "block",
+    "state_label": "禁止合并 🔴",
+    "state_icon": "🔴",
+    "summary": "Merge blocked: 6 blocking issue(s). 11 task card(s) still pending. 3 high-risk file(s) detected. Human review recommended.",
+    "blocking_issues": [
+      "BLOCKED: High-risk changes in 'harness' (priority=high)",
+      "BLOCKED: High-risk changes in 'tests' (priority=high)",
+      "BLOCKED: High-risk changes in 'harness' (level=high)",
+      "BLOCKED: High-risk changes in 'tests' (level=high)",
+      "Test results not yet available",
+      "Codex approval pending"
+    ],
+    "is_blocked": true,
+    "is_ready": false,
+    "review_required": true,
+    "pending_cards": 11,
+    "high_risk_count": 3
+  },
+  "risk_level": "critical",
+  "blocking": true,
+  "recommended_action": "等待代码修改完成",
+  "events": [
+    {
+      "event_id": "live-202606231024210087-0001",
+      "timestamp": "2026-06-23T10:24:21.Z",
+      "source": "project",
+      "event_type": "project_state_update",
+      "agent_state": {
+        "state": "implementing",
+        "confidence": 0.6,
+        "source_events": [
+          "project_diff_changed"
+        ],
+        "summary": "Agent 正在修改代码",
+        "recommended_action": "等待代码修改完成",
+        "severity": "low",
+        "blocking": false,
+        "timestamp": ""
+      },
+      "merge_readiness": {
+        "state": "block",
+        "state_label": "禁止合并 🔴",
+        "state_icon": "🔴",
+        "summary": "Merge blocked: 6 blocking issue(s). 11 task card(s) still pending. 3 high-risk file(s) detected. Human review recommended.",
+        "blocking_issues": [
+          "BLOCKED: High-risk changes in 'harness' (priority=high)",
+          "BLOCKED: High-risk changes in 'tests' (priority=high)",
+          "BLOCKED: High-risk changes in 'harness' (level=high)",
+          "BLOCKED: High-risk changes in 'tests' (level=high)",
+          "Test results not yet available",
+          "Codex approval pending"
+        ],
+        "is_blocked": true,
+        "is_ready": false,
+        "review_required": true,
+        "pending_cards": 11,
+        "high_risk_count": 3
+      },
+      "risk_level": "critical",
+      "summary": "Agent: Agent 正在修改代码 | 禁止合并 🔴 | 31 uncommitted",
+      "recommended_action": "等待代码修改完成",
+      "blocking": true,
+      "readonly": true,
+      "payload": {
+        "branch": "v1.2/engineering-copilot-ux",
+        "project_name": "-Harness-OS",
+        "uncommitted_changes": 31,
+        "module_count": 10
+      }
+    }
+  ]
+}

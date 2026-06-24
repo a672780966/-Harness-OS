@@ -1,0 +1,521 @@
+{
+  "project_name": "-Harness-OS",
+  "project_root": "/home/ctyun/-Harness-OS",
+  "branch": "v1.2/engineering-copilot-ux",
+  "overall_risk_level": "high",
+  "risk_color": "red",
+  "agent_phase": "implementing",
+  "agent_phase_label": "正在修改代码 — 等待代码修改完成",
+  "uncommitted_changes": 26,
+  "module_count": 10,
+  "generated_at": "2026-06-23T11:04:19.820129+00:00",
+  "modules": [
+    {
+      "name": "Harness-OS-P0-Fix-Requirements",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — Harness-OS-P0-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "Harness-OS-P0-Fix-Requirements/03_SECRET_REDACTION_FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path",
+            "Configuration file: requirements"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "Harness-OS-Third-Round-Fix-Requirements",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — Harness-OS-Third-Round-Fix-Requirements 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "Harness-OS-Third-Round-Fix-Requirements/02_SECRET_REDACTOR_FULL_CHAIN_FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path",
+            "Configuration file: requirements"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "docs",
+      "file_count": 31,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — docs",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "fix-reports",
+      "file_count": 6,
+      "risk_level": "high",
+      "risk_color": "red",
+      "risk_score": 0.8,
+      "risk_description": "⚠️ 高风险 — fix-reports 模块包含敏感文件或大范围变更，建议重点审查。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "fix-reports/AUD-P0-003-SECRET-REDACTION-FIX.md",
+          "score": 0.8,
+          "reasons": [
+            "Contains 'secret' in path"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "harness",
+      "file_count": 59,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — harness 模块变更安全。",
+      "dependencies": [],
+      "dependents": [
+        "tests"
+      ],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    },
+    {
+      "name": "harness_os_docs",
+      "file_count": 22,
+      "risk_level": "medium",
+      "risk_color": "yellow",
+      "risk_score": 0.5,
+      "risk_description": "⚡ 中等风险 — harness_os_docs 模块需关注，建议检查变更范围。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [
+        {
+          "path": "harness_os_docs/18_MIGRATION_VERSIONING.md",
+          "score": 0.5,
+          "reasons": [
+            "Contains 'migration' in path"
+          ]
+        }
+      ],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "root",
+      "file_count": 15,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — root 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "src",
+      "file_count": 67,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — src 模块变更安全。",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "templates",
+      "file_count": 1,
+      "risk_level": "unknown",
+      "risk_color": "gray",
+      "risk_score": 0.0,
+      "risk_description": "风险未知 — templates",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Markdown"
+    },
+    {
+      "name": "tests",
+      "file_count": 96,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.2,
+      "risk_description": "✅ 低风险 — tests 模块变更安全。",
+      "dependencies": [
+        "harness"
+      ],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": ".harness",
+      "summary": "Added 1340 lines across 4 files",
+      "intent": "新增代码",
+      "files_changed": [
+        ".harness/copilot_demo/phase8_live_loop/dashboard_state.json",
+        ".harness/copilot_demo/phase8_live_loop/index.html",
+        ".harness/copilot_demo/phase8_live_project/dashboard_state.json",
+        ".harness/copilot_demo/phase8_live_project/index.html"
+      ],
+      "lines_changed_str": "+1340/-0",
+      "has_risks": true,
+      "risk_warnings": [
+        ".harness/copilot_demo/phase8_live_loop/index.html: Large change (581 lines)",
+        ".harness/copilot_demo/phase8_live_project/index.html: Large change (592 lines)"
+      ]
+    },
+    {
+      "module": "harness",
+      "summary": "Changed 11 files (+1671/-1 lines)",
+      "intent": "新增代码",
+      "files_changed": [
+        "harness/copilot/cli.py",
+        "harness/copilot/live/__init__.py",
+        "harness/copilot/live/event_bus.py",
+        "harness/copilot/live/live_dashboard.py",
+        "harness/copilot/live/live_event.py",
+        "harness/copilot/live/live_html_renderer.py",
+        "harness/copilot/live/loop_stream.py",
+        "harness/copilot/live/project_stream.py",
+        "harness/copilot/live/renderer.py",
+        "harness/copilot/live/sse_server.py",
+        "harness/copilot/live/static_live_assets.py"
+      ],
+      "lines_changed_str": "+1671/-1",
+      "has_risks": true,
+      "risk_warnings": [
+        "harness/copilot/live/live_dashboard.py: Substantial change (236 lines)",
+        "harness/copilot/live/static_live_assets.py: Substantial change (384 lines)"
+      ]
+    },
+    {
+      "module": "tests",
+      "summary": "Added 885 lines across 9 files",
+      "intent": "测试用例变更",
+      "files_changed": [
+        "tests/copilot/test_live_cli.py",
+        "tests/copilot/test_live_dashboard_cli.py",
+        "tests/copilot/test_live_dashboard_readonly.py",
+        "tests/copilot/test_live_dashboard_ui.py",
+        "tests/copilot/test_live_event_bus.py",
+        "tests/copilot/test_live_event_schema.py",
+        "tests/copilot/test_live_readonly.py",
+        "tests/copilot/test_loop_live_stream.py",
+        "tests/copilot/test_project_live_stream.py"
+      ],
+      "lines_changed_str": "+885/-0",
+      "has_risks": true,
+      "risk_warnings": [
+        "tests/copilot/test_live_event_schema.py: Contains security/infra keyword: 'schema'"
+      ]
+    }
+  ],
+  "suggestions": {
+    "suggestions": [
+      {
+        "suggestion": "Add tests for AGENTS.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "AGENTS.md"
+      },
+      {
+        "suggestion": "Add tests for BENCHMARK.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "BENCHMARK.md"
+      },
+      {
+        "suggestion": "Add tests for CLAUDE.md",
+        "reason": "Test coverage gap — add tests for untested source file",
+        "priority_label": "🟡 中优先级",
+        "confidence_label": "60%",
+        "file_path": "CLAUDE.md"
+      },
+      {
+        "suggestion": "Consider splitting 'tests' into smaller modules",
+        "reason": "Module has 96 files and 1 dependencies",
+        "priority_label": "⚪ 低优先级",
+        "confidence_label": "30%",
+        "file_path": "/home/ctyun/-Harness-OS/tests"
+      }
+    ]
+  },
+  "task_cards": {
+    "cards": [
+      {
+        "title": "High-risk changes in '.harness'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": ".harness",
+        "target_file": "",
+        "description": "Module '.harness' has 1340+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Critical: index.html",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🔴 紧急",
+        "module": ".harness",
+        "target_file": ".harness/copilot_demo/phase8_live_loop/index.html",
+        "description": "File '.harness/copilot_demo/phase8_live_loop/index.html' has critical risk score (0.7).",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Critical: index.html",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🔴 紧急",
+        "module": ".harness",
+        "target_file": ".harness/copilot_demo/phase8_live_project/index.html",
+        "description": "File '.harness/copilot_demo/phase8_live_project/index.html' has critical risk score (0.7).",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High-risk changes in 'harness'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "",
+        "description": "Module 'harness' has 1671+/1- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: live_dashboard.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "harness/copilot/live/live_dashboard.py",
+        "description": "File 'harness/copilot/live/live_dashboard.py' flagged: Substantial change (236 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: static_live_assets.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "harness/copilot/live/static_live_assets.py",
+        "description": "File 'harness/copilot/live/static_live_assets.py' flagged: Substantial change (384 lines)",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High-risk changes in 'tests'",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "",
+        "description": "Module 'tests' has 885+/0- changes classified as high risk.",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "High risk: test_live_event_schema.py",
+        "card_type": "risk_alert",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "tests/copilot/test_live_event_schema.py",
+        "description": "File 'tests/copilot/test_live_event_schema.py' flagged: Contains security/infra keyword: 'schema'",
+        "is_blocking": false,
+        "risk_label": "🟠 高风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in '.harness'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": ".harness",
+        "target_file": "",
+        "description": "Added 1340 lines across 4 files",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'harness'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "harness",
+        "target_file": "",
+        "description": "Changed 11 files (+1671/-1 lines)",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Review changes in 'tests'",
+        "card_type": "fix_review",
+        "state": "pending",
+        "priority_label": "🟠 高优先级",
+        "module": "tests",
+        "target_file": "",
+        "description": "Added 885 lines across 9 files",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for AGENTS.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "AGENTS.md",
+        "description": "Add tests for AGENTS.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for BENCHMARK.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "BENCHMARK.md",
+        "description": "Add tests for BENCHMARK.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Add tests for CLAUDE.md",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "🟡 中优先级",
+        "module": "root",
+        "target_file": "CLAUDE.md",
+        "description": "Add tests for CLAUDE.md\n\nReason: Test coverage gap — add tests for untested source file",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      },
+      {
+        "title": "Consider splitting 'tests' into smaller modules",
+        "card_type": "fix_test",
+        "state": "pending",
+        "priority_label": "⚪ 低优先级",
+        "module": "tests",
+        "target_file": "/home/ctyun/-Harness-OS/tests",
+        "description": "Consider splitting 'tests' into smaller modules\n\nReason: Module has 96 files and 1 dependencies",
+        "is_blocking": false,
+        "risk_label": "🟡 中风险",
+        "state_label": "⏳ 待处理"
+      }
+    ],
+    "summary": {
+      "total_cards": 15,
+      "by_type": {
+        "risk_alert": 8,
+        "fix_review": 3,
+        "fix_test": 4
+      },
+      "by_state": {
+        "pending": 15
+      },
+      "by_priority": {
+        "high": 9,
+        "critical": 2,
+        "medium": 3,
+        "low": 1
+      },
+      "blocking_count": 5,
+      "summary_line": "15 cards: 15 pending, 0 completed, 5 blocking"
+    }
+  },
+  "readiness": {
+    "state": "block",
+    "state_label": "禁止合并 🔴",
+    "state_icon": "🔴",
+    "summary": "Merge blocked: 12 blocking issue(s). 15 task card(s) still pending. 5 high-risk file(s) detected. Human review recommended.",
+    "blocking_issues": [
+      "BLOCKED: High-risk changes in '.harness' (priority=high)",
+      "BLOCKED: Critical: index.html (priority=critical)",
+      "BLOCKED: Critical: index.html (priority=critical)",
+      "BLOCKED: High-risk changes in 'harness' (priority=high)",
+      "BLOCKED: High-risk changes in 'tests' (priority=high)",
+      "BLOCKED: High-risk changes in '.harness' (level=high)",
+      "BLOCKED: Critical: index.html (level=critical)",
+      "BLOCKED: Critical: index.html (level=critical)",
+      "BLOCKED: High-risk changes in 'harness' (level=high)",
+      "BLOCKED: High-risk changes in 'tests' (level=high)",
+      "Test results not yet available",
+      "Codex approval pending"
+    ],
+    "is_blocked": true,
+    "is_ready": false,
+    "review_required": true,
+    "pending_cards": 15,
+    "high_risk_count": 5
+  },
+  "evidence": {
+    "pack_id": "pack_71bdbcf6db52",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "integrity_hash": "d82f4e80a16f39180cc29a2d2f4da81b43368fa757a27f9f64a0157a523e3f8f"
+  },
+  "agent_state": {
+    "state": "implementing",
+    "confidence": 0.6,
+    "source_events": [
+      "project_diff_changed"
+    ],
+    "summary": "Agent 正在修改代码",
+    "recommended_action": "等待代码修改完成",
+    "severity": "low",
+    "blocking": false,
+    "timestamp": ""
+  },
+  "companion": {
+    "is_active": false,
+    "mode": "idle",
+    "status_text": "等待中",
+    "waiting_since": ""
+  }
+}

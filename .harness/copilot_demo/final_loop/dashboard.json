@@ -1,0 +1,99 @@
+{
+  "project_name": "django__django-11885",
+  "project_root": "/home/ctyun/-Harness-OS/.harness/evaluations/swebench_abc_mini_pilot_001/runs/django__django-11885/tier_C_full",
+  "branch": "tier_C",
+  "overall_risk_level": "low",
+  "risk_color": "green",
+  "agent_phase": "blocked",
+  "agent_phase_label": "阻塞 — 检查 review 意见并修复",
+  "uncommitted_changes": 0,
+  "module_count": 1,
+  "generated_at": "2026-06-23T11:04:21.317547+00:00",
+  "modules": [
+    {
+      "name": "django-11885",
+      "file_count": 4,
+      "risk_level": "low",
+      "risk_color": "green",
+      "risk_score": 0.1,
+      "risk_description": "✅ 低风险 — django__django-11885 执行通过",
+      "dependencies": [],
+      "dependents": [],
+      "high_risk_files": [],
+      "primary_language": "Python"
+    }
+  ],
+  "recent_changes": [
+    {
+      "module": "django__django-11885",
+      "summary": "Loop: real_loop_complete (4 files, patch: 91 lines)",
+      "intent": "Agent 完成循环并获批准，可以准备合并",
+      "files_changed": [],
+      "lines_changed_str": "+91",
+      "has_risks": false,
+      "risk_warnings": []
+    }
+  ],
+  "suggestions": null,
+  "task_cards": {
+    "cards": [
+      {
+        "title": "修复回合 round_1 (Eval-triggered)",
+        "card_type": "fix_test",
+        "state": "blocked",
+        "priority_label": "🟠 高优先级",
+        "module": "django__django-11885",
+        "target_file": "",
+        "description": "修复回合 round_1: 测试结果 0/0 通过 ❌",
+        "is_blocking": true,
+        "risk_label": "🟠 高风险",
+        "state_label": "🚫 已阻塞"
+      }
+    ],
+    "summary": {
+      "total_cards": 1,
+      "blocking_count": 1,
+      "by_state": {
+        "pending": 0
+      }
+    }
+  },
+  "readiness": {
+    "state": "pass",
+    "state_label": "可以合并 ✅",
+    "state_icon": "✅",
+    "summary": "✅ Final Gate 已通过，可以准备合并。",
+    "blocking_issues": [],
+    "is_blocked": false,
+    "is_ready": true,
+    "review_required": false,
+    "pending_cards": 0,
+    "high_risk_count": 0
+  },
+  "evidence": {
+    "pack_id": "pack_bfd0cc22407f",
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "integrity_hash": "4304830bc44990249303b7e2153fe7ebdc8f71df1b7b6e7b914b491f5b147be1"
+  },
+  "agent_state": {
+    "state": "blocked",
+    "confidence": 0.9,
+    "source_events": [
+      "final_gate_result",
+      "final_review_envelope"
+    ],
+    "summary": "Codex 审查拒绝，需要修复 review blocking issue",
+    "recommended_action": "检查 review 意见并修复",
+    "severity": "critical",
+    "blocking": true,
+    "timestamp": ""
+  },
+  "companion": {
+    "is_active": false,
+    "mode": "idle",
+    "status_text": "等待中",
+    "waiting_since": ""
+  }
+}
