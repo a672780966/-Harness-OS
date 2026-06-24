@@ -661,6 +661,43 @@ def cmd_pr_pack_from_loop(args: argparse.Namespace) -> None:
         print(f"   - {fp}")
 
 
+def cmd_pr_draft(args: argparse.Namespace) -> None:
+    """Generate or create PR draft (v1.3.1)."""
+    from harness.copilot.pr_draft import run_pr_draft
+
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    result = run_pr_draft(
+        project_root,
+        create=args.create,
+        out_dir=args.out,
+        base=args.base,
+    )
+
+    if not result.get("success"):
+        if result.get("blocked"):
+            print("❌ BLOCKED: Large files detected in diff:", file=sys.stderr)
+            for f in result.get("blocked_files", []):
+                print(f"   - {f}", file=sys.stderr)
+            sys.exit(1)
+        print(f"❌ Error: {result.get('error', 'Unknown error')}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.create:
+        print(f"✅ PR created: {result['url']}")
+        return
+
+    print(f"✅ PR draft generated at: {result['out_dir']}")
+    print(f"   compare URL: {result.get('compare_url', 'N/A')}")
+    print(f"   gh available: {result.get('gh_available', False)}")
+    print(f"   gh authenticated: {result.get('gh_authenticated', False)}")
+    if result.get("note"):
+        print(f"   {result['note']}")
+
+
 def cmd_pr_comment(args: argparse.Namespace) -> None:
     """Generate PR comment text from a project."""
     from harness.copilot.pr_integration.pr_pack import build_pr_pack
@@ -1182,6 +1219,14 @@ def main() -> None:
     p_pcfl.add_argument("--format", choices=["markdown", "json"], default="markdown",
                         help="Output format (default: markdown)")
     p_pcfl.set_defaults(func=cmd_pr_comment_from_loop)
+
+    # pr-draft (v1.3.1)
+    p_pd = subparsers.add_parser("pr-draft", help="Generate or create PR draft (v1.3.1)")
+    p_pd.add_argument("project_path", help="Path to project root")
+    p_pd.add_argument("--out", "-o", default=None, help="Output directory for draft pack")
+    p_pd.add_argument("--create", action="store_true", help="Create PR via gh CLI")
+    p_pd.add_argument("--base", default=None, help="Base branch (default: auto-detect main/master)")
+    p_pd.set_defaults(func=cmd_pr_draft)
 
     # ==================== Phase 8A: Live Event Stream Commands ====================
 
