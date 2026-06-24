@@ -1,4 +1,6 @@
 
+> **Note**: This translation is pending refresh. See [README.md](README.md) / [README.zh.md](README.zh.md) for v1.3 current status.
+
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0--rc.2-blue?style=flat-square" alt="バージョン">
   <img src="https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square" alt="TypeScript">

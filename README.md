@@ -1,9 +1,10 @@
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0--rc.2-blue?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square" alt="TypeScript">
+  <img src="https://img.shields.io/badge/version-v1.3--main--integration-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
+  <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot Tests">
+  <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="Full Tests">
   <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="Tests">
 </p>
 
 <p align="center">
@@ -14,364 +15,126 @@
 </p>
 
 <h1 align="center">Harness OS</h1>
-<p align="center"><em>Codex‑first Project Operating System — Governed, Auditable, Reproducible Agent Engineering</em></p>
+<p align="center"><em>Local Semantic Copilot + Governed Agent Engineering Runtime</em></p>
 
 ---
 
-**Harness OS** is an operating system for AI coding agents. It doesn't give agents *capabilities* — frameworks do that. It gives agents *boundaries and discipline*: every tool call is gated, every output is redacted, every decision is traced, and every delivery is verified.
+**Harness OS is a local semantic copilot and governed agent engineering runtime for AI-assisted software delivery.**
 
-Think of it as **Kubernetes for AI agents** — not for running containers, but for running agentic workflows with governance, observability, and auditability baked in.
-
----
-
-## Why Harness OS?
-
-Frameworks like LangChain, Vercel AI SDK, and OpenAI Agents SDK give agents the ability to call tools, use models, and compose workflows. But they don't answer:
-
-- **Who approved this tool call?** → Harness OS traces every invocation with session, turn, and agent identity.
-- **Did any secrets leak in the output?** → Harness OS redacts 15+ secret patterns at every output boundary.
-- **Can we replay what happened?** → Every run is recorded as a structured trace with events, approvals, and checkpoints.
-- **Is the delivery safe?** → Verification must pass with a cryptographic integrity hash before any commit, PR, or deploy.
-- **Can we enforce policy?** → Multi-layered configuration with immutable fields, safety-only override rules, and fail‑closed defaults.
-
-Harness OS is **not a framework**. It's the **governance layer** that wraps around any agent runtime to make it production‑ready.
+It answers:
+- What changed?
+- What modules are affected?
+- Is this ready to merge?
+- What risks should a reviewer see?
+- What evidence supports the decision?
+- How should a PR be drafted?
 
 ---
 
-## Architecture
+## Current Status
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   CLI (harness)                      │
-│  create │ open │ init │ run │ verify │ deliver        │
-│  config │ status │ report │ checkpoint │ rollback     │
-│  skills │ decision │ repair │ check                   │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│                 Turn Orchestrator                     │
-│  Session → Input → Model Call → Tool Gate → Response │
-└──────┬─────────┬──────────┬──────────┬─────────────┘
-       │         │          │          │
-┌──────▼──┐ ┌───▼────┐ ┌──▼────┐ ┌──▼──────────┐
-│ Policy  │ │Approval│ │Secret │ │Observability │
-│ Engine  │ │ Gate   │ │Redact │ │ Trace/Events │
-└─────────┘ └────────┘ └───────┘ └──────────────┘
-       │         │          │          │
-┌──────▼─────────▼──────────▼──────────▼──────────┐
-│            Verification & Delivery                │
-│  Guard → Commit → PR → Release → Deploy          │
-└──────────────────────────────────────────────────┘
-```
+- **Baseline**: `v1.3-main-integration`
+- **Latest capability**: `v1.3.1-pr-draft-assistant`
+- **Copilot tests**: `616 passed`
+- **Full pytest**: `848 passed`
+- **Mode**: local-first, read-only semantic copilot
+- **GitHub tag policy**: public-safe tags only; large evidence archives are kept out of Git tags
 
-### Thin Harness (implemented)
+---
 
-The minimal viable loop that governs every agent action:
+## What Is Included
 
-1. Turn input received
-2. Model call executed
-3. Tool proposal generated
-4. **PreToolUse gate** — policy evaluation + secret scan
-5. **Allow / Deny / NeedsApproval** decision
-6. **Approval resolution** (if needed)
-7. Tool execution
-8. **PostToolUse trace** — record everything
-9. Final response with redacted output
+### v1.1 — Real Hermes Loop
+- graph planner
+- loop runner/controller
+- executor/auditor
+- eval-triggered repair
+- review-triggered repair
+- final gate
+- evidence pack
 
-### Thick Harness (planned)
+### v1.2 — Local Semantic Copilot MVP
+- project inspection
+- diff summary
+- task cards
+- merge readiness
+- evidence pack
+- static shell
+- realtime monitor
+- agent state machine
+- PR/MR pack
+- provider reliability guard
+- live dashboard
 
-Extended capabilities for production-scale deployments:
-- Parallel hook fan-out with publish‑and‑collect
-- OpenTelemetry integration
-- Policy hot‑reload without restart
-- Multi‑provider failover (Claude ↔ GPT ↔ others)
-- Budget‑aware provider routing
-- Distributed approval UI
-- Sandboxed tool execution
+### v1.2.1 — Dogfood Stabilization
+- risk deduplication
+- source/docs filtering
+- file type expansion
+- false approval-blocking fix
+- clean-clone idle explanation
+
+### v1.3 — Runtime Foundation
+- config schema / loader / resolver / validator
+- runtime doctor
+- version command
+- provider reliability planning
+- cross-project runtime planning
+- public-safe evidence strategy
+
+### v1.3.1 — PR Draft Assistant
+- `harness copilot pr-draft`
+- GitHub CLI detection
+- manual fallback PR draft generation
+- large-file/cache blocking checks
+- optional authenticated `--create`
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) >= 22
-- [pnpm](https://pnpm.io/) >= 11
-
-### Install & Build
-
 ```bash
 git clone https://github.com/a672780966/-Harness-OS.git
-cd Harness-OS
-pnpm install
-pnpm build
+cd -Harness-OS
+python -m pip install --upgrade pip
+python -m pip install -e .
+harness copilot version --json
+harness copilot doctor
+harness copilot inspect .
+harness copilot readiness .
+harness copilot task-card .
+harness copilot pr-draft --base main
 ```
 
-### Run
-
+If the `harness` command is not available:
 ```bash
-# Show version
-pnpm harness --version
-# → 1.0.0-rc.2
-
-# Show help
-pnpm harness --help
-
-# Show configuration
-pnpm harness config
-
-# Show configuration (JSON)
-pnpm harness config --json
-
-# List available skills
-pnpm harness skills list
-
-# Check AGENTS.md validity
-pnpm harness check
-
-# Initialize Harness OS in a project
-pnpm harness init --json
-
-# Run a task
-pnpm harness run "add tests for the auth module"
-```
-
-### Common Workflow
-
-```bash
-# 1. Initialize a project
-cd my-project
-harness init
-
-# 2. Run a task
-harness run "implement user authentication"
-
-# 3. Run verification
-harness verify
-
-# 4. Prepare delivery
-harness deliver --commit --ver-id <verification-id>
+python -m harness.copilot.cli version --json
+python -m harness.copilot.cli doctor
 ```
 
 ---
 
-## CLI Commands
+## Important Docs
 
-| Command | Description |
-|---|---|
-| `create <name>` | Create a new Harness OS project |
-| `open <path>` | Open an existing project |
-| `init` | Initialize Harness OS in an existing project |
-| `repair` | Repair missing or invalid project structure |
-| `check` | Check AGENTS.md validity |
-| `status` | Show current project status |
-| `run <task>` | Execute a task (full pipeline) |
-| `resume <run-id>` | Resume a paused or interrupted run |
-| `verify` | Run verification pipeline (lint, typecheck, test, build) |
-| `report <run-id>` | Show run report |
-| `deliver` | Prepare delivery (commit / PR / release / deploy) |
-| `decision` | Manage architecture decisions (ADR) |
-| `skills` | Manage and list skills |
-| `checkpoint` | Create a checkpoint capturing git and task state |
-| `rollback <checkpoint-id>` | Show rollback information |
-| `config` | Show Harness OS configuration |
-
-All commands support `--json` for machine-readable output and `--quiet` for minimal output.
+- [v1.3 Main Integration Seal](docs/v1_3_main_integration_seal.md)
+- [v1.2 Alpha Final Seal Manifest](docs/v1_2_alpha_final_seal_manifest.md)
+- [v1.2 Alpha Command Reference](docs/v1_2_alpha_command_reference.md)
+- [Public-Safe Evidence Strategy](docs/public_safe_evidence_strategy.md)
+- [Public-Safe Tag Mapping](docs/public_safe_tag_mapping.md)
+- [Large Evidence Archive Manifest](docs/large_evidence_archive_manifest.md)
+- [GitHub Cloud Simulation Report](docs/github_cloud_simulation_report.md)
 
 ---
 
-## Built-in Capabilities
+## Tag / Evidence Policy
 
-### Governance & Security
-- **Permission tri‑state**: `allow` | `deny` | `needs_approval` — no ambiguous states
-- **Secret redaction**: 15+ pattern types — API keys, tokens, private keys automatically redacted from all outputs
-- **Protected files**: Dangerous paths blocked from agent access
-- **Safety fields**: Immutable config fields, one‑way weakening protection, union‑merge arrays
-- **Fail‑closed**: Any hook failure defaults to `needs_approval`
+Some local sealed tags are intentionally **not pushed** to GitHub because their reachable history includes a 373 MB SWE-bench evidence archive, which GitHub rejects due to the 100 MB blob limit.
 
-### Verification
-- Detects project commands from `AGENTS.md` and `package.json`
-- Runs full pipeline: lint → typecheck → test → build
-- Produces structured JSON result with cryptographic integrity hash
-- Bound to project, task, run, and git commit for non‑repudiation
-
-### Delivery Pipeline
-- Guard checks: verification binding, git status, project integrity
-- Conventional commit message generation
-- PR body generation
-- Delivery report with full audit trail
-
-### Observability
-- **Events**: JSONL event log with session, actor, and redaction
-- **Traces**: Full run trace with tool calls, context packs, checkpoints
-- **Reports**: Markdown run report with verification results
-
-### Skills Registry
-Built-in skills with risk classification and approval requirements:
-
-| Skill | Risk | Tools |
-|---|---|---|
-| Filesystem | Medium | read, write, list, search, delete |
-| Shell | High | run command, test, build |
-| Git | Medium | status, diff, commit, push |
-| Repo Scanner | Low | scan, detect, map |
+Public-safe tags are pushed. Large evidence archives should be stored as release assets or external cold archives, while Git keeps manifests and SHA256 references.
 
 ---
 
-## Project Structure
+## What Harness OS Is Not
 
-```
-Harness-OS/
-├── src/
-│   ├── cli/              # CLI entry point + formatter
-│   ├── config/           # Layered config loader (safety‑aware)
-│   ├── governance/       # Policy engine, redactor, hook framework
-│   ├── project/          # Project lifecycle (create/open/init/repair)
-│   ├── task/             # Task lifecycle (create/complete/fail)
-│   ├── decision/         # ADR management (propose/accept/reject)
-│   ├── verification/     # Verification pipeline + result binding
-│   ├── delivery/         # Delivery pipeline (guard/commit/PR/report)
-│   ├── observability/    # Events, traces, run reports
-│   ├── runtime/          # Session, pipeline, turn orchestrator
-│   ├── context/          # Context Pack building
-│   ├── skills/           # MCP Skill registry
-│   └── state/            # Run, checkpoint, SQLite state
-├── tests/
-│   ├── unit/             # 528 unit tests
-│   └── integration/      # 28 integration tests
-├── harness_os_docs/      # Full design specification (12 documents)
-├── .claude/              # Claude Code project configuration
-└── .project/             # Harness OS local state (gitignored)
-```
+Harness OS is **not** a model provider, not a general coding framework, and not a cloud SaaS product yet.
 
----
-
-## Documentation
-
-Full design and engineering specifications are in [`harness_os_docs/`](harness_os_docs/README.md):
-
-| Doc | Description |
-|---|---|
-| [01_ARCHITECTURE](harness_os_docs/01_ARCHITECTURE.md) | System architecture and core principles |
-| [02_CODEX_DEVELOPMENT_SPEC](harness_os_docs/02_CODEX_DEVELOPMENT_SPEC.md) | Development specification for Codex |
-| [03_AGENTS_MD_STANDARD](harness_os_docs/03_AGENTS_MD_STANDARD.md) | AGENTS.md protocol standard |
-| [04_HARNESS_OS_DESIGN](harness_os_docs/04_HARNESS_OS_DESIGN.md) | Detailed system design |
-| [05_CONTEXT_ENGINEERING](harness_os_docs/05_CONTEXT_ENGINEERING.md) | Context engineering specification |
-| [06_TASK_DECISION_PROJECT_MANAGER](harness_os_docs/06_TASK_DECISION_PROJECT_MANAGER.md) | Task, decision, and project management |
-| [07_MCP_SKILLS_SPEC](harness_os_docs/07_MCP_SKILLS_SPEC.md) | MCP skills specification |
-| [08_GOVERNANCE_SECURITY](harness_os_docs/08_GOVERNANCE_SECURITY.md) | Governance and security rules |
-| [09_VERIFICATION_OBSERVABILITY](harness_os_docs/09_VERIFICATION_OBSERVABILITY.md) | Verification and observability |
-| [10_DELIVERY_PIPELINE](harness_os_docs/10_DELIVERY_PIPELINE.md) | Delivery pipeline specification |
-| [11_ACCEPTANCE_CRITERIA](harness_os_docs/11_ACCEPTANCE_CRITERIA.md) | Final acceptance criteria |
-| [12_OPEN_SOURCE_REFERENCES](harness_os_docs/12_OPEN_SOURCE_REFERENCES.md) | Open source reference mapping |
-| [13_TESTING_STRATEGY](harness_os_docs/13_TESTING_STRATEGY.md) | Testing strategy |
-| [14_ERROR_CODES](harness_os_docs/14_ERROR_CODES.md) | Error code reference |
-| [15_CONFIG_REFERENCE](harness_os_docs/15_CONFIG_REFERENCE.md) | Configuration reference |
-| [16_CLI_OUTPUT_CONTRACT](harness_os_docs/16_CLI_OUTPUT_CONTRACT.md) | CLI output contract |
-| [17_PROJECT_STORAGE_GIT_POLICY](harness_os_docs/17_PROJECT_STORAGE_GIT_POLICY.md) | Git and storage policy |
-| [18_MIGRATION_VERSIONING](harness_os_docs/18_MIGRATION_VERSIONING.md) | Migration and versioning |
-
----
-
-## Development
-
-```bash
-# Type check
-pnpm typecheck
-
-# Run unit tests
-pnpm test:unit
-
-# Run integration tests
-pnpm test:integration
-
-# Run all tests
-pnpm test
-
-# Run with coverage
-pnpm test:coverage
-
-# Build
-pnpm build
-
-# Format code
-pnpm format
-```
-
-### Test Status
-
-- **528 unit tests** — 19 test files, all passing
-- **28 integration tests** — 1 test file, all passing
-- **Coverage threshold**: 80% (configured in vitest.config.ts)
-- **TypeScript**: Strict mode, all `as any` eliminated from `src/`
-
----
-
-## Design Principles
-
-1. **Boundary clarity**: Every module has a defined responsibility. No god objects.
-2. **Conservative permissions**: Default `needs_approval`. Never default `allow`.
-3. **State traceability**: Every write has a schema, scope, actor, reason, and trace ID.
-4. **Tool call auditability**: Every invocation records who, what, input, decision, and timestamp.
-5. **Low coupling**: Thin Harness first. Thick Harness as extensions, never mixed in.
-6. **Fail closed**: Any hook failure, timeout, or unparseable result → `needs_approval`.
-
----
-
-## Status
-
-**v1.0.0-rc.2** — Release candidate for core governance and verification.
-
-Implemented:
-- ✅ CLI framework (17 commands)
-- ✅ Multi-layer config with safety field enforcement
-- ✅ Secret redaction (15+ patterns across all output boundaries)
-- ✅ Verification pipeline with integrity-bound results
-- ✅ Delivery pipeline with guard checks
-- ✅ Observability (events, traces, run reports)
-- ✅ ADR management (propose/accept/reject/supersede)
-- ✅ Session and state management
-- ✅ Task lifecycle (create → run → complete → report)
-- ✅ Skills registry (4 built-in skills)
-- ✅ Checkpoint and rollback analysis
-- ✅ 528 unit tests + 28 integration tests
-
-Planned for v1.1+:
-- Policy hot-reload
-- Multi-provider runtime (Claude + GPT + open models)
-- Distributed approval UI
-- OpenTelemetry export
-- Sandboxed tool execution
-
----
-
-## v1.1 Real Loop (June 2026)
-
-**Status**: ✅ Closed (`real_loop_complete: true` | `mock_used: false`)
-
-v1.1 implements a **5-node real agent loop** — the first end-to-end execution where Hermes dispatches real agents (OpenCode, Codex) through a governed pipeline without mock or simulation.
-
-| Node | Type | Status | Executor |
-|------|------|--------|----------|
-| 001 — Fix P1 Gaps | `normal` | ✅ PASSED | OpenCode (DeepSeek) |
-| 002 — StarMap Completion | `normal` | ✅ PASSED (2 repairs) | OpenCode (DeepSeek) |
-| 003 — Repair Negative Sample | `repair_negative_sample` | ✅ CORRECTLY DETECTED | OpenCode (DeepSeek) |
-| 004 — Codex Final Review | `final_review` | ✅ APPROVED | Codex CLI (gpt-5.5) |
-| 005 — Merge Gate & StarMap | `final_gate` | ✅ DONE | Hermes handler |
-
-**Key innovations in v1.1**:
-- **Type-based dispatch** — `node_index.yaml` type field routes nodes to correct handler
-- **Codex Final Reviewer** — Dedicated handler calls Codex CLI directly, not as an executor node
-- **Repair negative sample validation** — Node designed to fail audit, proving repair detection works
-- **Evidence pack** — All artifacts under `.harness/evidence/v1_1_real_loop/`
-- **Hermes as pure orchestrator** — Dispatches but never writes business code
-
-Full report: [`docs/v1_1_real_loop_report.md`](docs/v1_1_real_loop_report.md)
-Evidence index: `.harness/evidence/v1_1_real_loop/EVIDENCE_INDEX.md`
-Architecture: [`docs/v1_1_architecture.md`](docs/v1_1_architecture.md)
-
----
-
-## License
-
-ISC
+It is currently a **local-first semantic copilot and governance layer** for AI-assisted engineering.
