@@ -110,3 +110,97 @@ def create_review_envelope(
         "reviewed_at": datetime.now().astimezone().isoformat(),
     }
     return json.dumps(envelope, ensure_ascii=False, indent=2)
+
+
+def create_repair_envelope(
+    trace_id: str,
+    task_id: str,
+    from_agent: str,
+    to_agent: str,
+    repair_round: int,
+    blocking_issues: list[dict[str, str]] | None = None,
+    focus_instructions: str = "",
+) -> str:
+    """Generate a RepairEnvelope JSON string (harness-loop/v1)."""
+    envelope: dict[str, Any] = {
+        "protocol": "harness-loop/v1",
+        "trace_id": trace_id,
+        "task_id": task_id,
+        "from_agent": from_agent,
+        "to_agent": to_agent,
+        "envelope_type": "repair",
+        "repair_round": repair_round,
+        "blocking_issues": blocking_issues or [],
+        "focus_instructions": focus_instructions,
+        "created_at": datetime.now().astimezone().isoformat(),
+    }
+    return json.dumps(envelope, ensure_ascii=False, indent=2)
+
+
+def create_final_evidence_envelope(
+    trace_id: str,
+    task_id: str,
+    from_agent: str,
+    to_agent: str,
+    status: str,
+    evidence_refs: list[str] | None = None,
+    final_report: str = "",
+) -> str:
+    """Generate a FinalEvidenceEnvelope JSON string (harness-loop/v1)."""
+    envelope: dict[str, Any] = {
+        "protocol": "harness-loop/v1",
+        "trace_id": trace_id,
+        "task_id": task_id,
+        "from_agent": from_agent,
+        "to_agent": to_agent,
+        "envelope_type": "final_evidence",
+        "status": status,
+        "evidence_refs": evidence_refs or [],
+        "final_report": final_report,
+        "completed_at": datetime.now().astimezone().isoformat(),
+    }
+    return json.dumps(envelope, ensure_ascii=False, indent=2)
+
+
+def create_audit_event(
+    trace_id: str,
+    task_id: str,
+    actor: str,
+    action: str,
+    payload: dict[str, Any] | None = None,
+    payload_ref: str | None = None,
+) -> str:
+    """Generate an AuditEvent JSON string (harness-loop/v1)."""
+    envelope: dict[str, Any] = {
+        "protocol": "harness-loop/v1",
+        "trace_id": trace_id,
+        "task_id": task_id,
+        "actor": actor,
+        "action": action,
+        "envelope_type": "audit_event",
+        "payload": payload or {},
+        "payload_ref": payload_ref or "",
+        "timestamp": datetime.now().astimezone().isoformat(),
+    }
+    return json.dumps(envelope, ensure_ascii=False, indent=2)
+
+
+def create_state_transition(
+    trace_id: str,
+    task_id: str,
+    from_state: str,
+    to_state: str,
+    reason: str = "",
+) -> str:
+    """Generate a StateTransition JSON string (harness-loop/v1)."""
+    envelope: dict[str, Any] = {
+        "protocol": "harness-loop/v1",
+        "trace_id": trace_id,
+        "task_id": task_id,
+        "envelope_type": "state_transition",
+        "from_state": from_state,
+        "to_state": to_state,
+        "reason": reason,
+        "timestamp": datetime.now().astimezone().isoformat(),
+    }
+    return json.dumps(envelope, ensure_ascii=False, indent=2)
