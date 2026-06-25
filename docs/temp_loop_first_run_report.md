@@ -1,54 +1,57 @@
 # Temporary Loop First Run Report
 
 ## Objective
-Fix COP-1~COP-5 blocking governance gaps in harness/copilot and harness/config source code.
-
-COP-1: Update cli.py docstring to list all 36+ v1.2 commands, removing stale 'sync' reference.
-COP-2: Refine cli.py governance claims: commands are read-only by default, with explicit WRITE (pr-pack, live-dashboard, shell generate local files), NETWORK (live-server, preview start local servers), and WRITE+NETWORK (pr-draft --create) exceptions.
-COP-3: Consolidate provider_guard/config.py tunables into HarnessConfig schema.py and loader.py.
-COP-4: Wire long_phase_allowed_when_degraded config flag into provider_guard canary.py and health.py.
-COP-5: Expose retry config (max_retries, retry_backoff, retry_jitter) from provider_guard/config.py through HarnessConfig.
-
-Create or update minimal targeted tests. Do not touch unrelated files. Do not commit. Do not tag. Do not push.
+Perform final global consistency audit across all phases (v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, Loop Installer). Cross-check all governance recovery reports for consistency. Verify all blocking gaps are either fixed, planned, or documented as accepted follow-up work. Produce global governance recovery summary report and remediation plan. Output to docs/global_consistency_audit.md.
 
 ## Graph confirmation from Codex
 ```json
 {
   "known_graph_nodes": [
-    "harness/copilot/cli.py",
-    "harness/copilot/provider_guard/config.py",
-    "harness/copilot/provider_guard/canary.py",
-    "harness/copilot/provider_guard/health.py",
-    "harness/copilot/provider_guard/__init__.py",
-    "harness/config/schema.py",
-    "harness/config/loader.py",
-    "harness/config/resolver.py",
-    "harness/config/validator.py",
-    "tests/copilot/test_provider_guard.py",
-    "tests/copilot/test_pr_integration_cli.py",
-    "tests/copilot/test_pr_draft.py",
-    "tests/test_config_schema.py",
-    "tests/test_config_loader.py",
-    "tests/test_config_resolution_priority.py",
-    "tests/test_config_validator.py"
+    "docs/v1_1_governance_audit_report.md",
+    "docs/v1_2_engineering_copilot_governance_audit.md",
+    "docs/v1_2_engineering_copilot_source_fix_plan.md",
+    "docs/v1_2_1_dogfood_audit_report.md",
+    "docs/v1_2_1_dogfood_stabilization_audit.md",
+    "docs/v1_3_foundation_runtime_audit.md",
+    "docs/v1_3_1_pr_draft_assistant_audit.md",
+    "docs/loop_installer_self_audit.md",
+    "docs/governance_recovery_report_c7210bbdf15c.md",
+    ".harness/temp_loop/run.py",
+    ".harness/scripts/hermes_auto_loop.py",
+    ".harness/scripts/hermes_final_gate.py",
+    ".harness/config/state_machine.yaml",
+    ".harness/audit/audit_event.schema.json",
+    "harness/runtime/envelope_validator.py",
+    "harness/loop/runner.py",
+    "harness/loop/safety.py",
+    "harness/copilot",
+    "harness/config",
+    "harness/runtime"
   ],
-  "target_node": "harness/copilot/provider_guard/config.py and harness/config/schema.py",
-  "reason_to_act": "The task is valid because the copilot CLI docstring is stale relative to registered commands, and provider reliability guard tunables are split between provider_guard/config.py and HarnessConfig.provider. Existing schema already owns provider mode, canary timeout, and long_phase_allowed_when_degraded, while retry and timeout tunables remain separate constants. The provider guard also blocks degraded long phases directly in canary.py and health.py without honoring the HarnessConfig long_phase_allowed_when_degraded flag.",
+  "target_node": "docs/global_consistency_audit.md",
+  "reason_to_act": "The requested audit is valid because multiple phase-specific governance reports already exist, but no docs/global_consistency_audit.md exists yet. The repo graph shows unresolved cross-phase governance gaps across temp loop orchestration, sealed Hermes governance, envelope validation, audit trail alignment, safety enforcement, provider/config runtime hardening, PR draft governance, and loop installer readiness. A global docs-only consistency report is the correct next artifact to reconcile fixed, planned, unresolved, and accepted follow-up work before any further remediation task is dispatched.",
   "affected_subsystems": [
-    "copilot CLI help and governance documentation",
-    "provider reliability guard configuration",
-    "HarnessConfig schema and loader",
-    "configuration resolution via HARNESS_PROVIDER_* environment overrides",
-    "provider guard canary and health gate behavior",
-    "copilot and config test suites"
+    "docs governance reports",
+    "temporary loop runner",
+    "Hermes auto loop",
+    "Hermes final gate",
+    "state machine",
+    "audit trail",
+    "envelope schemas and validation",
+    "Open Code Review adapter evidence",
+    "config/runtime foundation",
+    "provider guard",
+    "copilot PR draft and PR pack workflow",
+    "loop installer",
+    "workspace hygiene"
   ],
-  "duplicate_risk": "Moderate if implemented by adding new parallel provider config paths. The minimal path is to consolidate provider guard tunables into HarnessConfig.ProviderConfig and keep provider_guard/config.py as a compatibility adapter or thin factory, not a second source of truth.",
-  "next_graph_step": "Dispatch implementation through Hermes to update the targeted source and tests, then require pytest evidence for tests/test_config_schema.py, tests/test_config_loader.py, tests/test_config_resolution_priority.py, tests/test_config_validator.py, and tests/copilot/test_provider_guard.py before review."
+  "duplicate_risk": "Low. Existing reports cover individual phases or cross-pipeline snapshots, but docs/global_consistency_audit.md is absent. The task should consolidate and reconcile existing findings rather than re-audit source broadly or duplicate phase reports. There is some overlap with docs/governance_recovery_report_c7210bbdf15c.md and docs/v1_2_1_dogfood_audit_report.md, so the worker must explicitly cite them as inputs and focus on global closure status and remediation ordering.",
+  "next_graph_step": "Dispatch a docs-only Hermes worker task to create docs/global_consistency_audit.md, then verify with git status, git diff, and targeted pytest evidence without modifying source, config, schemas, package files, git history, or Harness state."
 }
 ```
 
 ## TaskEnvelope path
-`/home/ctyun/-Harness-OS/.harness/temp_loop/8487477ea2c2/task_envelope.json`
+`/home/ctyun/-Harness-OS/.harness/temp_loop/dd6c8e13dfa4/task_envelope.json`
 
 ## OpenCode implementation summary
 OpenCode completed initial implementation
@@ -84,43 +87,58 @@ OpenCode completed initial implementation
 ```json
 {
   "status": "REPAIR",
-  "summary": "Implementation cannot be accepted: ResultEnvelope is empty, CURRENT DIFF is empty, and pytest failed. None of COP-1 through COP-5 can be verified as implemented.",
+  "summary": "The implementation cannot be accepted for task-001. The ResultEnvelope is empty, the required docs/global_consistency_audit.md artifact is not evidenced in the current diff, and the shown diff modifies docs/temp_loop_first_run_report.md for a different Temporary Loop runner self-audit task. Although pytest passed, the documented work does not satisfy the global consistency audit acceptance criteria.",
   "graph_verdict": {
     "matches_graph": false,
     "can_enter_next_step": false,
-    "reason": "Task requires implementation evidence, targeted diff, passing tests, and a result envelope. The provided evidence has no diff, no result envelope content, and failing tests, so it cannot advance to review_passed or final acceptance."
+    "reason": "The TaskEnvelope requires a docs-only global consistency audit across v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, Loop Installer, and governance_recovery_report_c7210bbdf15c, producing docs/global_consistency_audit.md. The provided evidence instead concerns docs/loop_installer_self_audit.md and docs/temp_loop_first_run_report.md, with no non-empty ResultEnvelope or diff evidence for the required output."
   },
   "review": {
     "passed": false,
     "blocking_issues": [
-      "ResultEnvelope is empty, so there is no acceptance mapping, self-review, changed-file summary, or verification summary.",
-      "CURRENT DIFF is empty, so required COP-1 through COP-5 source and test changes are absent or not provided as evidence.",
-      "Tests did not pass: pytest exit_code is 1.",
-      "Failing test: tests/test_config_resolution_priority.py::TestResolutionPriority::test_project_config_overrides_global expected project config provider.mode fallback but got readonly.",
-      "Required targeted tests for CLI documentation/governance claims, config schema defaults, config loader parsing, provider guard retry config exposure, and degraded long-phase override behavior are not evidenced."
+      "ResultEnvelope is empty, so there is no acceptance mapping, changed_files list, commands_run, self-review, risk assessment, git status evidence, git diff evidence, or test rationale for the requested global audit.",
+      "Required output docs/global_consistency_audit.md is not shown in CURRENT DIFF or any provided evidence.",
+      "CURRENT DIFF modifies docs/temp_loop_first_run_report.md, which is not the expected artifact for this task.",
+      "The diff content refers to a Loop Installer self-audit and emergency implementation for docs/loop_installer_self_audit.md, not the requested global consistency audit.",
+      "No evidence shows the relevant phase reports were read and cited: v1.1 governance audit, v1.2 governance audit, v1.2 source-fix plan, v1.2.1 dogfood audit reports, v1.3 foundation runtime audit, v1.3.1 PR draft assistant audit, Loop Installer self-audit, and governance_recovery_report_c7210bbdf15c.",
+      "No phase-by-phase matrix is evidenced for v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, and Loop Installer.",
+      "No evidence cross-references blocking findings using CDG, COP, BG, TBG, CPG, or Loop Installer finding identifiers.",
+      "No evidence classifies every blocking gap as fixed, partially fixed, planned, unresolved, or accepted follow-up with evidence references.",
+      "No evidence reconciles the required conflicting COP-5 and provider guard status claims between v1_2_1_dogfood_audit_report.md and v1_2_1_dogfood_stabilization_audit.md.",
+      "No evidence identifies remaining global blockers preventing the temporary loop from being treated as canonical Harness OS governance.",
+      "No remediation plan is evidenced with priority, dependency, target subsystem, and required closure evidence.",
+      "No evidence separates accepted follow-up work from unresolved blocking work.",
+      "No git status or git diff evidence proves that the intended change is docs-only and limited to docs/global_consistency_audit.md."
     ],
     "required_repairs": [
-      "Provide a non-empty ResultEnvelope summarizing COP-1 through COP-5 acceptance mapping, self-review, changed files, and verification performed.",
-      "Implement the required targeted changes or provide the missing diff evidence if already implemented elsewhere.",
-      "Fix config resolution so project config correctly overrides global config, preserving expected provider.mode behavior.",
-      "Run and provide passing pytest evidence for targeted config and copilot provider guard tests.",
-      "Provide git status and git diff evidence showing only allowed targeted files changed and no commit, tag, push, merge, reset, clean, or history rewrite was performed."
+      "Produce docs/global_consistency_audit.md as the task artifact.",
+      "Provide a non-empty ResultEnvelope with changed_files, commands_run, test_results or test skip rationale, acceptance criteria mapping, self-review, risks, git status evidence, and git diff evidence.",
+      "Read and cite all required phase reports and governance recovery reports in the global audit.",
+      "Add the required phase-by-phase matrix covering v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, and Loop Installer.",
+      "Cross-reference blocking findings by existing identifiers, including CDG, COP, BG, TBG, CPG, and Loop Installer findings where applicable.",
+      "Classify each blocking gap as fixed, partially fixed, planned, unresolved, or accepted follow-up with evidence references.",
+      "Explicitly reconcile the conflicting COP-5 and provider guard status claims between the two v1.2.1 dogfood audit reports.",
+      "Identify remaining global blockers and provide an ordered remediation plan with priority, dependency, subsystem, and required evidence.",
+      "Remove or exclude unrelated docs/temp_loop_first_run_report.md changes from this task evidence unless documented as pre-existing unrelated workspace dirt.",
+      "Provide git status and git diff evidence after the docs change, showing only allowed docs changes attributable to this task."
     ],
     "evidence_checked": [
-      "TaskEnvelope acceptance criteria COP-1 through COP-5",
+      "TaskEnvelope objective and acceptance criteria for task-001",
+      "TaskEnvelope allowed_actions and blocked_actions",
       "ResultEnvelope: empty object",
-      "CURRENT DIFF: none",
-      "TEST RESULTS: pytest exit_code 1, 679 passed, 1 failed",
-      "Failing test stdout for tests/test_config_resolution_priority.py::TestResolutionPriority::test_project_config_overrides_global"
+      "CURRENT DIFF showing docs/temp_loop_first_run_report.md modification",
+      "CURRENT DIFF content referencing docs/loop_installer_self_audit.md and Loop Installer self-audit task",
+      "TEST RESULTS showing exit_code 0 with 933 passed and 1 skipped"
     ]
   },
   "final_evidence_required": [
+    "docs/global_consistency_audit.md content or patch evidence",
     "Non-empty ResultEnvelope",
-    "Git diff for targeted source and test files",
-    "Passing pytest output for targeted config and provider guard tests",
-    "Git status evidence",
-    "Acceptance mapping for COP-1 through COP-5",
-    "Self-review evidence"
+    "git status evidence after the docs change",
+    "git diff evidence for docs/global_consistency_audit.md",
+    "Acceptance criteria mapping for all listed criteria",
+    "Self-review adequacy assessment",
+    "Test evidence or explicit explanation that no pytest run was useful for this docs-only audit"
   ]
 }
 ```
@@ -132,62 +150,59 @@ OpenCode completed initial implementation
 - OpenCode status: BLOCKED
 - Self-review issues: ["JSON parse error from OpenCode"]
 - Codex review status: REPAIR
-- Required repairs: ["Provide a non-empty ResultEnvelope with COP-1 through COP-5 acceptance mapping, changed files, tests run, and self-review.", "Fix the config resolution regression so project config overrides global config as expected.", "Complete provider_guard/config.py integration so HarnessConfig.provider is the schema source while preserving ProviderGuardConfig compatibility.", "Wire long_phase_allowed_when_degraded into both provider_guard health.py and canary.py long-phase gating behavior.", "Expose max_retries, retry_backoff, and retry_jitter through ProviderGuardConfig callers using the compatibility surface.", "Use robust boolean parsing in the config loader instead of bool(value) for config-sourced booleans.", "Add or update minimal targeted tests for the required COP-1 through COP-5 behavior.", "Rerun targeted pytest and provide passing output.", "Provide git status and git diff evidence showing only allowed targeted files changed and no blocked git operations were performed."]
+- Required repairs: ["Produce docs/global_consistency_audit.md as the task artifact.", "Provide a non-empty ResultEnvelope with changed_files, commands_run, test_results or docs-only test rationale, acceptance criteria mapping, self-review, risk assessment, git status evidence, and git diff evidence.", "Read and cite all required phase reports and governance recovery reports in the global audit.", "Add the required phase-by-phase matrix covering v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, and Loop Installer.", "Cross-reference blocking findings by existing identifiers, including CDG, COP, BG, TBG, CPG, and Loop Installer findings where applicable.", "Classify each blocking gap as fixed, partially fixed, planned, unresolved, or accepted follow-up with evidence references.", "Explicitly reconcile conflicting COP-5 and provider guard status claims between the two v1.2.1 dogfood audit reports.", "Identify remaining global blockers and provide an ordered remediation plan with priority, dependency, subsystem, and required evidence.", "Remove or exclude unrelated docs/temp_loop_first_run_report.md changes from this task evidence unless clearly documented as pre-existing unrelated workspace dirt.", "Provide git status and git diff evidence after the docs change, showing only allowed docs changes attributable to this task."]
 
 ### Repair round 2
 - OpenCode status: BLOCKED
 - Self-review issues: ["JSON parse error from OpenCode"]
 - Codex review status: REPAIR
-- Required repairs: ["Provide a non-empty ResultEnvelope with COP-1 through COP-5 acceptance mapping, changed files, tests run, self-review, and verification summary.", "Fix the config resolution regression so project-level config overrides global config.", "Complete harness/copilot/provider_guard/config.py integration so ProviderGuardConfig exposes HarnessConfig.provider retry and long-phase fields through the existing compatibility surface.", "Wire long_phase_allowed_when_degraded into harness/copilot/provider_guard/canary.py as well as health.py.", "Replace bool(value) config parsing with robust boolean parsing for config-sourced booleans.", "Add or update minimal targeted tests covering CLI documentation/governance text, ProviderConfig defaults/to_dict, loader parsing, ProviderGuardConfig retry exposure, and degraded long-phase override behavior.", "Rerun pytest and provide passing targeted test output.", "Provide git diff and git status evidence showing only allowed targeted files changed and no blocked git operations were performed."]
+- Required repairs: ["Produce docs/global_consistency_audit.md as the required docs-only artifact.", "Provide a non-empty ResultEnvelope with changed_files, commands_run, test_results or docs-only test rationale, acceptance criteria mapping, self-review, risk assessment, git status evidence, and git diff evidence.", "Read and cite all required phase reports and governance recovery reports in the global audit.", "Add a phase-by-phase matrix covering v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, and Loop Installer.", "Cross-reference blocking findings by existing identifiers, including CDG, COP, BG, TBG, CPG, and Loop Installer findings where applicable.", "Classify every blocking gap as fixed, partially fixed, planned, unresolved, or accepted follow-up with evidence references.", "Explicitly reconcile conflicting COP-5 and provider guard status claims between v1_2_1_dogfood_audit_report.md and v1_2_1_dogfood_stabilization_audit.md.", "Identify remaining global blockers and provide an ordered remediation plan with priority, dependency, target subsystem, and required evidence.", "Document accepted follow-up work separately from unresolved blocking work.", "Remove or exclude unrelated docs/temp_loop_first_run_report.md changes from this task evidence unless clearly documented as pre-existing unrelated workspace dirt.", "Provide git status and git diff evidence after the docs change, showing only allowed docs changes attributable to this task."]
 
 ### Repair round 3
 - OpenCode status: BLOCKED
 - Self-review issues: ["JSON parse error from OpenCode"]
 - Codex review status: REPAIR
-- Required repairs: ["Provide a non-empty ResultEnvelope with COP-1 through COP-5 acceptance mapping, changed files, tests run, verification summary, and self-review.", "Fix the config resolution regression so project config overrides global config.", "Rerun pytest and provide passing evidence for the targeted config and copilot provider guard tests.", "Provide git status evidence and git diff evidence showing only allowed targeted files changed.", "Clarify or repair ProviderGuardConfig compatibility so HarnessConfig.provider is the actual source of provider guard tunables without competing duplicated defaults.", "Add or provide targeted tests for CLI documentation/governance text."]
+- Required repairs: ["Produce docs/global_consistency_audit.md as the required docs-only artifact.", "Provide a non-empty ResultEnvelope with changed_files, commands_run, test_results or docs-only test rationale, acceptance criteria mapping, self-review, risk assessment, git status evidence, and git diff evidence.", "Read and cite all required phase reports and governance recovery reports in the global audit.", "Add a phase-by-phase matrix covering v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, and Loop Installer.", "Cross-reference blocking findings by existing identifiers, including CDG, COP, BG, TBG, CPG, and Loop Installer findings where applicable.", "Classify every blocking gap as fixed, partially fixed, planned, unresolved, or accepted follow-up with evidence references.", "Explicitly reconcile conflicting COP-5 and provider guard status claims between v1_2_1_dogfood_audit_report.md and v1_2_1_dogfood_stabilization_audit.md.", "Identify remaining global blockers and provide an ordered remediation plan with priority, dependency, target subsystem, and required evidence.", "Document accepted follow-up work separately from unresolved blocking work.", "Remove or exclude unrelated docs/temp_loop_first_run_report.md changes from this task evidence unless clearly documented as pre-existing unrelated workspace dirt.", "Provide git status and git diff evidence after the docs change, showing only allowed docs changes attributable to this task."]
 
 ## Codex emergency implementation
 - Used: YES
 - Emergency result: {
-  "status": "BLOCKED_REQUIRES_USER_APPROVAL",
-  "summary": "Emergency implementation appears to address COP-1 through COP-5 and full pytest passed with PYTHONPATH=., but final gate cannot mark DONE because harness/config/resolver.py was modified outside the TaskEnvelope allowed write list and required git status/full diff evidence is incomplete.",
+  "status": "DONE",
+  "summary": "Emergency implementation is complete for the docs-only global consistency audit. The required docs/global_consistency_audit.md artifact exists, covers the required phase reports and identifiers, reconciles the COP-5/provider guard conflict, separates unresolved blockers from accepted follow-up work, and includes a prioritized remediation plan. Test evidence shows the suite passed.",
   "review": {
-    "passed": false,
-    "blocking_issues": [
-      "harness/config/resolver.py was changed even though it is not included in allowed_actions write targets; this requires explicit user approval or removal from the patch.",
-      "Required git status evidence output was not provided, so final gate cannot verify no commit, tag, push, merge, reset, clean, or history rewrite occurred.",
-      "Full git diff evidence is incomplete for at least tests/copilot/test_cli_documentation.py, which is listed as changed but not shown in the provided diff."
-    ],
+    "passed": true,
+    "blocking_issues": [],
     "evidence_checked": [
-      "Emergency Implementation result envelope status=IMPLEMENTED",
-      "Acceptance mapping for COP-1 through COP-5 in repairs_applied",
-      "Provided source/test diff excerpt",
-      "Provided pytest result: 933 passed, 1 skipped in 29.23s with exit_code 0",
-      "Changed files list from emergency implementation",
-      "TaskEnvelope allowed_actions and blocked_actions"
+      "docs/global_consistency_audit.md exists and is 186 lines",
+      "Report cites v1.1, v1.2, v1.2 source-fix, v1.2.1 dogfood, v1.2.1 stabilization, v1.3, v1.3.1, Loop Installer, and governance_recovery_report_c7210bbdf15c",
+      "Report includes phase matrix covering v1.1, v1.2, v1.2 source-fix, v1.2.1, v1.3, v1.3.1, Loop Installer, and cross-pipeline recovery",
+      "Report cross-references CDG, COP, BG, TBG, CPG, and LI findings",
+      "Report classifies findings as fixed, partially fixed, unresolved, planned/specification, or accepted follow-up",
+      "Report explicitly reconciles conflicting COP-5 and provider guard status between the two v1.2.1 reports",
+      "Report identifies remaining global blockers preventing canonical Harness OS governance treatment",
+      "Report includes remediation plan ordered by priority, dependency, target subsystem, related IDs, and required evidence",
+      "Report separates accepted follow-up work from unresolved blocking work",
+      "git status shows docs/global_consistency_audit.md as the task artifact, with unrelated pre-existing workspace dirt still present",
+      "git diff -- docs/global_consistency_audit.md is empty because the file is untracked; git diff --no-index /dev/null docs/global_consistency_audit.md provides new-file patch evidence",
+      "Provided test result passed: exit_code 0, 933 passed, 1 skipped"
     ]
   },
-  "final_evidence_required": [
-    "Explicit user approval for the harness/config/resolver.py change, or a revised patch that removes that change.",
-    "Actual git status --short --branch output after emergency implementation.",
-    "Complete git diff or git diff --name-only plus per-file diff for all changed files, including tests/copilot/test_cli_documentation.py.",
-    "Confirmation that unrelated untracked files were not created or modified by this emergency implementation."
-  ]
+  "final_evidence_required": []
 }
 
 ## FinalEvidence path
-`/home/ctyun/-Harness-OS/.harness/temp_loop/8487477ea2c2/final_evidence.json`
+`/home/ctyun/-Harness-OS/.harness/temp_loop/dd6c8e13dfa4/final_evidence.json`
 
 ## State transitions path
-`/home/ctyun/-Harness-OS/.harness/temp_loop/8487477ea2c2/state_transitions.jsonl`
+`/home/ctyun/-Harness-OS/.harness/temp_loop/dd6c8e13dfa4/state_transitions.jsonl`
 Total: 19 transitions
 
 ## Audit events path
-`/home/ctyun/-Harness-OS/.harness/temp_loop/8487477ea2c2/audit_events.jsonl`
+`/home/ctyun/-Harness-OS/.harness/temp_loop/dd6c8e13dfa4/audit_events.jsonl`
 Total: 43 events
 
 ## Did Hermes act only as dispatcher?
 YES. Hermes did not implement code, did not review, did not plan. Only dispatched agents and collected artifacts.
 
 ## Verdict
-BLOCKED_REQUIRES_USER_APPROVAL
+DONE
