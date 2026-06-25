@@ -1,0 +1,11 @@
+{
+  "test_cli_help_governance_exists": true,
+  "test_cli_documentation_deleted": true,
+  "assertions_migrated": true,
+  "cop_coverage_preserved": true,
+  "governance_checks_not_weakened": true,
+  "source_code_unchanged": true,
+  "full_pytest_passes": true,
+  "review_verdict": "APPROVED",
+  "issues": []
+}

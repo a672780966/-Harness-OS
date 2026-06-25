@@ -16,12 +16,29 @@ SCHEMA_VERSION: int = 1
 
 @dataclass
 class ProviderConfig:
-    """Provider / model configuration section."""
+    """Provider / model configuration section.
+
+    Tunables map to the ProviderGuardConfig in
+    harness/copilot/provider_guard/config.py.  The schema is the
+    single source of truth; ProviderGuardConfig provides env-var
+    overrides for runtime-only use.
+    """
 
     mode: str = "readonly"  # readonly | primary | fallback
     primary: str = "opencode-go/deepseek-v4-flash"
     fallback: str = "opencode/deepseek-v4-flash-free"
+
+    # Timeouts (seconds)
+    connect_timeout_seconds: float = 10.0
+    read_timeout_seconds: float = 90.0
     canary_timeout_seconds: float = 45.0
+
+    # Retry policy
+    max_retries: int = 3
+    retry_backoff: str = "exponential"  # exponential | linear | constant
+    retry_jitter: bool = True
+
+    # Degradation policy
     long_phase_allowed_when_degraded: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
@@ -29,7 +46,12 @@ class ProviderConfig:
             "mode": self.mode,
             "primary": self.primary,
             "fallback": self.fallback,
+            "connect_timeout_seconds": self.connect_timeout_seconds,
+            "read_timeout_seconds": self.read_timeout_seconds,
             "canary_timeout_seconds": self.canary_timeout_seconds,
+            "max_retries": self.max_retries,
+            "retry_backoff": self.retry_backoff,
+            "retry_jitter": self.retry_jitter,
             "long_phase_allowed_when_degraded": self.long_phase_allowed_when_degraded,
         }
 

@@ -214,11 +214,27 @@ def is_provider_degraded(state: Optional[ProviderHealthState] = None) -> bool:
     return state.state == "degraded"
 
 
-def can_proceed_to_long_phase(state: Optional[ProviderHealthState] = None) -> bool:
-    """Return True if provider is healthy enough for long implementation tasks."""
+def can_proceed_to_long_phase(
+    state: Optional[ProviderHealthState] = None,
+    config: Optional[ProviderGuardConfig] = None,
+) -> bool:
+    """Return True if provider is healthy enough for long implementation tasks.
+
+    When ``long_phase_allowed_when_degraded`` is True in the provider
+    config, degraded state is also accepted.
+    """
     if state is None:
         state = load_health_state()
-    return state.state in ("unknown", "healthy")
+    if state.state in ("unknown", "healthy"):
+        return True
+    if state.state == "degraded":
+        cfg = config or DEFAULT_CONFIG
+        # Check for the override via ProviderGuardConfig compatibility
+        # Surface: the config module can be called with HarnessConfig-derived values
+        if getattr(cfg, "long_phase_allowed_when_degraded", False):
+            return True
+        return False
+    return False
 
 
 def health_check_needed(

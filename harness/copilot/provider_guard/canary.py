@@ -59,7 +59,7 @@ def get_diagnosis_summary(state: Optional[ProviderHealthState] = None) -> Dict[s
         "last_failure_has_http_status": state.last_failure_has_http_status,
         "last_failure_http_status": state.last_failure_http_status,
         "degraded": is_provider_degraded(state),
-        "can_proceed_to_long_phase": can_proceed_to_long_phase(state),
+        "can_proceed_to_long_phase": can_proceed_to_long_phase(state, config=cfg),
         "guard_config": cfg.to_dict(),
     }
 
@@ -215,6 +215,18 @@ def check_before_long_phase(
     state = load_health_state()
 
     if is_provider_degraded(state):
+        if getattr(cfg, "long_phase_allowed_when_degraded", False):
+            return {
+                "allowed": True,
+                "degraded": True,
+                "state": state.state,
+                "model": state.model,
+                "detail": (
+                    f"Provider is DEGRADED but long_phase_allowed_when_degraded is True. "
+                    f"Proceeding with degraded mode. "
+                    f"Consecutive failures: {state.consecutive_failures}."
+                ),
+            }
         return {
             "allowed": False,
             "degraded": True,
