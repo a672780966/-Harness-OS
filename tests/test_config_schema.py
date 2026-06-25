@@ -48,6 +48,26 @@ class TestSchemaDefaults:
         cfg = HarnessConfig.defaults()
         assert cfg.provider.long_phase_allowed_when_degraded is False
 
+    def test_provider_timeout_defaults(self):
+        cfg = HarnessConfig.defaults()
+        assert cfg.provider.connect_timeout_seconds == 10.0
+        assert cfg.provider.read_timeout_seconds == 90.0
+
+    def test_provider_retry_defaults(self):
+        cfg = HarnessConfig.defaults()
+        assert cfg.provider.max_retries == 3
+        assert cfg.provider.retry_backoff == "exponential"
+        assert cfg.provider.retry_jitter is True
+
+    def test_provider_to_dict_includes_new_fields(self):
+        d = ProviderConfig().to_dict()
+        assert d["connect_timeout_seconds"] == 10.0
+        assert d["read_timeout_seconds"] == 90.0
+        assert d["max_retries"] == 3
+        assert d["retry_backoff"] == "exponential"
+        assert d["retry_jitter"] is True
+        assert d["long_phase_allowed_when_degraded"] is False
+
     def test_default_format_markdown(self):
         cfg = HarnessConfig.defaults()
         assert cfg.copilot.default_format == "markdown"

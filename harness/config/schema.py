@@ -21,6 +21,11 @@ class ProviderConfig:
     mode: str = "readonly"  # readonly | primary | fallback
     primary: str = "opencode-go/deepseek-v4-flash"
     fallback: str = "opencode/deepseek-v4-flash-free"
+    connect_timeout_seconds: float = 10.0
+    read_timeout_seconds: float = 90.0
+    max_retries: int = 3
+    retry_backoff: str = "exponential"  # exponential | linear | constant
+    retry_jitter: bool = True
     canary_timeout_seconds: float = 45.0
     long_phase_allowed_when_degraded: bool = False
 
@@ -29,6 +34,11 @@ class ProviderConfig:
             "mode": self.mode,
             "primary": self.primary,
             "fallback": self.fallback,
+            "connect_timeout_seconds": self.connect_timeout_seconds,
+            "read_timeout_seconds": self.read_timeout_seconds,
+            "max_retries": self.max_retries,
+            "retry_backoff": self.retry_backoff,
+            "retry_jitter": self.retry_jitter,
             "canary_timeout_seconds": self.canary_timeout_seconds,
             "long_phase_allowed_when_degraded": self.long_phase_allowed_when_degraded,
         }

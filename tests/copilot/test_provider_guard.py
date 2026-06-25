@@ -86,6 +86,7 @@ class TestConfig:
         os.environ["HARNESS_PROVIDER_MAX_RETRIES"] = "5"
         os.environ["HARNESS_PROVIDER_CANARY_TIMEOUT"] = "60"
         os.environ["HARNESS_PROVIDER_CANARY_MAX_TOKENS"] = "20"
+        os.environ["HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED"] = "true"
         try:
             cfg = ProviderGuardConfig.from_env()
             assert cfg.connect_timeout_seconds == 5.0
@@ -93,12 +94,34 @@ class TestConfig:
             assert cfg.max_retries == 5
             assert cfg.canary_timeout_seconds == 60.0
             assert cfg.canary_max_tokens == 20
+            assert cfg.long_phase_allowed_when_degraded is True
         finally:
             del os.environ["HARNESS_PROVIDER_CONNECT_TIMEOUT"]
             del os.environ["HARNESS_PROVIDER_READ_TIMEOUT"]
             del os.environ["HARNESS_PROVIDER_MAX_RETRIES"]
             del os.environ["HARNESS_PROVIDER_CANARY_TIMEOUT"]
             del os.environ["HARNESS_PROVIDER_CANARY_MAX_TOKENS"]
+            del os.environ["HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED"]
+
+    def test_env_override_long_phase_false_overrides_config_true(self):
+        """HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED=false overrides config true."""
+        from harness.config.schema import ProviderConfig
+        pc = ProviderConfig(long_phase_allowed_when_degraded=True)
+        os.environ["HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED"] = "false"
+        try:
+            cfg = ProviderGuardConfig.from_harness_config(pc)
+            assert cfg.long_phase_allowed_when_degraded is False, (
+                "Env false should override config true"
+            )
+        finally:
+            del os.environ["HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED"]
+
+    def test_env_override_long_phase_absent_uses_config(self):
+        """Absent env var uses HarnessConfig value."""
+        from harness.config.schema import ProviderConfig
+        pc = ProviderConfig(long_phase_allowed_when_degraded=True)
+        cfg = ProviderGuardConfig.from_harness_config(pc)
+        assert cfg.long_phase_allowed_when_degraded is True
 
     def test_to_dict(self):
         """to_dict returns expected keys."""
@@ -108,6 +131,53 @@ class TestConfig:
         assert d["canary_timeout_seconds"] == 45.0
         assert "connect_timeout_seconds" in d
         assert "retry_backoff" in d
+        assert "long_phase_allowed_when_degraded" in d
+        assert d["long_phase_allowed_when_degraded"] is False
+
+    def test_from_harness_config(self):
+        """from_harness_config maps ProviderConfig fields correctly."""
+        from harness.config.schema import ProviderConfig
+        pc = ProviderConfig(long_phase_allowed_when_degraded=True, canary_timeout_seconds=30.0,
+                            connect_timeout_seconds=5.0, max_retries=7)
+        cfg = ProviderGuardConfig.from_harness_config(pc)
+        assert cfg.long_phase_allowed_when_degraded is True
+        assert cfg.canary_timeout_seconds == 30.0  # from provider_cfg, no env override
+        assert cfg.connect_timeout_seconds == 5.0  # from provider_cfg
+        assert cfg.max_retries == 7  # from provider_cfg
+        assert cfg.retry_backoff == "exponential"
+        assert cfg.retry_jitter is True
+        assert cfg.health_check_cooldown_seconds == 120.0  # default
+
+    def test_from_harness_config_none(self):
+        """from_harness_config with None returns env-based defaults."""
+        cfg = ProviderGuardConfig.from_harness_config(None)
+        assert cfg.long_phase_allowed_when_degraded is False
+
+    def test_from_harness_config_env_overrides(self):
+        """from_harness_config env overrides have highest precedence."""
+        from harness.config.schema import ProviderConfig
+        pc = ProviderConfig(connect_timeout_seconds=5.0, read_timeout_seconds=30.0, max_retries=3)
+        os.environ["HARNESS_PROVIDER_CONNECT_TIMEOUT"] = "20"
+        os.environ["HARNESS_PROVIDER_READ_TIMEOUT"] = "180"
+        os.environ["HARNESS_PROVIDER_MAX_RETRIES"] = "10"
+        try:
+            cfg = ProviderGuardConfig.from_harness_config(pc)
+            assert cfg.connect_timeout_seconds == 20.0, "Env should override config value"
+            assert cfg.read_timeout_seconds == 180.0, "Env should override config value"
+            assert cfg.max_retries == 10, "Env should override config value"
+        finally:
+            del os.environ["HARNESS_PROVIDER_CONNECT_TIMEOUT"]
+            del os.environ["HARNESS_PROVIDER_READ_TIMEOUT"]
+            del os.environ["HARNESS_PROVIDER_MAX_RETRIES"]
+
+    def test_from_harness_config_no_env_uses_config(self):
+        """from_harness_config uses HarnessConfig values when env absent."""
+        from harness.config.schema import ProviderConfig
+        pc = ProviderConfig(connect_timeout_seconds=25.0, read_timeout_seconds=200.0, max_retries=8)
+        cfg = ProviderGuardConfig.from_harness_config(pc)
+        assert cfg.connect_timeout_seconds == 25.0
+        assert cfg.read_timeout_seconds == 200.0
+        assert cfg.max_retries == 8
 
 
 # ===================== Health State Tests =====================
@@ -248,8 +318,14 @@ class TestGuardLogic:
         assert can_proceed_to_long_phase(ProviderHealthState(state="failed")) is False
 
     def test_can_proceed_degraded(self):
-        """degraded state → cannot proceed."""
+        """degraded state → cannot proceed (default config)."""
         assert can_proceed_to_long_phase(ProviderHealthState(state="degraded")) is False
+
+    def test_can_proceed_degraded_when_allowed(self):
+        """degraded state + long_phase_allowed_when_degraded=True → can proceed."""
+        from harness.copilot.provider_guard.config import ProviderGuardConfig
+        cfg = ProviderGuardConfig(long_phase_allowed_when_degraded=True)
+        assert can_proceed_to_long_phase(ProviderHealthState(state="degraded"), config=cfg) is True
 
     def test_health_check_needed_unknown(self):
         """Unknown state always needs check."""
@@ -380,6 +456,18 @@ class TestCheckBeforeLongPhase:
         assert result["allowed"] is False
         assert result["degraded"] is True
         assert result["state"] == "degraded"
+
+    def test_degraded_allowed_when_config_says_ok(self):
+        """Degraded state + long_phase_allowed_when_degraded=True -> allowed."""
+        from harness.copilot.provider_guard.config import ProviderGuardConfig
+        cfg = ProviderGuardConfig(long_phase_allowed_when_degraded=True)
+        state = ProviderHealthState()
+        state = record_failure(state, failure_type="timeout")
+        state = record_failure(state, failure_type="timeout")
+        assert state.state == "degraded"
+        result = check_before_long_phase(config=cfg)
+        assert result["allowed"] is True
+        assert result["degraded"] is True
 
 
 # ===================== Diagnosis Summary Tests =====================

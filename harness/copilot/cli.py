@@ -1,31 +1,61 @@
 #!/usr/bin/env python3
-"""Harness Code Copilot — Thin CLI Skeleton.
+"""Harness Code Copilot — AI Coding Semantic Copilot CLI.
+
+Commands are read-only by default, with three exception categories:
+- (WRITE) — modifies files or creates local output
+- (NETWORK) — starts a server or makes outbound connections
+- (WRITE+NETWORK) — both
 
 Usage:
-  harness copilot inspect <project_path>
-  harness copilot diff-summary <project_path> [--diff-ref=<ref>]
-  harness copilot task-card <project_path> [--diff-ref=<ref>]
-  harness copilot readiness <project_path> [--diff-ref=<ref>]
-  harness copilot agent-state <project_path> [--diff-ref=<ref>] [--format=markdown|json]
-  harness copilot agent-state-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot pr-pack <project_path> [--out=<dir>]
-  harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]
-  harness copilot pr-comment <project_path> [--format=markdown|json]
-  harness copilot pr-comment-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot live-events <project_path>
-  harness copilot live-events-from-loop <loop_run_dir>
-  harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]
-  harness copilot live-dashboard <project_path> [--out=<dir>]
-  harness copilot live-dashboard-from-loop <loop_run_dir> [--out=<dir>]
-  harness copilot provider-status [--check] [--format=markdown|json]
-  harness copilot config init
-  harness copilot config show [--project=<path>]
-  harness copilot config path [--project=<path>]
-  harness copilot config validate [--project=<path>]
-  harness copilot doctor
-  harness copilot version
+  # ----- Read-only commands (no state change) -----
+  harness copilot inspect <project_path>                    # Read-only
+  harness copilot diff-summary <project_path> [--diff-ref=<ref>]  # Read-only
+  harness copilot task-card <project_path> [--diff-ref=<ref>]     # Read-only
+  harness copilot readiness <project_path> [--diff-ref=<ref>]     # Read-only
+  harness copilot agent-state <project_path> [...]          # Read-only
+  harness copilot agent-state-from-loop <loop_run_dir> [...] # Read-only
+  harness copilot pr-pack-from-loop <loop_run_dir> [...]    # Read-only
+  harness copilot pr-comment <project_path> [...]           # Read-only
+  harness copilot pr-comment-from-loop <loop_run_dir> [...] # Read-only
+  harness copilot live-events <project_path>                # Read-only
+  harness copilot live-events-from-loop <loop_run_dir>      # Read-only
+  harness copilot live-dashboard-from-loop <loop_run_dir>   # Read-only
+  harness copilot provider-status [--check] [...]           # Read-only
+  harness copilot config show [--project=<path>]            # Read-only
+  harness copilot config path [--project=<path>]            # Read-only
+  harness copilot config validate [--project=<path>]        # Read-only
+  harness copilot doctor                                    # Read-only
+  harness copilot version                                   # Read-only
+  harness copilot dashboard <project_path> [...]            # Read-only
+  harness copilot modules <project_path> [...]              # Read-only
+  harness copilot task-cards <project_path> [...]           # Read-only
+  harness copilot from-loop <loop_run_dir> [...]            # Read-only
+  harness copilot evidence <loop_run_dir> [...]             # Read-only
+  harness copilot repair-cards <loop_run_dir> [...]         # Read-only
+  harness copilot shell-from-loop <loop_run_dir> [...]      # Read-only
+  harness copilot export-task-card <project_path> [...]     # Read-only
+  harness copilot monitor <project_path> [...]              # Read-only
+  harness copilot monitor-loop <loop_run_dir> [...]         # Read-only
+  harness copilot loop doctor                               # Read-only
+  harness copilot loop suggest                              # Read-only
 
-All commands are read-only. No code modification, no external agent control.
+  # ----- Local file output commands (WRITE) -----
+  harness copilot pr-pack <project_path> [--out=<dir>]      # WRITE (generates local output files)
+  harness copilot live-dashboard <project_path> [...]       # WRITE (generates local output files)
+  harness copilot shell <project_path> [...]                # WRITE (generates local output files)
+
+  # ----- Opt-in write operations (--create or --force flag required) -----
+  harness copilot pr-draft <project_path> [--create]        # Read-only by default; --create = NETWORK + WRITE
+  harness copilot config init [--force]                     # WRITE (creates ~/.harness/config.yaml)
+
+  # ----- Opt-in write operations (loop lifecycle) -----
+  harness copilot loop setup <project_path> [...]           # WRITE (creates loop config files)
+  harness copilot loop init <project_path> [...]            # WRITE (initializes loop structure)
+  harness copilot loop run <project_path> [...]             # WRITE (executes loop — modifies files)
+
+  # ----- Opt-in network operations (local servers) -----
+  harness copilot preview <dashboard_dir> [--port]          # NETWORK (starts HTTP server)
+  harness copilot live-server <project_path> [--port]       # NETWORK (starts SSE server)
 """
 
 from __future__ import annotations

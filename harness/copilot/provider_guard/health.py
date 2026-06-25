@@ -214,11 +214,19 @@ def is_provider_degraded(state: Optional[ProviderHealthState] = None) -> bool:
     return state.state == "degraded"
 
 
-def can_proceed_to_long_phase(state: Optional[ProviderHealthState] = None) -> bool:
+def can_proceed_to_long_phase(
+    state: Optional[ProviderHealthState] = None,
+    config: Optional[ProviderGuardConfig] = None,
+) -> bool:
     """Return True if provider is healthy enough for long implementation tasks."""
     if state is None:
         state = load_health_state()
-    return state.state in ("unknown", "healthy")
+    if state.state in ("unknown", "healthy"):
+        return True
+    if state.state == "degraded":
+        cfg = config or DEFAULT_CONFIG
+        return cfg.long_phase_allowed_when_degraded
+    return False
 
 
 def health_check_needed(

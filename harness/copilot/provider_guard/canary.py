@@ -40,11 +40,14 @@ from .health import (
 )
 
 
-def get_diagnosis_summary(state: Optional[ProviderHealthState] = None) -> Dict[str, Any]:
+def get_diagnosis_summary(
+    state: Optional[ProviderHealthState] = None,
+    guard_config: Optional[ProviderGuardConfig] = None,
+) -> Dict[str, Any]:
     """Return a complete diagnosis / health summary dict."""
     if state is None:
         state = load_health_state()
-    cfg = DEFAULT_CONFIG
+    cfg = guard_config or DEFAULT_CONFIG
     return {
         "provider_health_state": state.state,
         "model": state.model,
@@ -59,7 +62,8 @@ def get_diagnosis_summary(state: Optional[ProviderHealthState] = None) -> Dict[s
         "last_failure_has_http_status": state.last_failure_has_http_status,
         "last_failure_http_status": state.last_failure_http_status,
         "degraded": is_provider_degraded(state),
-        "can_proceed_to_long_phase": can_proceed_to_long_phase(state),
+        "can_proceed_to_long_phase": can_proceed_to_long_phase(state, config=cfg),
+        "long_phase_allowed_when_degraded": cfg.long_phase_allowed_when_degraded,
         "guard_config": cfg.to_dict(),
     }
 
@@ -215,6 +219,17 @@ def check_before_long_phase(
     state = load_health_state()
 
     if is_provider_degraded(state):
+        if cfg.long_phase_allowed_when_degraded:
+            return {
+                "allowed": True,
+                "degraded": True,
+                "state": state.state,
+                "model": state.model,
+                "detail": (
+                    f"Provider is DEGRADED but long_phase_allowed_when_degraded=True. "
+                    f"Consecutive failures: {state.consecutive_failures}."
+                ),
+            }
         return {
             "allowed": False,
             "degraded": True,

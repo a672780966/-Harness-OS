@@ -118,6 +118,61 @@ class TestParseRaw:
         cfg = _parse_raw({"nonexistent": {"foo": "bar"}})
         assert cfg.runtime.readonly_default is True
 
+    def test_provider_timeout_retry_parsed(self):
+        """Provider timeout/retry fields are parsed correctly."""
+        cfg = _parse_raw({
+            "provider": {
+                "connect_timeout_seconds": 5.0,
+                "read_timeout_seconds": 30.0,
+                "max_retries": 7,
+                "retry_backoff": "linear",
+                "retry_jitter": False,
+                "canary_timeout_seconds": 60.0,
+                "long_phase_allowed_when_degraded": True,
+            }
+        })
+        assert cfg.provider.connect_timeout_seconds == 5.0
+        assert cfg.provider.read_timeout_seconds == 30.0
+        assert cfg.provider.max_retries == 7
+        assert cfg.provider.retry_backoff == "linear"
+        assert cfg.provider.retry_jitter is False
+        assert cfg.provider.canary_timeout_seconds == 60.0
+        assert cfg.provider.long_phase_allowed_when_degraded is True
+
+    def test_provider_defaults_when_missing(self):
+        """Missing provider fields use defaults."""
+        cfg = _parse_raw({"provider": {}})
+        assert cfg.provider.connect_timeout_seconds == 10.0
+        assert cfg.provider.max_retries == 3
+        assert cfg.provider.retry_backoff == "exponential"
+        assert cfg.provider.retry_jitter is True
+        assert cfg.provider.long_phase_allowed_when_degraded is False
+
+    def test_load_json_config_provider_fields(self):
+        """JSON config with provider timeout/retry fields is parsed."""
+        import json, tempfile
+        data = json.dumps({
+            "provider": {
+                "connect_timeout_seconds": 15.0,
+                "read_timeout_seconds": 120.0,
+                "max_retries": 5,
+                "retry_backoff": "exponential",
+                "retry_jitter": True,
+                "long_phase_allowed_when_degraded": False,
+            }
+        })
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(data)
+            path = f.name
+        try:
+            cfg = load_config_file(path)
+            assert cfg.provider.connect_timeout_seconds == 15.0
+            assert cfg.provider.read_timeout_seconds == 120.0
+            assert cfg.provider.max_retries == 5
+            assert cfg.provider.long_phase_allowed_when_degraded is False
+        finally:
+            os.unlink(path)
+
 
 def _yaml_dump(data: dict, indent: int = 0) -> str:
     """Simple YAML-like dumper for test data."""
