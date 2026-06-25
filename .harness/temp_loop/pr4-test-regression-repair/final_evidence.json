@@ -1,0 +1,21 @@
+{
+  "trace_id": "pr4-test-regression-repair",
+  "protocol": "temporary-loop/v1",
+  "objective": "Fix PR #4 test regression — merge assertions into test_cli_help_governance.py, delete test_cli_documentation.py",
+  "final_verdict": "DONE",
+  "pr4_merge_recommendation": "MERGE",
+  "test_results": {
+    "targeted_cli_governance": "47 passed in 0.18s",
+    "provider_guard": "50 passed in 1.09s",
+    "config_tests": "31 passed in 0.09s",
+    "full_pytest": "944 passed, 1 skipped in 32.72s"
+  },
+  "source_code_unchanged": true,
+  "changed_files": [
+    "tests/copilot/test_cli_help_governance.py (+311 lines, -0 restored from quarantine + merged)",
+    "tests/copilot/test_cli_documentation.py (-184 lines, deleted)"
+  ],
+  "state_transitions_path": ".harness/temp_loop/pr4-test-regression-repair/state_transitions.jsonl",
+  "audit_events_path": ".harness/temp_loop/pr4-test-regression-repair/audit_events.jsonl",
+  "created_at": "2026-06-25T07:00:00Z"
+}

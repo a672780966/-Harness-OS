@@ -1,0 +1,13 @@
+{
+  "status": "DONE",
+  "test_cli_help_governance_exists": true,
+  "test_cli_documentation_deleted": true,
+  "assertions_migrated": true,
+  "cop_coverage_preserved": true,
+  "full_pytest_passes": true,
+  "source_code_unchanged": true,
+  "pr4_merge_recommendation": "MERGE",
+  "reason": "FINAL GATE VERDICT: MERGE. All 7 conditions independently verified: (1) test_cli_help_governance.py exists (311 lines, 47 tests, 4 classes); (2) test_cli_documentation.py deleted (git rm); (3) 31 command-name assertions + 4 governance text assertions migrated from old test_cli_documentation.py; (4) COP-1~COP-5 coverage preserved — COP-1/COP-2 in test_cli_help_governance.py, COP-3/COP-4/COP-5 in test_provider_guard.py; (5) Full pytest: 944 passed, 1 skipped (30.86s); (6) No source code changes — git diff fe0d5fc HEAD -- harness/ is empty; (7) PR #4 recommendation changed from REWORK to MERGE.",
+  "commit_allowed": true,
+  "commit_message": "fix(tests): resolve PR #4 test regression — merge assertions into test_cli_help_governance.py, delete test_cli_documentation.py"
+}

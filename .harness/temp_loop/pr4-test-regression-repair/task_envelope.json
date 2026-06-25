@@ -1,0 +1,11 @@
+{
+  "protocol": "temporary-loop/v1",
+  "trace_id": "pr4-test-regression-repair",
+  "objective": "Fix PR #4 test regression: restore test_cli_help_governance.py as canonical governance test, merge useful assertions from test_cli_documentation.py, delete test_cli_documentation.py",
+  "worker_permissions": {
+    "allow_source_modification": false,
+    "allow_test_modification": true,
+    "allow_test_deletion": true,
+    "restriction_reason": "Only test files may be modified. No source code changes."
+  }
+}
