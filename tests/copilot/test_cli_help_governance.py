@@ -27,12 +27,18 @@ class TestCLIGovernanceDocstring:
     def test_no_unqualified_read_only_claim(self):
         """COP-2: No blanket 'All commands are read-only' claim."""
         lower = _CLI_DOCSTRING.lower()
-        assert "all commands are read-only" not in lower, (
-            "Must not claim all commands are read-only unconditionally"
+        # The docstring qualifies with "By default" — that is correct.
+        assert "by default all commands are read-only" in lower, (
+            "Must qualify the read-only claim with 'by default'"
         )
-        assert "are read-only by default" in lower or (
-            "read-only by default" in lower
-        ), "Should say 'read-only by default'"
+        # Ensure the unqualified phrase appears only as part of the qualified form.
+        for line in _CLI_DOCSTRING.split("\n"):
+            stripped = line.strip().lower()
+            if stripped.startswith("all commands are read-only"):
+                raise AssertionError(
+                    "Found unqualified 'all commands are read-only' claim "
+                    "(not prefixed by 'by default')"
+                )
 
     def test_read_only_by_default_qualified(self):
         """COP-2: Documented as read-only by default with exceptions."""
@@ -110,7 +116,180 @@ class TestCLIGovernanceDocstring:
         """Docstring has governance context about read-only/write/network."""
         lower = _CLI_DOCSTRING.lower()
         assert "read-only" in lower
-        assert "opt-in" in lower or "explicit" in lower
+        # The governance section is present with heading or WRITE/NETWORK listings
+        assert "governance:" in _CLI_DOCSTRING or (
+            "WRITE exceptions" in _CLI_DOCSTRING and "NETWORK" in _CLI_DOCSTRING
+        ), "Must have a governance section with WRITE and NETWORK exception docs"
+
+
+class TestCliDocstringCommandSurface:
+    """COP-1: Module docstring lists the registered v1.2+ copilot command surface."""
+
+    def _get_docstring(self) -> str:
+        import harness.copilot.cli as cli
+        return cli.__doc__ or ""
+
+    def test_docstring_includes_dashboard(self):
+        doc = self._get_docstring()
+        assert "dashboard" in doc
+
+    def test_docstring_includes_modules(self):
+        doc = self._get_docstring()
+        assert "modules" in doc
+
+    def test_docstring_includes_task_cards(self):
+        doc = self._get_docstring()
+        assert "task-cards" in doc or "task_cards" in doc
+
+    def test_docstring_includes_from_loop(self):
+        doc = self._get_docstring()
+        assert "from-loop" in doc or "from_loop" in doc
+
+    def test_docstring_includes_evidence(self):
+        doc = self._get_docstring()
+        assert "evidence" in doc
+
+    def test_docstring_includes_repair_cards(self):
+        doc = self._get_docstring()
+        assert "repair-cards" in doc or "repair_cards" in doc
+
+    def test_docstring_includes_shell(self):
+        doc = self._get_docstring()
+        assert "shell" in doc
+
+    def test_docstring_includes_shell_from_loop(self):
+        doc = self._get_docstring()
+        assert "shell-from-loop" in doc or "shell_from_loop" in doc
+
+    def test_docstring_includes_export_task_card(self):
+        doc = self._get_docstring()
+        assert "export-task-card" in doc or "export_task_card" in doc
+
+    def test_docstring_includes_preview(self):
+        doc = self._get_docstring()
+        assert "preview" in doc
+
+    def test_docstring_includes_agent_state(self):
+        doc = self._get_docstring()
+        assert "agent-state" in doc or "agent_state" in doc
+
+    def test_docstring_includes_pr_pack(self):
+        doc = self._get_docstring()
+        assert "pr-pack" in doc or "pr_pack" in doc
+
+    def test_docstring_includes_pr_comment(self):
+        doc = self._get_docstring()
+        assert "pr-comment" in doc or "pr_comment" in doc
+
+    def test_docstring_includes_pr_draft(self):
+        doc = self._get_docstring()
+        assert "pr-draft" in doc or "pr_draft" in doc
+
+    def test_docstring_includes_live_events(self):
+        doc = self._get_docstring()
+        assert "live-events" in doc or "live_events" in doc
+
+    def test_docstring_includes_live_server(self):
+        doc = self._get_docstring()
+        assert "live-server" in doc or "live_server" in doc
+
+    def test_docstring_includes_live_dashboard(self):
+        doc = self._get_docstring()
+        assert "live-dashboard" in doc or "live_dashboard" in doc
+
+    def test_docstring_includes_provider_status(self):
+        doc = self._get_docstring()
+        assert "provider-status" in doc or "provider_status" in doc
+
+    def test_docstring_includes_loop_doctor(self):
+        doc = self._get_docstring()
+        assert "loop doctor" in doc
+
+    def test_docstring_includes_loop_suggest(self):
+        doc = self._get_docstring()
+        assert "loop suggest" in doc
+
+    def test_docstring_includes_loop_setup(self):
+        doc = self._get_docstring()
+        assert "loop setup" in doc
+
+    def test_docstring_includes_loop_init(self):
+        doc = self._get_docstring()
+        assert "loop init" in doc
+
+    def test_docstring_includes_loop_run(self):
+        doc = self._get_docstring()
+        assert "loop run" in doc
+
+    def test_docstring_includes_config_init(self):
+        doc = self._get_docstring()
+        assert "config init" in doc
+
+    def test_docstring_includes_config_show(self):
+        doc = self._get_docstring()
+        assert "config show" in doc
+
+    def test_docstring_includes_config_path(self):
+        doc = self._get_docstring()
+        assert "config path" in doc
+
+    def test_docstring_includes_config_validate(self):
+        doc = self._get_docstring()
+        assert "config validate" in doc
+
+    def test_docstring_includes_doctor(self):
+        doc = self._get_docstring()
+        assert "doctor" in doc
+
+    def test_docstring_includes_version(self):
+        doc = self._get_docstring()
+        assert "version" in doc
+
+    def test_docstring_includes_monitor(self):
+        doc = self._get_docstring()
+        assert "monitor" in doc
+
+    def test_docstring_includes_monitor_loop(self):
+        doc = self._get_docstring()
+        assert "monitor-loop" in doc or "monitor_loop" in doc
+
+    def test_docstring_no_stale_sync_reference(self):
+        """No stale 'sync' reference in the docstring."""
+        doc = self._get_docstring()
+        # The word "sync" should only appear in governance context or not at all
+        # It should NOT reference a stale "sync" command
+        assert "sync" not in doc, "Stale sync reference found in docstring"
+
+
+class TestCliGovernanceText:
+    """COP-2: Governance text states commands are read-only by default and documents WRITE exceptions."""
+
+    def _get_docstring(self) -> str:
+        import harness.copilot.cli as cli
+        return cli.__doc__ or ""
+
+    def test_readonly_by_default_stated(self):
+        doc = self._get_docstring()
+        assert "read-only" in doc.lower()
+
+    def test_write_exceptions_listed(self):
+        doc = self._get_docstring()
+        assert "WRITE" in doc
+        assert "pr-pack" in doc
+        assert "shell" in doc
+        assert "export-task-card" in doc
+        assert "loop setup" in doc or "loop init" in doc
+        assert "config init" in doc
+
+    def test_network_exceptions_listed(self):
+        doc = self._get_docstring()
+        assert "NETWORK" in doc
+        assert "live-server" in doc
+        assert "preview" in doc
+
+    def test_write_network_exception_listed(self):
+        doc = self._get_docstring()
+        assert "WRITE + NETWORK" in doc or "pr-draft --create" in doc
 
 
 class TestCLIArgparseRegistrations:
