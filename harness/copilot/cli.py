@@ -1,31 +1,90 @@
 #!/usr/bin/env python3
-"""Harness Code Copilot — Thin CLI Skeleton.
+"""Harness Code Copilot — Registered v1.2+ CLI Command Surface.
 
 Usage:
+  # Core inspection commands (read-only)
   harness copilot inspect <project_path>
   harness copilot diff-summary <project_path> [--diff-ref=<ref>]
   harness copilot task-card <project_path> [--diff-ref=<ref>]
   harness copilot readiness <project_path> [--diff-ref=<ref>]
+
+  # UX layer (read-only)
+  harness copilot dashboard <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+  harness copilot modules <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+  harness copilot task-cards <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+
+  # Integration / loop artifact inspection (read-only)
+  harness copilot from-loop <loop_run_dir> [--format=markdown|json]
+  harness copilot evidence <loop_run_dir> [--format=markdown|json]
+  harness copilot repair-cards <loop_run_dir> [--format=markdown|json]
+
+  # Shell / static HTML generation (WRITE: writes to output directory)
+  harness copilot shell <project_path> [--out=<dir>] [--diff-ref=<ref>]
+  harness copilot shell-from-loop <loop_run_dir> [--out=<dir>]
+  harness copilot export-task-card <project_path> [--out=<file>] [--diff-ref=<ref>] [--card-index=<int>]
+
+  # Preview server (NETWORK: local HTTP server)
+  harness copilot preview <dashboard_dir> [--port=8080]
+
+  # Agent state (read-only)
   harness copilot agent-state <project_path> [--diff-ref=<ref>] [--format=markdown|json]
   harness copilot agent-state-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot pr-pack <project_path> [--out=<dir>]
-  harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]
-  harness copilot pr-comment <project_path> [--format=markdown|json]
-  harness copilot pr-comment-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot live-events <project_path>
-  harness copilot live-events-from-loop <loop_run_dir>
-  harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]
-  harness copilot live-dashboard <project_path> [--out=<dir>]
-  harness copilot live-dashboard-from-loop <loop_run_dir> [--out=<dir>]
-  harness copilot provider-status [--check] [--format=markdown|json]
-  harness copilot config init
-  harness copilot config show [--project=<path>]
-  harness copilot config path [--project=<path>]
-  harness copilot config validate [--project=<path>]
-  harness copilot doctor
-  harness copilot version
 
-All commands are read-only. No code modification, no external agent control.
+  # PR/MR commands
+  harness copilot pr-pack <project_path> [--out=<dir>] [--diff-ref=<ref>]       # WRITE
+  harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]                # WRITE
+  harness copilot pr-comment <project_path> [--diff-ref=<ref>] [--format=...]  # read-only
+  harness copilot pr-comment-from-loop <loop_run_dir> [--format=...]           # read-only
+  harness copilot pr-draft <project_path> [--out=<dir>] [--create] [--base=<ref>]  # WRITE+NETWORK with --create
+
+  # Live event stream commands (read-only for capture; NETWORK for live-server)
+  harness copilot live-events <project_path> [--diff-ref=<ref>]
+  harness copilot live-events-from-loop <loop_run_dir>
+  harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]  # NETWORK
+  harness copilot live-dashboard <project_path> [--out=<dir>] [--diff-ref=<ref>]         # WRITE
+  harness copilot live-dashboard-from-loop <loop_run_dir> [--out=<dir>]                  # WRITE
+
+  # Provider reliability guard (read-only)
+  harness copilot provider-status [--check] [--format=markdown|json]
+
+  # Loop subcommands
+  harness copilot loop doctor
+  harness copilot loop suggest
+  harness copilot loop setup <project_path> [--mode=<mode>] [--agents=<list>] [--out=<dir>]  # WRITE
+  harness copilot loop init <project_path> [--mode=<mode>] [--agents=<list>] [--out=<dir>]   # WRITE
+  harness copilot loop run <project_path> [--loop-dir=<dir>]
+
+  # Config subcommands
+  harness copilot config init [--force]            # WRITE
+  harness copilot config show [--project=<path>]   # read-only
+  harness copilot config path [--project=<path>]   # read-only
+  harness copilot config validate [--project=<path>]  # read-only
+
+  # Utilities (read-only)
+  harness copilot doctor
+  harness copilot version [--json]
+
+  # Monitor commands (read-only; WRITE when --out specified for dashboard output)
+  harness copilot monitor <project_path> [--interval=3] [--out=<dir>] [--once]
+  harness copilot monitor-loop <loop_run_dir> [--interval=3] [--out=<dir>] [--once]
+
+Governance:
+  By default all commands are read-only: they inspect, display, or
+  evaluate without modifying any project file or making external network
+  requests.
+
+  WRITE exceptions (commands that write files to disk):
+    pr-pack, pr-pack-from-loop, live-dashboard, live-dashboard-from-loop,
+    shell, shell-from-loop, export-task-card, loop setup, loop init,
+    config init, monitor (with --out), monitor-loop (with --out).
+
+  NETWORK / local server exceptions:
+    live-server, preview.
+
+  WRITE + NETWORK exception:
+    pr-draft --create (creates PR via gh CLI, requires network + write).
+
+  No other commands may modify code, push, merge, or deploy.
 """
 
 from __future__ import annotations
