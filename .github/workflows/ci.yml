@@ -74,5 +74,8 @@ jobs:
       - name: CLI smoke test
         run: python -m harness.copilot.cli version
 
+      - name: Install test dependencies
+        run: pip install pytest
+
       - name: Python tests
         run: python -m pytest tests/ -q
