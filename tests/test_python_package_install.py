@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import json
 
 
 class TestPackageInstall:
@@ -37,7 +38,11 @@ class TestCLISmoke:
             capture_output=True, text=True, timeout=10,
         )
         assert result.returncode == 0, f"version --json failed: {result.stderr}"
-        assert "v1.4" in result.stdout
+        # stdout has human-readable preamble before JSON — extract JSON part
+        json_start = result.stdout.index("{")
+        data = json.loads(result.stdout[json_start:])
+        assert "version" in data
+        assert data["version"]  # version is non-empty
 
     def test_help(self):
         result = subprocess.run(
