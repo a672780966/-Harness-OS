@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harness-os"
+version = "1.0.0-rc.2"
+description = "Harness OS — Agentic Engineering Governance Platform"
+requires-python = ">=3.11"
+license = {text = "ISC"}
+authors = [
+  {name = "Harness OS Contributors"},
+]
+keywords = ["ai-governance", "coding-agent", "engineering-platform"]
+
+[project.scripts]
+harness-copilot = "harness.copilot.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["harness*"]
