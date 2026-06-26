@@ -75,7 +75,7 @@ jobs:
         run: python -m harness.copilot.cli version
 
       - name: Install test dependencies
-        run: pip install pytest
+        run: pip install pytest pyyaml
 
       - name: Python tests
         run: python -m pytest tests/ -q
