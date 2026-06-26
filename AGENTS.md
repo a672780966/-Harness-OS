@@ -1,8 +1,8 @@
-# Harness OS v1.1 Project Agent Instructions
+# Harness OS Project Agent Instructions
 
 ## Project goal
 
-Harness OS v1.1 is a minimal semi-automatic AI coding agent production loop.
+Harness OS is a minimal semi-automatic AI coding agent production loop.
 
 The target loop is:
 
@@ -57,7 +57,7 @@ Codex:
 - Planner
 - Advanced reviewer
 - Final gate reviewer
-- Does not implement by default
+- May support local orchestration; implementation still goes through Hermes task envelopes unless explicitly authorized
 
 ## Hard rules
 
@@ -67,7 +67,7 @@ Codex:
 - No direct main branch modification by worker.
 - No secret logging.
 - No force push.
-- No deployment in v1.1 local loop.
+- No deployment in local loop.
 - Max repair rounds: 3.
 - High-risk path changes require human confirmation.
 
@@ -100,7 +100,7 @@ Do not implement:
 
 # Project Skill Pack
 
-Harness OS v1.1 uses the following skill pack:
+Harness OS uses the following skill pack:
 
 ## Spec Kit
 
@@ -188,7 +188,7 @@ Includes:
 
 # External Tool Invocation Baseline
 
-Harness OS v1.1 uses some external tools directly to improve project creation and task execution quality.
+Harness OS uses some external tools directly to improve project creation and task execution quality.
 
 These tools are not internal Harness subsystems.
 
