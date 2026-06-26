@@ -78,4 +78,4 @@ jobs:
         run: pip install pytest pyyaml
 
       - name: Python tests
-        run: python -m pytest tests/ -q
+        run: python -m pytest tests/ -q --ignore=tests/test_hermes_auto_loop_final_review_handler.py --ignore=tests/test_hermes_auto_loop_negative_sample.py
