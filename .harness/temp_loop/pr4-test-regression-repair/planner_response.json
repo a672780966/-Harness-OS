@@ -1,0 +1,9 @@
+{
+  "trace_id": "pr4-test-regression-repair",
+  "problem": "PR #4 (recovery/v1.2-source-fix-clean → feat/loop-installer-mvp) has a test regression. The PR adds tests/copilot/test_cli_documentation.py (+184) but the quarantined commit (4b8b921) had a better governance-aligned test at tests/copilot/test_cli_help_governance.py (132 lines) that was NOT included in the clean rerun (fe0d5fc).",
+  "goal": "Create tests/copilot/test_cli_help_governance.py as the canonical governance test by merging useful assertions from test_cli_documentation.py. Then delete test_cli_documentation.py.",
+  "files_to_modify": [
+    "tests/copilot/test_cli_help_governance.py (write)",
+    "tests/copilot/test_cli_documentation.py (delete)"
+  ]
+}

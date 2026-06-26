@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.3--main--integration-blue?style=flat-square" alt="版本">
+  <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="版本">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
   <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot 测试">
   <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="全量测试">
@@ -33,8 +33,8 @@
 
 ## 当前状态
 
-- **主线基线**: `v1.3-main-integration`
-- **最新能力**: `v1.3.1-pr-draft-assistant`
+- **主线基线**: `v1.4-loop-installer-mvp`
+- **最新能力**: `v1.4-loop-installer-mvp`
 - **Copilot 测试**: `616 passed`
 - **全量测试**: `848 passed`
 - **产品状态**: Local Semantic Copilot MVP
@@ -95,14 +95,18 @@
 ```bash
 git clone https://github.com/a672780966/-Harness-OS.git
 cd -Harness-OS
-python -m pip install --upgrade pip
-python -m pip install -e .
-harness copilot version --json
-harness copilot doctor
-harness copilot inspect .
-harness copilot readiness .
-harness copilot task-card .
-harness copilot pr-draft --base main
+# 方式 1：Python CLI（无需安装）
+python -m harness.copilot.cli version --json
+python -m harness.copilot.cli doctor
+python -m harness.copilot.cli inspect .
+python -m harness.copilot.cli dashboard .
+python -m harness.copilot.cli pr-draft --base main
+
+# 方式 2：Node CLI（需要 pnpm + node）
+pnpm install
+pnpm build
+./dist/index.js version --json
+./dist/index.js doctor
 ```
 
 如果 `harness` 命令不可用：
@@ -110,6 +114,7 @@ harness copilot pr-draft --base main
 python -m harness.copilot.cli version --json
 python -m harness.copilot.cli doctor
 ```
+构建后（`pnpm install && pnpm build`），`harness` bin 位于 `./dist/index.js`。
 
 ---
 

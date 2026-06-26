@@ -1,31 +1,90 @@
 #!/usr/bin/env python3
-"""Harness Code Copilot — Thin CLI Skeleton.
+"""Harness Code Copilot — Registered v1.2+ CLI Command Surface.
 
 Usage:
+  # Core inspection commands (read-only)
   harness copilot inspect <project_path>
   harness copilot diff-summary <project_path> [--diff-ref=<ref>]
   harness copilot task-card <project_path> [--diff-ref=<ref>]
   harness copilot readiness <project_path> [--diff-ref=<ref>]
+
+  # UX layer (read-only)
+  harness copilot dashboard <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+  harness copilot modules <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+  harness copilot task-cards <project_path> [--diff-ref=<ref>] [--format=markdown|json]
+
+  # Integration / loop artifact inspection (read-only)
+  harness copilot from-loop <loop_run_dir> [--format=markdown|json]
+  harness copilot evidence <loop_run_dir> [--format=markdown|json]
+  harness copilot repair-cards <loop_run_dir> [--format=markdown|json]
+
+  # Shell / static HTML generation (WRITE: writes to output directory)
+  harness copilot shell <project_path> [--out=<dir>] [--diff-ref=<ref>]
+  harness copilot shell-from-loop <loop_run_dir> [--out=<dir>]
+  harness copilot export-task-card <project_path> [--out=<file>] [--diff-ref=<ref>] [--card-index=<int>]
+
+  # Preview server (NETWORK: local HTTP server)
+  harness copilot preview <dashboard_dir> [--port=8080]
+
+  # Agent state (read-only)
   harness copilot agent-state <project_path> [--diff-ref=<ref>] [--format=markdown|json]
   harness copilot agent-state-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot pr-pack <project_path> [--out=<dir>]
-  harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]
-  harness copilot pr-comment <project_path> [--format=markdown|json]
-  harness copilot pr-comment-from-loop <loop_run_dir> [--format=markdown|json]
-  harness copilot live-events <project_path>
-  harness copilot live-events-from-loop <loop_run_dir>
-  harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]
-  harness copilot live-dashboard <project_path> [--out=<dir>]
-  harness copilot live-dashboard-from-loop <loop_run_dir> [--out=<dir>]
-  harness copilot provider-status [--check] [--format=markdown|json]
-  harness copilot config init
-  harness copilot config show [--project=<path>]
-  harness copilot config path [--project=<path>]
-  harness copilot config validate [--project=<path>]
-  harness copilot doctor
-  harness copilot version
 
-All commands are read-only. No code modification, no external agent control.
+  # PR/MR commands
+  harness copilot pr-pack <project_path> [--out=<dir>] [--diff-ref=<ref>]       # WRITE
+  harness copilot pr-pack-from-loop <loop_run_dir> [--out=<dir>]                # WRITE
+  harness copilot pr-comment <project_path> [--diff-ref=<ref>] [--format=...]  # read-only
+  harness copilot pr-comment-from-loop <loop_run_dir> [--format=...]           # read-only
+  harness copilot pr-draft <project_path> [--out=<dir>] [--create] [--base=<ref>]  # WRITE+NETWORK with --create
+
+  # Live event stream commands (read-only for capture; NETWORK for live-server)
+  harness copilot live-events <project_path> [--diff-ref=<ref>]
+  harness copilot live-events-from-loop <loop_run_dir>
+  harness copilot live-server <project_path> [--host=127.0.0.1] [--port=8765] [--once]  # NETWORK
+  harness copilot live-dashboard <project_path> [--out=<dir>] [--diff-ref=<ref>]         # WRITE
+  harness copilot live-dashboard-from-loop <loop_run_dir> [--out=<dir>]                  # WRITE
+
+  # Provider reliability guard (read-only)
+  harness copilot provider-status [--check] [--format=markdown|json]
+
+  # Loop subcommands
+  harness copilot loop doctor
+  harness copilot loop suggest
+  harness copilot loop setup <project_path> [--mode=<mode>] [--agents=<list>] [--out=<dir>]  # WRITE
+  harness copilot loop init <project_path> [--mode=<mode>] [--agents=<list>] [--out=<dir>]   # WRITE
+  harness copilot loop run <project_path> [--loop-dir=<dir>]
+
+  # Config subcommands
+  harness copilot config init [--force]            # WRITE
+  harness copilot config show [--project=<path>]   # read-only
+  harness copilot config path [--project=<path>]   # read-only
+  harness copilot config validate [--project=<path>]  # read-only
+
+  # Utilities (read-only)
+  harness copilot doctor
+  harness copilot version [--json]
+
+  # Monitor commands (read-only; WRITE when --out specified for dashboard output)
+  harness copilot monitor <project_path> [--interval=3] [--out=<dir>] [--once]
+  harness copilot monitor-loop <loop_run_dir> [--interval=3] [--out=<dir>] [--once]
+
+Governance:
+  By default all commands are read-only: they inspect, display, or
+  evaluate without modifying any project file or making external network
+  requests.
+
+  WRITE exceptions (commands that write files to disk):
+    pr-pack, pr-pack-from-loop, live-dashboard, live-dashboard-from-loop,
+    shell, shell-from-loop, export-task-card, loop setup, loop init,
+    config init, monitor (with --out), monitor-loop (with --out).
+
+  NETWORK / local server exceptions:
+    live-server, preview.
+
+  WRITE + NETWORK exception:
+    pr-draft --create (creates PR via gh CLI, requires network + write).
+
+  No other commands may modify code, push, merge, or deploy.
 """
 
 from __future__ import annotations
@@ -661,6 +720,77 @@ def cmd_pr_pack_from_loop(args: argparse.Namespace) -> None:
         print(f"   - {fp}")
 
 
+def cmd_loop_doctor(args: argparse.Namespace) -> None:
+    """Detect installed tools and AI coding agents (Loop Installer)."""
+    from harness.loop.discovery import detect_summary
+    print(detect_summary())
+
+
+def cmd_loop_suggest(args: argparse.Namespace) -> None:
+    """Recommend loop topologies based on detected agents."""
+    from harness.loop.discovery import detect_system
+    from harness.loop.topology import suggest_summary
+    sys_info = detect_system()
+    print(suggest_summary(sys_info))
+
+
+def cmd_loop_setup(args: argparse.Namespace) -> None:
+    """Interactive or non-interactive loop setup."""
+    from harness.loop.setup import setup_loop
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+    result = setup_loop(
+        project_root,
+        mode=args.mode,
+        agents=args.agents.split(",") if args.agents else None,
+        output_dir=args.out,
+    )
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown')}", file=sys.stderr)
+        sys.exit(1)
+    print(f"✅ Loop configured at: {result['output_dir']}")
+    print(f"   Mode: {result['mode']}")
+    print(f"   Agents: {', '.join(result['agents'])}")
+    print(f"   Config files: {len(result['config_files'])}")
+    print(f"   Instruction files: {len(result['instruction_files'])}")
+
+
+def cmd_loop_init(args: argparse.Namespace) -> None:
+    """Non-interactive loop initialization."""
+    from harness.loop.setup import init_loop
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+    result = init_loop(
+        project_root,
+        mode=args.mode,
+        agents=args.agents.split(",") if args.agents else None,
+        output_dir=args.out,
+    )
+    if not result.get("success"):
+        print(f"Error: {result.get('error', 'Unknown')}", file=sys.stderr)
+        sys.exit(1)
+    print(f"✅ Loop initialized at: {result['output_dir']}")
+    print(f"   Mode: {result['mode']}")
+    print(f"   Agents: {', '.join(result['agents'])}")
+
+
+def cmd_loop_run(args: argparse.Namespace) -> None:
+    """Execute a configured loop cycle (MVP)."""
+    from harness.loop.runner import run_loop
+    project_root = os.path.abspath(args.project_path)
+    if not os.path.isdir(project_root):
+        print(f"Error: '{project_root}' is not a directory", file=sys.stderr)
+        sys.exit(1)
+    result = run_loop(project_root, loop_dir=args.loop_dir)
+    print(f"✅ Loop run completed: {result.get('run_dir', '(unknown)')}")
+    print(f"   Steps: {len(result['steps'])}")
+    print(f"   Worktree clean: {result.get('worktree_clean', False)}")
+
+
 def cmd_pr_draft(args: argparse.Namespace) -> None:
     """Generate or create PR draft (v1.3.1)."""
     from harness.copilot.pr_draft import run_pr_draft
@@ -1271,6 +1401,40 @@ def main() -> None:
                       help="Output format (default: markdown)")
     p_ps.set_defaults(func=cmd_provider_status)
 
+    # ==================== Loop Installer Commands (v1.4) ====================
+
+    # loop doctor
+    p_ld_doc = subparsers.add_parser("loop", help="Manage loop installer")
+    p_ld_sub = p_ld_doc.add_subparsers(dest="loop_command", help="Loop sub-command")
+
+    p_ld_doc_cmd = p_ld_sub.add_parser("doctor", help="Detect installed tools and AI agents")
+    p_ld_doc_cmd.set_defaults(func=cmd_loop_doctor)
+
+    p_ld_sug = p_ld_sub.add_parser("suggest", help="Recommend loop topologies")
+    p_ld_sug.set_defaults(func=cmd_loop_suggest)
+
+    p_ld_setup = p_ld_sub.add_parser("setup",
+        help="Configure loop (interactive or non-interactive)")
+    p_ld_setup.add_argument("project_path", help="Path to project root")
+    p_ld_setup.add_argument("--mode", choices=["single_agent", "multi_agent"],
+                            default="single_agent", help="Loop mode")
+    p_ld_setup.add_argument("--agents", default=None, help="Comma-separated agent list")
+    p_ld_setup.add_argument("--out", "-o", default=None, help="Output directory")
+    p_ld_setup.set_defaults(func=cmd_loop_setup)
+
+    p_ld_init = p_ld_sub.add_parser("init", help="Initialize loop (non-interactive)")
+    p_ld_init.add_argument("project_path", help="Path to project root")
+    p_ld_init.add_argument("--mode", choices=["single_agent", "multi_agent"],
+                           default="single_agent", help="Loop mode")
+    p_ld_init.add_argument("--agents", default=None, help="Comma-separated agent list")
+    p_ld_init.add_argument("--out", "-o", default=None, help="Output directory")
+    p_ld_init.set_defaults(func=cmd_loop_init)
+
+    p_ld_run = p_ld_sub.add_parser("run", help="Execute a loop cycle (MVP)")
+    p_ld_run.add_argument("project_path", help="Path to project root")
+    p_ld_run.add_argument("--loop-dir", default=None, help="Loop config directory")
+    p_ld_run.set_defaults(func=cmd_loop_run)
+
     # Foundation: Config / Doctor / Version
     p_cfg_init = subparsers.add_parser("config", help="Manage configuration")
     p_cfg_sub = p_cfg_init.add_subparsers(dest="config_command", help="Config sub-command")
@@ -1325,6 +1489,11 @@ def main() -> None:
     # Handle config subcommand dispatch
     if args.command == "config" and not getattr(args, "config_command", None):
         p_cfg_init.print_help()
+        sys.exit(1)
+
+    # Handle loop subcommand dispatch
+    if args.command == "loop" and not getattr(args, "loop_command", None):
+        p_ld_doc.print_help()
         sys.exit(1)
 
     args.func(args)

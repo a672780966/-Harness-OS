@@ -108,6 +108,62 @@ class TestConfig:
         assert d["canary_timeout_seconds"] == 45.0
         assert "connect_timeout_seconds" in d
         assert "retry_backoff" in d
+        assert "long_phase_allowed_when_degraded" in d
+        assert d["long_phase_allowed_when_degraded"] is False
+
+    def test_long_phase_allowed_when_degraded_default(self):
+        """long_phase_allowed_when_degraded defaults to False."""
+        cfg = ProviderGuardConfig()
+        assert cfg.long_phase_allowed_when_degraded is False
+
+    def test_long_phase_allowed_when_degraded_env_override(self):
+        """Env var overrides long_phase_allowed_when_degraded."""
+        os.environ["HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED"] = "true"
+        try:
+            cfg = ProviderGuardConfig.from_env()
+            assert cfg.long_phase_allowed_when_degraded is True
+        finally:
+            del os.environ["HARNESS_PROVIDER_LONG_PHASE_ALLOWED_WHEN_DEGRADED"]
+
+    def test_retry_fields_in_to_dict(self):
+        """to_dict includes retry fields for COP-5."""
+        cfg = ProviderGuardConfig()
+        d = cfg.to_dict()
+        assert d["max_retries"] == 3
+        assert d["retry_backoff"] == "exponential"
+        assert d["retry_jitter"] is True
+
+    def test_from_harness_config_exposes_provider_retry_fields(self):
+        """HarnessConfig.provider feeds ProviderGuardConfig compatibility surface."""
+        from harness.config.schema import HarnessConfig
+
+        harness_cfg = HarnessConfig.defaults()
+        harness_cfg.provider.max_retries = 7
+        harness_cfg.provider.retry_backoff = "linear"
+        harness_cfg.provider.retry_jitter = False
+        harness_cfg.provider.long_phase_allowed_when_degraded = True
+
+        cfg = ProviderGuardConfig.from_harness_config(harness_cfg)
+
+        assert cfg.max_retries == 7
+        assert cfg.retry_backoff == "linear"
+        assert cfg.retry_jitter is False
+        assert cfg.long_phase_allowed_when_degraded is True
+
+    def test_retry_env_overrides_provider_defaults(self):
+        """Env override path preserves retry config exposure."""
+        os.environ["HARNESS_PROVIDER_MAX_RETRIES"] = "9"
+        os.environ["HARNESS_PROVIDER_RETRY_BACKOFF"] = "constant"
+        os.environ["HARNESS_PROVIDER_RETRY_JITTER"] = "false"
+        try:
+            cfg = ProviderGuardConfig.from_env()
+            assert cfg.max_retries == 9
+            assert cfg.retry_backoff == "constant"
+            assert cfg.retry_jitter is False
+        finally:
+            del os.environ["HARNESS_PROVIDER_MAX_RETRIES"]
+            del os.environ["HARNESS_PROVIDER_RETRY_BACKOFF"]
+            del os.environ["HARNESS_PROVIDER_RETRY_JITTER"]
 
 
 # ===================== Health State Tests =====================
@@ -251,6 +307,22 @@ class TestGuardLogic:
         """degraded state → cannot proceed."""
         assert can_proceed_to_long_phase(ProviderHealthState(state="degraded")) is False
 
+    def test_can_proceed_degraded_with_override(self):
+        """degraded state + long_phase_allowed_when_degraded=True → can proceed."""
+        override_cfg = ProviderGuardConfig(long_phase_allowed_when_degraded=True)
+        assert can_proceed_to_long_phase(
+            ProviderHealthState(state="degraded"),
+            config=override_cfg,
+        ) is True
+
+    def test_can_proceed_degraded_with_override_false(self):
+        """degraded state + long_phase_allowed_when_degraded=False → blocked."""
+        override_cfg = ProviderGuardConfig(long_phase_allowed_when_degraded=False)
+        assert can_proceed_to_long_phase(
+            ProviderHealthState(state="degraded"),
+            config=override_cfg,
+        ) is False
+
     def test_health_check_needed_unknown(self):
         """Unknown state always needs check."""
         assert health_check_needed(ProviderHealthState(state="unknown")) is True
@@ -377,6 +449,30 @@ class TestCheckBeforeLongPhase:
         state = record_failure(state, failure_type="timeout")
         assert state.state == "degraded"
         result = check_before_long_phase()
+        assert result["allowed"] is False
+        assert result["degraded"] is True
+        assert result["state"] == "degraded"
+
+    def test_degraded_allows_with_override_config(self):
+        """Degraded state + long_phase_allowed_when_degraded=True → allowed."""
+        state = ProviderHealthState()
+        state = record_failure(state, failure_type="timeout")
+        state = record_failure(state, failure_type="timeout")
+        assert state.state == "degraded"
+        override_cfg = ProviderGuardConfig(long_phase_allowed_when_degraded=True)
+        result = check_before_long_phase(config=override_cfg)
+        assert result["allowed"] is True
+        assert result["degraded"] is True
+        assert result["state"] == "degraded"
+
+    def test_degraded_blocks_with_override_false_config(self):
+        """Degraded state + long_phase_allowed_when_degraded=False → blocked."""
+        state = ProviderHealthState()
+        state = record_failure(state, failure_type="timeout")
+        state = record_failure(state, failure_type="timeout")
+        assert state.state == "degraded"
+        override_cfg = ProviderGuardConfig(long_phase_allowed_when_degraded=False)
+        result = check_before_long_phase(config=override_cfg)
         assert result["allowed"] is False
         assert result["degraded"] is True
         assert result["state"] == "degraded"

@@ -11,11 +11,12 @@ Priority (highest to lowest):
 from __future__ import annotations
 
 import os
+import sys
 import re
 from typing import Any, Dict, Optional
 
 from .schema import HarnessConfig, ProviderConfig, WorkspaceConfig, RuntimeConfig, CopilotConfig, SecurityConfig
-from .loader import load_config_file, _parse_raw
+from .loader import _parse_file, _parse_raw
 from .paths import get_global_config_path, get_project_config_path
 
 
@@ -91,24 +92,61 @@ def resolve_config(
 
     # 2. Global config
     global_path = get_global_config_path()
-    global_cfg = load_config_file(global_path)
-    config = config.merge(global_cfg)
+    config = _merge_config_file(config, global_path)
 
     # 3. Project config
     if project_root:
         project_path = get_project_config_path(project_root)
-        project_cfg = load_config_file(project_path)
-        config = config.merge(project_cfg)
+        config = _merge_config_file(config, project_path)
 
     # 4. Environment variables
     env_overrides = _load_env_overrides()
     if env_overrides:
-        env_cfg = _parse_raw(env_overrides)
-        config = config.merge(env_cfg)
+        config = _merge_raw_override(config, env_overrides)
 
     # 5. CLI overrides (highest priority)
     if cli_overrides:
-        cli_cfg = _parse_raw(cli_overrides)
-        config = config.merge(cli_cfg)
+        config = _merge_raw_override(config, cli_overrides)
+
+    return config
+
+
+def _merge_config_file(config: HarnessConfig, file_path: str) -> HarnessConfig:
+    """Merge only explicitly present keys from a config file."""
+    if not os.path.isfile(file_path):
+        return config
+
+    try:
+        raw = _parse_file(file_path)
+    except Exception as e:
+        print(f"Warning: failed to parse config '{file_path}': {e}", file=sys.stderr)
+        return config
+
+    return _merge_raw_override(config, raw)
+
+
+def _merge_raw_override(config: HarnessConfig, raw: Dict[str, Any]) -> HarnessConfig:
+    """Merge raw config while preserving lower-priority values for absent keys.
+
+    ``load_config_file`` returns a fully defaulted HarnessConfig, which is
+    correct for single-file loading but not for priority resolution: absent keys
+    in a higher-priority source must not reset values from lower-priority
+    sources. This resolver therefore applies only keys that are explicitly
+    present in the raw source.
+    """
+    parsed = _parse_raw(raw)
+
+    if "version" in raw:
+        config.version = parsed.version
+
+    for section in ("workspace", "runtime", "provider", "copilot", "security"):
+        raw_section = raw.get(section)
+        if not isinstance(raw_section, dict):
+            continue
+        target_section = getattr(config, section)
+        parsed_section = getattr(parsed, section)
+        for key in raw_section:
+            if hasattr(target_section, key):
+                setattr(target_section, key, getattr(parsed_section, key))
 
     return config

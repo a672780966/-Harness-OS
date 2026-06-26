@@ -73,6 +73,66 @@ class TestLoadConfigFile:
         finally:
             os.unlink(path)
 
+    def test_load_provider_config_with_retry_fields(self):
+        """Loader parses provider retry fields from JSON config."""
+        data = json.dumps({
+            "provider": {
+                "max_retries": 5,
+                "retry_backoff": "linear",
+                "retry_jitter": False,
+                "long_phase_allowed_when_degraded": True,
+            },
+        })
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(data)
+            path = f.name
+        try:
+            cfg = load_config_file(path)
+            assert cfg.provider.max_retries == 5
+            assert cfg.provider.retry_backoff == "linear"
+            assert cfg.provider.retry_jitter is False
+            assert cfg.provider.long_phase_allowed_when_degraded is True
+        finally:
+            os.unlink(path)
+
+    def test_load_bool_string_parsing_robust(self):
+        """String 'false'/'no'/'0' in config is parsed as False, not True."""
+        data = json.dumps({
+            "runtime": {"readonly_default": "false"},
+            "provider": {"retry_jitter": "false", "long_phase_allowed_when_degraded": "false"},
+            "security": {"save_credentials": "no"},
+        })
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(data)
+            path = f.name
+        try:
+            cfg = load_config_file(path)
+            assert cfg.runtime.readonly_default is False, f"Got {cfg.runtime.readonly_default}"
+            assert cfg.provider.retry_jitter is False, f"Got {cfg.provider.retry_jitter}"
+            assert cfg.provider.long_phase_allowed_when_degraded is False, f"Got {cfg.provider.long_phase_allowed_when_degraded}"
+            assert cfg.security.save_credentials is False, f"Got {cfg.security.save_credentials}"
+        finally:
+            os.unlink(path)
+
+    def test_load_bool_string_true_parsing(self):
+        """String 'true'/'yes'/'1' in config is parsed as True."""
+        data = json.dumps({
+            "runtime": {"readonly_default": "yes"},
+            "provider": {"retry_jitter": "1", "long_phase_allowed_when_degraded": "true"},
+            "security": {"allow_agent_control": "yes"},
+        })
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(data)
+            path = f.name
+        try:
+            cfg = load_config_file(path)
+            assert cfg.runtime.readonly_default is True
+            assert cfg.provider.retry_jitter is True
+            assert cfg.provider.long_phase_allowed_when_degraded is True
+            assert cfg.security.allow_agent_control is True
+        finally:
+            os.unlink(path)
+
 
 class TestWriteDefaultConfig:
     def test_write_default_creates_file(self):

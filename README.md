@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.3--main--integration-blue?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="Version">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
   <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot Tests">
   <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="Full Tests">
@@ -33,8 +33,8 @@ It answers:
 
 ## Current Status
 
-- **Baseline**: `v1.3-main-integration`
-- **Latest capability**: `v1.3.1-pr-draft-assistant`
+- **Baseline**: `v1.4-loop-installer-mvp`
+- **Latest capability**: `v1.4-loop-installer-mvp`
 - **Copilot tests**: `616 passed`
 - **Full pytest**: `848 passed`
 - **Mode**: local-first, read-only semantic copilot
@@ -95,14 +95,18 @@ It answers:
 ```bash
 git clone https://github.com/a672780966/-Harness-OS.git
 cd -Harness-OS
-python -m pip install --upgrade pip
-python -m pip install -e .
-harness copilot version --json
-harness copilot doctor
-harness copilot inspect .
-harness copilot readiness .
-harness copilot task-card .
-harness copilot pr-draft --base main
+# Option 1: Python CLI (no install required)
+python -m harness.copilot.cli version --json
+python -m harness.copilot.cli doctor
+python -m harness.copilot.cli inspect .
+python -m harness.copilot.cli dashboard .
+python -m harness.copilot.cli pr-draft --base main
+
+# Option 2: Node CLI (requires pnpm + node)
+pnpm install
+pnpm build
+./dist/index.js version --json
+./dist/index.js doctor
 ```
 
 If the `harness` command is not available:
@@ -110,6 +114,7 @@ If the `harness` command is not available:
 python -m harness.copilot.cli version --json
 python -m harness.copilot.cli doctor
 ```
+After building (`pnpm install && pnpm build`), the `harness` bin is at `./dist/index.js`.
 
 ---
 

@@ -96,6 +96,20 @@ def _parse_as_json_strict(content: str) -> Dict[str, Any]:
         return {}
 
 
+def _parse_bool(value: Any, default: bool = False) -> bool:
+    """Robust boolean parsing from config-sourced values.
+
+    Handles bool, int, and string representations.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value != 0
+    if isinstance(value, str):
+        return value.lower() in ("true", "yes", "1", "on")
+    return default
+
+
 def _parse_raw(raw: Dict[str, Any]) -> HarnessConfig:
     """Convert a raw dict (from YAML/JSON) into a HarnessConfig."""
     cfg = HarnessConfig.defaults()
@@ -125,8 +139,8 @@ def _parse_raw(raw: Dict[str, Any]) -> HarnessConfig:
         cfg.runtime = RuntimeConfig(
             mode=str(rt.get("mode", cfg.runtime.mode)),
             os_hint=str(rt.get("os_hint", cfg.runtime.os_hint)),
-            readonly_default=bool(rt.get("readonly_default", cfg.runtime.readonly_default)),
-            allow_external_api=bool(rt.get("allow_external_api", cfg.runtime.allow_external_api)),
+            readonly_default=_parse_bool(rt.get("readonly_default", cfg.runtime.readonly_default)),
+            allow_external_api=_parse_bool(rt.get("allow_external_api", cfg.runtime.allow_external_api)),
         )
 
     # Provider
@@ -136,8 +150,25 @@ def _parse_raw(raw: Dict[str, Any]) -> HarnessConfig:
             mode=str(pr.get("mode", cfg.provider.mode)),
             primary=str(pr.get("primary", cfg.provider.primary)),
             fallback=str(pr.get("fallback", cfg.provider.fallback)),
-            canary_timeout_seconds=float(pr.get("canary_timeout_seconds", cfg.provider.canary_timeout_seconds)),
-            long_phase_allowed_when_degraded=bool(
+            connect_timeout_seconds=float(
+                pr.get("connect_timeout_seconds", cfg.provider.connect_timeout_seconds)
+            ),
+            read_timeout_seconds=float(
+                pr.get("read_timeout_seconds", cfg.provider.read_timeout_seconds)
+            ),
+            canary_timeout_seconds=float(
+                pr.get("canary_timeout_seconds", cfg.provider.canary_timeout_seconds)
+            ),
+            max_retries=int(
+                pr.get("max_retries", cfg.provider.max_retries)
+            ),
+            retry_backoff=str(
+                pr.get("retry_backoff", cfg.provider.retry_backoff)
+            ),
+            retry_jitter=_parse_bool(
+                pr.get("retry_jitter", cfg.provider.retry_jitter)
+            ),
+            long_phase_allowed_when_degraded=_parse_bool(
                 pr.get("long_phase_allowed_when_degraded", cfg.provider.long_phase_allowed_when_degraded)
             ),
         )
@@ -147,16 +178,16 @@ def _parse_raw(raw: Dict[str, Any]) -> HarnessConfig:
     if isinstance(cp, dict):
         cfg.copilot = CopilotConfig(
             default_format=str(cp.get("default_format", cfg.copilot.default_format)),
-            include_live_dashboard=bool(cp.get("include_live_dashboard", cfg.copilot.include_live_dashboard)),
-            include_pr_pack=bool(cp.get("include_pr_pack", cfg.copilot.include_pr_pack)),
+            include_live_dashboard=_parse_bool(cp.get("include_live_dashboard", cfg.copilot.include_live_dashboard)),
+            include_pr_pack=_parse_bool(cp.get("include_pr_pack", cfg.copilot.include_pr_pack)),
         )
 
     # Security
     sc = raw.get("security", {})
     if isinstance(sc, dict):
         cfg.security = SecurityConfig(
-            save_credentials=bool(sc.get("save_credentials", cfg.security.save_credentials)),
-            allow_agent_control=bool(sc.get("allow_agent_control", cfg.security.allow_agent_control)),
+            save_credentials=_parse_bool(sc.get("save_credentials", cfg.security.save_credentials)),
+            allow_agent_control=_parse_bool(sc.get("allow_agent_control", cfg.security.allow_agent_control)),
         )
 
     return cfg
