@@ -1,11 +1,10 @@
 
-> **Note**: This translation is pending refresh. See [README.md](README.md) / [README.zh.md](README.zh.md) for v1.3 current status.
-
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0.0--rc.2-blue?style=flat-square" alt="버전">
-  <img src="https://img.shields.io/badge/TypeScript-6.0-blue?style=flat-square" alt="TypeScript">
+  <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="버전">
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
+  <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot 테스트">
+  <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="전체 테스트">
   <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="라이선스">
-  <img src="https://img.shields.io/badge/tests-528%20passed-brightgreen?style=flat-square" alt="테스트">
 </p>
 
 <p align="center">
@@ -15,338 +14,158 @@
   <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
 </p>
 
-<h1 align="center">Harness OS</h1>
-<p align="center"><em>Codex‑first 프로젝트 운영체제 — 통제 가능하고, 감사 가능하며, 재현 가능한 에이전트 엔지니어링</em></p>
+<h1 align="center">Mobius</h1>
+<p align="center"><em>AI 프로덕션을 위한 시간 거버넌스 시스템</em></p>
 
 ---
 
-**Harness OS**는 AI 코딩 에이전트를 위한 운영체제입니다. 프레임워크가 에이전트에게 *능력*을 주는 반면, Harness OS는 *경계와 규율*을 제공합니다. 모든 도구 호출은 게이트를 통과하고, 모든 출력은 마스킹되며, 모든 결정은 추적되고, 모든 전달은 검증됩니다.
+**Mobius는 생성형 시스템을 위한 시간 거버넌스 구조입니다.**
 
-이는 **AI 에이전트를 위한 Kubernetes**라고 생각하면 됩니다 — 컨테이너를 실행하기 위한 것이 아니라, 거버넌스, 관측 가능성, 감사 기능이 내장된 에이전틱 워크플로우를 실행하기 위한 것입니다.
+목적이 행동을 제약하고,
+증거가 신뢰를 뒷받침하며,
+기억이 결과를 보존하고,
+경계가 능력을 형성하며,
+진화가 미래의 판단을 교정합니다.
 
----
+영구적인 에이전트를 만들지 않습니다.
+일시적인 실행이 증거, 기억, 경계, 능력 또는 명확한 판단으로 시스템에 환원되도록 합니다.
 
-## 왜 Harness OS인가?
-
-LangChain, Vercel AI SDK, OpenAI Agents SDK 같은 프레임워크는 에이전트에게 도구 호출, 모델 사용, 워크플로우 구성 능력을 제공합니다. 하지만 다음 질문에는 답하지 못합니다:
-
-- **누가 이 도구 호출을 승인했는가?** → Harness OS는 세션, 턴, 에이전트 ID로 모든 호출을 추적합니다.
-- **출력에 비밀이 유출되었는가?** → Harness OS는 15개 이상의 비밀 패턴을 모든 출력 경계에서 자동 마스킹합니다.
-- **무슨 일이 일어났는지 재생할 수 있는가?** → 모든 실행은 이벤트, 승인, 체크포인트를 포함한 구조화된 추적으로 기록됩니다.
-- **전달이 안전한가?** → commit, PR, deploy 전에 암호화 무결성 해시로 검증이 통과해야 합니다.
-- **정책을 강제할 수 있는가?** → 불변 필드, 단방향 안전 강화 규칙, fail‑closed 기본값을 갖춘 다계층 구성.
-
-Harness OS는 **프레임워크가 아닙니다**. 모든 에이전트 런타임을 감싸서 프로덕션 환경에 대비시키는 **거버넌스 레이어**입니다.
+<p align="center">
+  <a href="#빠른-시작"><strong>▶ 5분 안에 시작하기</strong></a>
+</p>
 
 ---
 
-## 아키텍처
+## Mobius가 존재하는 이유
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   CLI (harness)                      │
-│  create │ open │ init │ run │ verify │ deliver        │
-│  config │ status │ report │ checkpoint │ rollback     │
-│  skills │ decision │ repair │ check                   │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│                 Turn Orchestrator                     │
-│  Session → Input → Model Call → Tool Gate → Response │
-└──────┬─────────┬──────────┬──────────┬─────────────┘
-       │         │          │          │
-┌──────▼──┐ ┌───▼────┐ ┌──▼────┐ ┌──▼──────────┐
-│ Policy  │ │Approval│ │Secret │ │Observability │
-│ Engine  │ │ Gate   │ │Redact │ │ Trace/Events │
-└─────────┘ └────────┘ └───────┘ └──────────────┘
-       │         │          │          │
-┌──────▼─────────▼──────────▼──────────▼──────────┐
-│            Verification & Delivery                │
-│  Guard → Commit → PR → Release → Deploy          │
-└──────────────────────────────────────────────────┘
-```
+현대 AI 에이전트는 추론, 코딩, 도구 사용, 멀티에이전트 협업에서 빠르게 능력을 향상하고 있습니다. 하지만 능력만으로 AI 프로덕션 프로세스를 신뢰할 수 있게 만들 수는 없습니다.
 
-### Thin Harness (구현 완료)
+더 어려운 문제는 거버넌스입니다:
 
-모든 에이전트 액션을 통제하는 최소 실행 가능 루프:
+- 목표는 누가 정의하는가?
+- 작업은 누가 실행하는가?
+- 도구 접근은 누가 허용하는가?
+- 결과는 누가 평가하는가?
+- 계속, 중지, 재시도, 롤백, 인간에게 인계는 누가 결정하는가?
 
-1. 턴 입력 수신
-2. 모델 호출 실행
-3. 도구 제안 생성
-4. **PreToolUse 게이트** — 정책 평가 + 비밀 스캔
-5. **Allow / Deny / NeedsApproval** 결정
-6. **승인 해결** (필요한 경우)
-7. 도구 실행
-8. **PostToolUse 추적** — 모든 것 기록
-9. 마스킹 처리된 최종 응답
+현재의 에이전트 프레임워크는 "어떻게 실행할 것인가"에 답합니다. Mobius는 "시간을 초월하여 실행을 어떻게 거버넌스할 것인가"에 답합니다.
 
-### Thick Harness (계획 중)
-
-프로덕션 규모 배포를 위한 확장 기능:
-- 병렬 Hook 팬아웃 (발행‑수집 패턴)
-- OpenTelemetry 통합
-- 재시작 없는 정책 핫 리로드
-- 다중 Provider 장애 조치 (Claude ↔ GPT ↔ 기타)
-- 예산 기반 Provider 라우팅
-- 분산 승인 UI
-- 샌드박스 도구 실행
+**Mobius가 존재하는 이유는 AI 프로덕션에 강력한 에이전트뿐만 아니라 모든 행동이 증거, 기억, 경계 또는 더 나은 판단으로 환원됨을 보장하는 시간 지향 거버넌스 구조가 필요하기 때문입니다.**
 
 ---
 
 ## 빠른 시작
 
-### 사전 요구사항
-
-- [Node.js](https://nodejs.org/) >= 22
-- [pnpm](https://pnpm.io/) >= 11
-
-### 설치 및 빌드
-
 ```bash
 git clone https://github.com/a672780966/-Harness-OS.git
-cd Harness-OS
+cd -Harness-OS
+# 방법 1: Python CLI (설치 불필요)
+python -m harness.copilot.cli version --json
+python -m harness.copilot.cli doctor
+python -m harness.copilot.cli inspect .
+python -m harness.copilot.cli dashboard .
+python -m harness.copilot.cli pr-draft --base main
+
+# 방법 2: Node CLI (pnpm + node 필요)
 pnpm install
 pnpm build
+./dist/index.js version --json
+./dist/index.js doctor
 ```
 
-### 실행
-
+`harness` 명령어를 사용할 수 없는 경우:
 ```bash
-# 버전 표시
-pnpm harness --version
-# → 1.0.0-rc.2
-
-# 도움말 표시
-pnpm harness --help
-
-# 설정 표시
-pnpm harness config
-
-# 설정 표시 (JSON)
-pnpm harness config --json
-
-# 사용 가능한 스킬 목록
-pnpm harness skills list
-
-# AGENTS.md 유효성 검사
-pnpm harness check
-
-# 프로젝트에 Harness OS 초기화
-pnpm harness init --json
-
-# 태스크 실행
-pnpm harness run "인증 모듈에 테스트 추가"
+python -m harness.copilot.cli version --json
+python -m harness.copilot.cli doctor
 ```
-
-### 일반적인 워크플로우
-
-```bash
-# 1. 프로젝트 초기화
-cd my-project
-harness init
-
-# 2. 태스크 실행
-harness run "사용자 인증 구현"
-
-# 3. 검증 실행
-harness verify
-
-# 4. 전달 준비
-harness deliver --commit --ver-id <검증ID>
-```
+빌드 후(`pnpm install && pnpm build`), `harness` 바이너리는 `./dist/index.js`에 있습니다.
 
 ---
 
-## CLI 명령어
+## 핵심 철학
 
-| 명령어 | 설명 |
-|---|---|
-| `create <name>` | 새 Harness OS 프로젝트 생성 |
-| `open <path>` | 기존 프로젝트 열기 |
-| `init` | 기존 프로젝트에 Harness OS 초기화 |
-| `repair` | 누락되거나 유효하지 않은 프로젝트 구조 복구 |
-| `check` | AGENTS.md 유효성 검사 |
-| `status` | 현재 프로젝트 상태 표시 |
-| `run <task>` | 태스크 실행 (전체 파이프라인) |
-| `resume <run-id>` | 일시 중지되거나 중단된 실행 재개 |
-| `verify` | 검증 파이프라인 실행 (lint, 타입검사, 테스트, 빌드) |
-| `report <run-id>` | 실행 보고서 표시 |
-| `deliver` | 전달 준비 (commit / PR / release / deploy) |
-| `decision` | 아키텍처 결정 관리 (ADR) |
-| `skills` | 스킬 관리 및 목록 표시 |
-| `checkpoint` | git 및 태스크 상태를 저장하는 체크포인트 생성 |
-| `rollback <checkpoint-id>` | 롤백 정보 표시 |
-| `config` | Harness OS 설정 표시 |
+### 목적은 행동에 선행한다 (Purpose Before Action)
 
-모든 명령어는 `--json` (기계 판독 가능 출력)과 `--quiet` (최소 출력)을 지원합니다.
+모든 실행은 명확한 목적을 위해 존재해야 합니다. 에이전트는 행동하기 전에 왜 시작하는지, 어디로 가는지, 무엇이 완료인지, 무엇을 배반해서는 안 되는지를 알아야 합니다.
 
----
+### 모든 행동은 환원되어야 한다 (Every Action Must Return)
 
-## 내장 기능
+실행은 항상 결과를 낳습니다. 결과는 일시적 에이전트와 함께 사라져서는 안 됩니다. 증거, 궤적, 위험, 비용, 실패, 경계, 능력으로 시스템에 환원되어야 합니다.
 
-### 거버넌스 및 보안
-- **권한 삼상태**: `allow` | `deny` | `needs_approval` — 모호한 상태 없음
-- **비밀 마스킹**: 15개 이상의 패턴 — API 키, 토큰, 개인 키를 모든 출력에서 자동 마스킹
-- **파일 보호**: 위험한 경로에 에이전트 접근 차단
-- **안전 필드**: 불변 설정 필드, 단방향 약화 방지, 유니온 병합 배열
-- **Fail‑closed**: 모든 Hook 실패는 기본적으로 `needs_approval`
+### 증거는 신뢰에 선행한다 (Evidence Before Trust)
 
-### 검증
-- `AGENTS.md`와 `package.json`에서 프로젝트 명령어 자동 감지
-- 전체 파이프라인 실행: lint → 타입검사 → 테스트 → 빌드
-- 암호화 무결성 해시가 포함된 구조화된 JSON 결과 생성
-- 프로젝트, 태스크, 실행, git commit에 바인딩되어 부인 방지 제공
+AI는 완료를 스스로 증명할 수 없습니다. 에이전트의 주장은 증거가 아닙니다. 신뢰는 trace, diff, test, review, audit, 그리고 고위험 또는 최종 권한 시나리오에서의 인간 승인에서 비롯됩니다.
 
-### 전달 파이프라인
-- 가드 검사: 검증 바인딩, git 상태, 프로젝트 무결성
-- 규약 기반 커밋 메시지 생성
-- PR 본문 생성
-- 완전한 감사 추적이 포함된 전달 보고서
+### 능력은 경계에서 emerges한다 (Capability Emerges from Boundaries)
 
-### 관측 가능성
-- **이벤트**: 세션, 행위자, 마스킹이 포함된 JSONL 이벤트 로그
-- **추적**: 도구 호출, 컨텍스트 팩, 체크포인트를 포함한 전체 실행 추적
-- **보고서**: 검증 결과가 포함된 Markdown 실행 보고서
+진정한 능력은 "무엇이든 할 수 있는 것"이 아닙니다. 언제 행동해야 하는지, 어디서 멈춰야 하는지, 무엇에 증거가 필요한지, 무엇을 인간에게 맡겨야 하는지를 아는 것입니다.
 
-### 스킬 레지스트리
-위험 분류 및 승인 요구사항에 따른 내장 스킬:
+### 시스템은 진화해야 한다 (The System Must Evolve)
 
-| 스킬 | 위험 | 도구 |
-|---|---|---|
-| Filesystem | 중 | 읽기, 쓰기, 목록, 검색, 삭제 |
-| Shell | 높음 | 명령어 실행, 테스트, 빌드 |
-| Git | 중 | 상태, 차이, 커밋, 푸시 |
-| Repo Scanner | 낮음 | 스캔, 감지, 매핑 |
+에이전트는 일시적일 수 있습니다. 워커는 폐기될 수 있습니다. 작업은 종료될 수 있습니다. 그러나 시스템은 정체되어서는 안 됩니다. 모든 행동 후 Mobius는 판단합니다: 이것을 기억으로 침적해야 하는가? 능력을 생성해야 하는가? 경계를 업데이트해야 하는가? 판단을 인간에게 되돌려야 하는가?
 
 ---
 
-## 프로젝트 구조
+## 아키텍처
 
-```
-Harness-OS/
-├── src/
-│   ├── cli/              # CLI 진입점 + 포맷터
-│   ├── config/           # 계층형 설정 로더 (안전 인식)
-│   ├── governance/       # 정책 엔진, 마스커, Hook 프레임워크
-│   ├── project/          # 프로젝트 라이프사이클 (생성/열기/초기화/복구)
-│   ├── task/             # 태스크 라이프사이클 (생성/완료/실패)
-│   ├── decision/         # ADR 관리 (제안/승인/거절)
-│   ├── verification/     # 검증 파이프라인 + 결과 바인딩
-│   ├── delivery/         # 전달 파이프라인 (가드/커밋/PR/보고서)
-│   ├── observability/    # 이벤트, 추적, 실행 보고서
-│   ├── runtime/          # 세션, 파이프라인, 턴 오케스트레이터
-│   ├── context/          # 컨텍스트 팩 구축
-│   ├── skills/           # MCP 스킬 레지스트리
-│   └── state/            # 실행, 체크포인트, SQLite 상태
-├── tests/
-│   ├── unit/             # 528 단위 테스트
-│   └── integration/      # 28 통합 테스트
-├── harness_os_docs/      # 전체 설계 명세 (12개 문서)
-├── .claude/              # Claude Code 프로젝트 설정
-└── .project/             # Harness OS 로컬 상태 (gitignore)
-```
+Mobius는 AI 프로덕션 프로세스를 4개의 시간 거버넌스 레이어로 분할합니다.
+
+### Future Layer (목표 제약)
+미래는 예측이 아닌 제약입니다. 목적, 목표, 합격 기준, 프로젝트 방향, 불가침 불변 조건을 보존합니다.
+
+### Present Layer (일시적 실행)
+현재는 제한된 권한 내에서 일시적 에이전트가 검증 가능한 작업을 실행하는 장소입니다. 작업 실행, 도구 호출, 코드 변경, 테스트 실행, 증거 생성을 담당합니다.
+
+### Past Layer (경험 침적)
+과거는 채팅 로그가 아닙니다. 증거로 검증된 시스템 메모리입니다. 실행 궤적, 실패 원인, 수정 경로, 테스트 결과, 감사 이벤트, 결정 기록을 보존합니다.
+
+### Evolution Layer (시스템 진화)
+특정 실행에는 참여하지 않으면서 시스템 전체가 개선되고 있는지 판단하는 유일한 레이어입니다.
 
 ---
 
-## 문서
+## Harness OS: 참조 구현
 
-전체 설계 및 엔지니어링 명세는 [`harness_os_docs/`](harness_os_docs/README.md)에 있습니다:
+Harness OS는 Mobius Architecture의 최초이자 현재 유일한 참조 구현입니다.
 
-| 문서 | 설명 |
-|---|---|
-| [01_ARCHITECTURE](harness_os_docs/01_ARCHITECTURE.md) | 시스템 아키텍처 및 핵심 원칙 |
-| [02_CODEX_DEVELOPMENT_SPEC](harness_os_docs/02_CODEX_DEVELOPMENT_SPEC.md) | Codex 개발 명세 |
-| [03_AGENTS_MD_STANDARD](harness_os_docs/03_AGENTS_MD_STANDARD.md) | AGENTS.md 프로토콜 표준 |
-| [04_HARNESS_OS_DESIGN](harness_os_docs/04_HARNESS_OS_DESIGN.md) | 상세 시스템 설계 |
-| [05_CONTEXT_ENGINEERING](harness_os_docs/05_CONTEXT_ENGINEERING.md) | 컨텍스트 엔지니어링 명세 |
-| [06_TASK_DECISION_PROJECT_MANAGER](harness_os_docs/06_TASK_DECISION_PROJECT_MANAGER.md) | 태스크, 결정, 프로젝트 관리 |
-| [07_MCP_SKILLS_SPEC](harness_os_docs/07_MCP_SKILLS_SPEC.md) | MCP 스킬 명세 |
-| [08_GOVERNANCE_SECURITY](harness_os_docs/08_GOVERNANCE_SECURITY.md) | 거버넌스 및 보안 규칙 |
-| [09_VERIFICATION_OBSERVABILITY](harness_os_docs/09_VERIFICATION_OBSERVABILITY.md) | 검증 및 관측 가능성 |
-| [10_DELIVERY_PIPELINE](harness_os_docs/10_DELIVERY_PIPELINE.md) | 전달 파이프라인 명세 |
-| [11_ACCEPTANCE_CRITERIA](harness_os_docs/11_ACCEPTANCE_CRITERIA.md) | 최종 승인 기준 |
-| [12_OPEN_SOURCE_REFERENCES](harness_os_docs/12_OPEN_SOURCE_REFERENCES.md) | 오픈소스 참조 매핑 |
-| [13_TESTING_STRATEGY](harness_os_docs/13_TESTING_STRATEGY.md) | 테스트 전략 |
-| [14_ERROR_CODES](harness_os_docs/14_ERROR_CODES.md) | 에러 코드 참조 |
-| [15_CONFIG_REFERENCE](harness_os_docs/15_CONFIG_REFERENCE.md) | 설정 참조 |
-| [16_CLI_OUTPUT_CONTRACT](harness_os_docs/16_CLI_OUTPUT_CONTRACT.md) | CLI 출력 계약 |
-| [17_PROJECT_STORAGE_GIT_POLICY](harness_os_docs/17_PROJECT_STORAGE_GIT_POLICY.md) | Git 및 저장소 정책 |
-| [18_MIGRATION_VERSIONING](harness_os_docs/18_MIGRATION_VERSIONING.md) | 마이그레이션 및 버저닝 |
+Captain, Worker, Audit, StarMap, Loop Controller, Tool Gateway를 포함한 런타임 레이어를 Mobius 원칙을 코드로 강제하는 구체적인 엔지니어링 제품으로 구현합니다.
+
+- **이론적 대체 가능성**: Mobius Architecture는 특정 런타임에 의존하지 않습니다. 다른 구현도 가능합니다.
+- **실질적 유일성**: Harness OS는 최초이자 현재 유일한 참조 구현입니다.
+
+Harness OS는 모델 제공자, 범용 코딩 프레임워크, 클라우드 SaaS 제품이 아닙니다. AI 지원 엔지니어링을 위한 로컬 우선 거버넌스 런타임입니다.
 
 ---
 
-## 개발
+## 현재 상태
 
-```bash
-# 타입 검사
-pnpm typecheck
+- **베이스라인**: `v1.4-loop-installer-mvp`
+- **Copilot 테스트**: `616 passed`
+- **전체 테스트**: `848 passed`
+- **모드**: local-first semantic copilot
 
-# 단위 테스트 실행
-pnpm test:unit
+### v1.1 — Real Hermes Loop
+그래프 플래너, 루프 러너/컨트롤러, 실행/감사, 평가 트리거 수정, 리뷰 트리거 수정, 파이널 게이트, 증거 팩
 
-# 통합 테스트 실행
-pnpm test:integration
+### v1.2 — Local Semantic Copilot MVP
+프로젝트 검사, diff 요약, 태스크 카드, 병합 준비 상태, 증거 팩, 정적 셸, 실시간 모니터, 에이전트 상태 머신, PR/MR 팩, 제공자 신뢰성 가드, 라이브 대시보드
 
-# 전체 테스트 실행
-pnpm test
+### v1.3 — 런타임 기반
+설정 스키마/로더/리졸버/밸리데이터, 런타임 닥터, 버전 명령어, 제공자 신뢰성 계획
 
-# 커버리지 테스트 실행
-pnpm test:coverage
-
-# 빌드
-pnpm build
-
-# 코드 포맷
-pnpm format
-```
-
-### 테스트 현황
-
-- **528개 단위 테스트** — 19개 테스트 파일, 모두 통과
-- **28개 통합 테스트** — 1개 테스트 파일, 모두 통과
-- **커버리지 임계값**: 80% (vitest.config.ts에서 설정)
-- **TypeScript**: 엄격 모드, `src/`에서 `as any` 완전 제거
+### v1.3.1 — PR 초안 어시스턴트
+`harness copilot pr-draft`, GitHub CLI 감지, 수동 폴백 PR 초안 생성, 대용량 파일/캐시 차단 검사
 
 ---
 
-## 설계 원칙
+## 태그 / 증거 정책
 
-1. **경계 명확성**: 각 모듈은 명확한 책임을 가집니다. 갓 객체(god object)는 없습니다.
-2. **보수적 권한**: 기본값은 `needs_approval`입니다. 절대 `allow`를 기본값으로 하지 않습니다.
-3. **상태 추적 가능성**: 모든 쓰기에는 스키마, 범위, 행위자, 이유, 추적 ID가 있습니다.
-4. **도구 호출 감사 가능성**: 모든 호출은 누가, 무엇을, 입력, 결정, 타임스탬프를 기록합니다.
-5. **낮은 결합도**: Thin Harness 우선. Thick Harness는 확장으로서 절대 혼합하지 않습니다.
-6. **Fail‑closed**: Hook 실패, 타임아웃, 파싱 불가능한 결과 → `needs_approval`.
+일부 로컬 sealed 태그는 도달 가능한 히스토리에 373MB SWE-bench 증거 아카이브가 포함되어 GitHub에 푸시되지 않습니다. 공개 안전 태그만 푸시됩니다.
 
 ---
 
-## 상태
+## 중요 문서
 
-**v1.0.0-rc.2** — 핵심 거버넌스 및 검증을 위한 릴리스 후보.
-
-구현 완료:
-- ✅ CLI 프레임워크 (17개 명령어)
-- ✅ 다계층 설정 + 안전 필드 강제
-- ✅ 비밀 마스킹 (15개 이상 패턴, 모든 출력 경계 커버)
-- ✅ 무결성 바인딩이 있는 검증 파이프라인
-- ✅ 가드 검사가 있는 전달 파이프라인
-- ✅ 관측 가능성 (이벤트, 추적, 실행 보고서)
-- ✅ ADR 관리 (제안/승인/거절/대체)
-- ✅ 세션 및 상태 관리
-- ✅ 태스크 라이프사이클 (생성 → 실행 → 완료 → 보고서)
-- ✅ 스킬 레지스트리 (4개의 내장 스킬)
-- ✅ 체크포인트 및 롤백 분석
-- ✅ 528개 단위 테스트 + 28개 통합 테스트
-
-v1.1+ 계획:
-- 정책 핫 리로드
-- 다중 Provider 런타임 (Claude + GPT + 오픈 모델)
-- 분산 승인 UI
-- OpenTelemetry 내보내기
-- 샌드박스 도구 실행
-
----
-
-## 라이선스
-
-ISC
+- [v1.3 Main Integration Seal](docs/v1_3_main_integration_seal.md)
+- [v1.2 Alpha Final Seal Manifest](docs/v1_2_alpha_final_seal_manifest.md)
+- [Public-Safe Evidence Strategy](docs/public_safe_evidence_strategy.md)
