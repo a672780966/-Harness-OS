@@ -14,6 +14,10 @@
   <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
 </p>
 
+<p align="center">
+  <img src="assets/brand/mobius-system-identity-v1.png" width="128" height="128" alt="Mobius 系统身份标识">
+</p>
+
 <h1 align="center">Mobius</h1>
 <p align="center"><em>面向 AI 生产过程的时间治理系统</em></p>
 
