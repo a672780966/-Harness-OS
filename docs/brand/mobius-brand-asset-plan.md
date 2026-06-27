@@ -2,46 +2,52 @@
 
 ## Goal
 
-Integrate the finalized Mobius visual identity as a canonical repository asset without redesigning, regenerating, or restyling the image.
+Create and integrate a minimal Mobius icon and homepage image from the supplied visual identity content without changing the brand direction: deep space background, luminous Mobius loop, future-facing visual tone, and the `MOBIUS` temporal-governance message.
 
 ## Existing asset locations inspected
 
 - `README.md`, `README.zh.md`, `README.ja.md`, and `README.ko.md` are the primary documentation entry points.
-- `docs/` contains project documentation and is appropriate for documentation-facing imagery.
-- No existing favicon, app icon, splash screen, social preview, or brand asset directory was found outside the previously generated SVG files.
-- The generated SVG icon and splash files from the previous pass were removed because the canonical image must not be redesigned.
+- `assets/brand/` is the canonical location for brand assets in this repository.
+- `docs/` contains project documentation and can describe asset usage, but brand image files should live in `assets/brand/`.
+- No existing favicon, packaged app icon, or web-app splash asset location was found in source code.
 
-## Proposed repository locations
+## Created assets
 
-| Asset type | Proposed path | Source | Notes |
+| Asset type | Path | Format | Status |
 | --- | --- | --- | --- |
-| Canonical visual identity reference | `assets/brand/mobius-visual-identity-canonical.png` | Direct copy from `/mnt/data/1000037149.png` | Preserve unchanged. |
-| README hero image | `assets/brand/mobius-readme-hero.png` | Non-destructive copy or crop from canonical image | Add only after confirming desired crop. |
-| GitHub social preview / banner | `assets/brand/mobius-social-preview.png` | Non-destructive crop or resize from canonical image | GitHub social preview commonly uses a 1280×640 image. |
-| App icon candidate | `assets/brand/mobius-app-icon-1024.png` | Non-destructive crop from canonical app-icon panel | Use the app-icon area from the canonical reference. |
-| Favicon candidates | `assets/brand/favicon-32.png`, `assets/brand/favicon-16.png`, `assets/brand/favicon.ico` | Derived from app icon candidate | Generate only with approved tooling and source crop. |
-| Splash screen candidate | `assets/brand/mobius-splash-screen.png` | Non-destructive crop from canonical splash panel | Use the splash-screen panel from the canonical reference. |
+| README / homepage hero | `assets/brand/mobius-homepage.svg` | SVG | Created and referenced from README files. |
+| App icon candidate | `assets/brand/mobius-icon.svg` | SVG | Created and referenced from README files. |
+
+## Required output formats still recommended
+
+| Asset type | Proposed path | Notes |
+| --- | --- | --- |
+| GitHub social preview / banner | `assets/brand/mobius-social-preview.png` | Export or crop at 1280×640 when raster conversion tooling is available. |
+| App icon raster | `assets/brand/mobius-app-icon-1024.png` | Export from `mobius-icon.svg` for app/package usage. |
+| Favicon candidates | `assets/brand/favicon-32.png`, `assets/brand/favicon-16.png`, `assets/brand/favicon.ico` | Derive from the icon candidate when icon tooling is available. |
+| Splash screen raster | `assets/brand/mobius-splash-screen.png` | Export from `mobius-homepage.svg` if a PNG splash is needed. |
 
 ## Current execution result
 
 - Changed files:
   - `assets/brand/README.md`
+  - `assets/brand/mobius-homepage.svg`
+  - `assets/brand/mobius-icon.svg`
   - `docs/brand/mobius-brand-asset-plan.md`
   - `README.md`
   - `README.zh.md`
   - `README.ja.md`
   - `README.ko.md`
-  - `docs/assets/mobius-icon.svg`
-  - `docs/assets/mobius-splash.svg`
 - Copied assets:
-  - None. The input file `/mnt/data/1000037149.png` was not present in this environment.
-- Derived assets:
-  - None. Image conversion tooling was not used because the canonical input file was unavailable and Python Pillow was not installed.
+  - None.
+- Created assets:
+  - `assets/brand/mobius-homepage.svg`
+  - `assets/brand/mobius-icon.svg`
 - Image conversion performed:
-  - No.
+  - No. The generated files are source SVG assets; no PNG/ICO conversion tooling was available in this environment.
 - README references:
-  - The README files should reference the canonical README hero image later, after `assets/brand/mobius-readme-hero.png` or the direct canonical image is available.
+  - The localized README files now reference the homepage image and icon from `assets/brand/`.
 
 ## Next recommended step
 
-Provide the canonical image at `assets/brand/mobius-visual-identity-canonical.png` or make `/mnt/data/1000037149.png` available, then generate only direct, non-destructive crops/resizes for README, social preview, app icon, favicon, and splash usage.
+Review the SVG visuals in a browser or design tool. If approved, export non-destructive PNG/ICO derivatives for GitHub social preview, app icon, favicon, and splash screen packaging.

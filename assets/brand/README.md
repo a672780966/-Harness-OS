@@ -1,13 +1,19 @@
 # Mobius Brand Assets
 
-This directory is reserved for canonical Mobius brand assets and non-destructive derivatives.
+This directory stores Mobius visual identity assets for repository documentation and future app packaging.
 
-## Expected canonical source
+## Current assets
 
-- `mobius-visual-identity-canonical.png` — direct copy of the user-finalized visual identity reference.
-
-The source file was expected at `/mnt/data/1000037149.png`, but that path was not present in this execution environment, so no canonical image was copied in this pass.
+- `mobius-homepage.svg` — homepage / README hero image based on the supplied Mobius visual identity content.
+- `mobius-icon.svg` — app icon candidate based on the same Mobius visual identity content.
 
 ## Derivative policy
 
-Derived files may be added here only when they are non-destructive conversions or crops from the canonical asset. Do not redesign, redraw, regenerate, or alter the visual style.
+Derived files may be added here only when they preserve the Mobius visual style: deep navy background, luminous white Mobius loop, minimal futuristic composition, and the existing Mobius wordmark language. Avoid unrelated redesigns or alternate logos unless explicitly approved.
+
+## Future candidates
+
+- `mobius-social-preview.png` — GitHub social preview / banner derivative.
+- `mobius-app-icon-1024.png` — raster app icon export.
+- `favicon-32.png`, `favicon-16.png`, `favicon.ico` — favicon derivatives from the icon candidate.
+- `mobius-splash-screen.png` — raster splash-screen export from the homepage candidate.

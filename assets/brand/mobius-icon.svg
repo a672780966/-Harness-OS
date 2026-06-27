@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Mobius app icon</title>
+  <desc id="desc">Minimal luminous Mobius loop app icon for Harness OS.</desc>
+  <defs>
+    <radialGradient id="icon-bg" cx="50%" cy="42%" r="76%">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="0.58" stop-color="#111827"/>
+      <stop offset="1" stop-color="#0a0e17"/>
+    </radialGradient>
+    <filter id="soft-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="11" result="blur"/>
+      <feColorMatrix in="blur" result="glow" type="matrix" values="0 0 0 0 0.78 0 0 0 0 0.88 0 0 0 0 1 0 0 0 0.95 0"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="loop-stroke" x1="250" x2="800" y1="330" y2="690" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.52" stop-color="#e6f0ff"/>
+      <stop offset="1" stop-color="#c7d2fe"/>
+    </linearGradient>
+    <path id="mobius-path" d="M204 526c74-199 317-247 524-135 142 77 153 230 20 301-187 101-512 44-544-166Z"/>
+  </defs>
+  <rect width="1024" height="1024" rx="205" fill="url(#icon-bg)"/>
+  <rect x="31" y="31" width="962" height="962" rx="184" fill="none" stroke="#e6f0ff" stroke-opacity="0.16" stroke-width="4"/>
+  <g transform="rotate(-8 512 512)" filter="url(#soft-glow)">
+    <use href="#mobius-path" fill="none" stroke="url(#loop-stroke)" stroke-linecap="round" stroke-width="34"/>
+    <use href="#mobius-path" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="8" opacity="0.92"/>
+    <ellipse cx="512" cy="518" rx="226" ry="108" fill="#0a0e17" opacity="0.94"/>
+    <path d="M229 519c86-88 194-125 304-111 128 17 221 95 293 181" fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="12" opacity="0.82"/>
+    <path d="M213 551c133 96 349 132 526 76 55-17 93-42 116-73" fill="none" stroke="#e6f0ff" stroke-linecap="round" stroke-width="9" opacity="0.74"/>
+    <g stroke="#e6f0ff" stroke-linecap="round" stroke-width="7" opacity="0.9">
+      <path d="M252 483l13 149"/><path d="M286 444l17 219"/><path d="M324 414l19 273"/><path d="M366 395l17 305"/>
+      <path d="M410 384l14 323"/><path d="M456 385l10 321"/><path d="M503 395l5 302"/><path d="M550 411v270"/>
+      <path d="M596 434l-6 226"/><path d="M640 463l-13 172"/><path d="M682 496l-20 111"/><path d="M725 526l-27 54"/>
+      <path d="M768 536l-35 24"/><path d="M808 514l-36 92"/><path d="M840 478l-31 143"/>
+    </g>
+  </g>
+</svg>
