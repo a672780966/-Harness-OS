@@ -1,5 +1,9 @@
 
 <p align="center">
+  <img src="assets/brand/mobius-homepage.svg" alt="Mobius homepage hero" width="100%">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="バージョン">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
   <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot テスト">
@@ -12,6 +16,10 @@
   <a href="README.zh.md"><strong>🇨🇳 中文</strong></a> ·
   <a href="README.ja.md"><strong>🇯🇵 日本語</strong></a> ·
   <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
+</p>
+
+<p align="center">
+  <img src="assets/brand/mobius-icon.svg" alt="Mobius app icon" width="96" height="96">
 </p>
 
 <h1 align="center">Mobius</h1>
