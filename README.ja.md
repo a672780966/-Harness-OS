@@ -15,9 +15,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/brand/mobius-system-identity-v1.png" width="128" height="128" alt="Mobius システムアイデンティティ">
+  <img src="assets/brand/mobius-homepage-hero-v1.png" width="360" alt="Mobius — AI 生産プロセスのための時間ガバナンスシステム">
 </p>
-
 <h1 align="center">Mobius</h1>
 <p align="center"><em>AI 生産プロセスのための時間ガバナンスシステム</em></p>
 

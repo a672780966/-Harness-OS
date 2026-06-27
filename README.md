@@ -15,9 +15,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/brand/mobius-system-identity-v1.png" width="128" height="128" alt="Mobius System Identity">
+  <img src="assets/brand/mobius-homepage-hero-v1.png" width="360" alt="Mobius — Temporal Governance for AI Production">
 </p>
-
 <h1 align="center">Mobius</h1>
 <p align="center"><em>Temporal Governance for AI Production</em></p>
 

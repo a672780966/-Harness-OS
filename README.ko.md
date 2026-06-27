@@ -15,9 +15,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/brand/mobius-system-identity-v1.png" width="128" height="128" alt="Mobius 시스템 아이덴티티">
+  <img src="assets/brand/mobius-homepage-hero-v1.png" width="360" alt="Mobius — AI 프로덕션을 위한 시간 거버넌스 시스템">
 </p>
-
 <h1 align="center">Mobius</h1>
 <p align="center"><em>AI 프로덕션을 위한 시간 거버넌스 시스템</em></p>
 
