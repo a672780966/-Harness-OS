@@ -1,220 +1,150 @@
+# Captain Code
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="Version">
-  <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
-  <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot Tests">
-  <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="Full Tests">
-  <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="License">
-</p>
+> An auditable AI coding workflow.
 
-<p align="center">
-  <a href="README.md"><strong>🇬🇧 English</strong></a> ·
-  <a href="README.zh.md"><strong>🇨🇳 中文</strong></a> ·
-  <a href="README.ja.md"><strong>🇯🇵 日本語</strong></a> ·
-  <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
-</p>
+[![License](https://img.shields.io/badge/license-ISC-green?style=flat-square)](#license)
+![Status](https://img.shields.io/badge/status-early%20development-orange?style=flat-square)
+![Mode](https://img.shields.io/badge/mode-local--first-blue?style=flat-square)
 
-<p align="center">
-  <img src="assets/brand/mobius-homepage-hero-v1.png" width="360" alt="Mobius — Temporal Governance for AI Production">
-</p>
-<h1 align="center">Mobius</h1>
-<p align="center"><em>Temporal Governance for AI Production</em></p>
+**English** · [中文](./README.zh.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md)
 
 ---
 
-**Mobius is a temporal governance structure for generative systems.**
+## What is Captain Code
 
-It lets purpose constrain action,
-evidence ground trust,
-memory preserve consequence,
-boundaries shape capability,
-and evolution refine future judgment.
+Captain Code is an auditable AI coding workflow that turns development tasks into
+**controlled executions, reviewable evidence, gate decisions, and return records**.
 
-It does not make agents permanent.
-It makes every temporary execution return to the system as evidence, memory, boundary, capability, or an explicit decision.
+It helps developers use AI coding agents without blindly trusting raw agent output.
+Instead of accepting "the agent says it's done," Captain Code requires that every
+task carries a contract, every execution leaves evidence, and nothing reaches a
+trusted state until a gate decision accepts it.
 
-<p align="center">
-  <a href="#quick-start"><strong>▶ Get Started in 5 Minutes</strong></a>
-</p>
+Captain Code is **local-first** and read-first. It runs on your machine, against
+your repository, and never pushes, publishes, or deploys on its own.
 
----
+## The problem
 
-## Why Mobius Exists
+AI coding agents are good at producing diffs and confident summaries. They are bad
+at proving that the work is correct, in scope, and safe to accept.
 
-Modern AI agents are becoming increasingly capable at reasoning, coding, tool use, and multi-agent collaboration. But capability alone does not make an AI production process trustworthy.
+- An agent's claim is not evidence.
+- A passing summary is not a passing test.
+- A diff that "looks done" is not the same as a diff that is safe to merge.
 
-The harder problem is governance:
+Without a workflow around the agent, you end up trusting unverified output. Captain
+Code puts a thin, auditable layer between the agent and your trusted state, so that
+acceptance is a decision backed by evidence rather than a vibe.
 
-- Who defines the goal?
-- Who executes the task?
-- Who grants tool access?
-- Who evaluates the result?
-- Who decides whether the system should continue, stop, retry, rollback, or learn?
+## Core workflow
 
-Current agent frameworks answer *how to execute*. Mobius answers *how to govern execution across time*.
-
-**Mobius exists because AI production needs more than capable agents. It needs a time-oriented governance structure that ensures every action returns as evidence, memory, boundary, or better judgment.**
-
----
-
-## Quick Start
-
-```bash
-git clone https://github.com/a672780966/-Harness-OS.git
-cd -Harness-OS
-# Option 1: Python CLI (no install required)
-python -m harness.copilot.cli version --json
-python -m harness.copilot.cli doctor
-python -m harness.copilot.cli inspect .
-python -m harness.copilot.cli dashboard .
-python -m harness.copilot.cli pr-draft --base main
-
-# Option 2: Node CLI (requires pnpm + node)
-pnpm install
-pnpm build
-./dist/index.js version --json
-./dist/index.js doctor
+```
+TaskEnvelope → Invocation → Artifact / Evidence → Review → GateDecision → AuditEvent → ReturnRecord
 ```
 
-If the `harness` command is not available:
-```bash
-python -m harness.copilot.cli version --json
-python -m harness.copilot.cli doctor
+| Object         | Meaning                                                                   |
+| -------------- | ------------------------------------------------------------------------- |
+| `TaskEnvelope` | The task contract: goal, scope, acceptance criteria, constraints.         |
+| `Invocation`   | One execution attempt against a controlled workspace.                     |
+| `Artifact`     | A produced output (diff, generated file, patch, plan).                    |
+| `Evidence`     | Something that supports a judgment (test result, log, policy check).       |
+| `Review`       | An assessment of artifacts and evidence: approve, repair, or block.       |
+| `GateDecision` | The flow decision: `PASS` / `REPAIR` / `BLOCK` / `ESCALATE`.              |
+| `AuditEvent`   | An append-only record of what happened, for traceability.                 |
+| `ReturnRecord` | The state-return record: what was accepted, rejected, or left unresolved. |
+
+These are **generic protocol objects**. Captain Code is the coding profile of the
+protocol, but the objects stay reusable and are not narrowed into code-only terms.
+
+## Minimal example
+
+A task starts as an envelope:
+
+```yaml
+# task_envelope.yaml
+task_id: task-001
+title: "Add a usage section to README"
+user_request: "Document how to run the CLI in README.md"
+scope:
+  allowed_paths: ["README.md"]
+  denied_commands: ["git push", "git merge"]
+acceptance_criteria:
+  - "README has a 'Usage' section"
+test_commands: ["pnpm test"]
 ```
-After building (`pnpm install && pnpm build`), the `harness` bin is at `./dist/index.js`.
 
----
+From there the workflow runs:
 
-## Core Philosophy
+1. **Invocation** — the worker executes inside a controlled workspace (a git
+   worktree), not your main checkout.
+2. **Artifact / Evidence** — the diff is captured as an artifact; logs and test
+   results are captured as evidence.
+3. **Review** — artifacts and evidence are assessed against the acceptance criteria.
+4. **GateDecision** — `PASS`, `REPAIR`, `BLOCK`, or `ESCALATE`.
+5. **AuditEvent** — every step is appended to the audit log.
+6. **ReturnRecord** — the final record of what was accepted and what risks remain.
 
-### Purpose Before Action
+Nothing is "done" until a `GateDecision` accepts it and a `ReturnRecord` is written.
 
-Every execution must serve a defined end, not exist for its own sake. Before any agent acts, it must know: why it starts, where it is going, what counts as done, and what must not be betrayed. Without purpose, action is drift. Without purpose, loops are just spinning.
+## Current status
 
-*Future Layer exists not merely to store requirements, but to preserve purpose, direction, acceptance criteria, and inviolable constraints.*
+Captain Code is in **early, active development** and should be treated as such.
 
-### Every Action Must Return
+- **Mode:** local-first, read-first semantic copilot.
+- **Available today:** project inspection, diff and evidence collection, a runner
+  loop (plan → execute → collect → review → gate), and report generation.
+- **Being hardened:** the full write-side `TaskEnvelope → ReturnRecord` loop with
+  controlled-workspace execution and closure.
+- **Not a sandbox claim:** the controlled workspace is a git worktree. It isolates
+  *changes*, not the host. It is **not** a security sandbox (see [Safety model](#safety-model)).
 
-Every execution produces consequences. Consequences must not disappear with the temporary agent that caused them. They must return as evidence, trajectory, risk, cost, failure, boundary, or capability. If the system catches the consequence, it becomes order. If not, it returns as noise, drift, debt, or risk.
+> Note on naming: the CLI is currently invoked as `harness` / `python -m harness.copilot.cli`
+> while the `captain-code` naming is being adopted. See [docs/quickstart.md](./docs/quickstart.md).
 
-*Mobius follows a conservation law: no execution truly vanishes. Every action is transformed into order, or returned as chaos.*
+## Safety model
 
-### Evidence Before Trust
+Captain Code is conservative by default. The following rules are enforced as part of
+the workflow, not left to the agent's discretion:
 
-AI cannot self-certify completion. An agent's claim is not evidence. A model's summary is not fact. Trust comes from trace, diff, test, review, audit, and — for high-risk or final-authority cases — human approval. Without evidence, no completion enters trusted state. Without audit, no result enters system memory. Without verification, no experience enters future judgment.
+1. **No `TaskEnvelope`, no worker execution.**
+2. **No `trace_id`, no trusted execution.**
+3. **No diff reference, no done state.**
+4. **No test result, no done state.**
+5. **Failed tests cannot become accepted.**
+6. **Out-of-scope file changes are quarantined**, not silently applied.
+7. **Core protocol changes require human approval.**
+8. **Three repeated failures trigger pause or human review.**
+9. **`git push`, publish, and deploy are blocked.**
+10. **A `GateDecision` must be accepted before a `ReturnRecord` is trusted.**
 
-*Mobius does not trust "looks done." Mobius accepts only "proven done."*
+The controlled workspace prevents pollution of your main checkout and makes changes
+easy to diff and destroy. It does **not** prevent a malicious command from reading
+local files, environment variables, or credentials. Strong isolation (containers,
+microVM) is out of scope for this stage.
 
-### Capability Emerges from Boundaries
+## What Captain Code does not do
 
-True capability is not "can do everything." It is knowing when to act, how much to do, where to stop, what needs evidence, what must be handed to a human, and what must not be repeated. Success provides paths. Failure provides boundaries. Evidence confirms paths. Memory preserves boundaries. The system generates capability from both.
+- It is **not** an "Agent OS" or an AI operating system.
+- It is **not** an enterprise governance platform.
+- It does **not** replace your AI coding agent — it governs how its output is accepted.
+- It does **not** host login state or ship any API keys.
+- It does **not** push, publish, or deploy.
+- It does **not** claim its workspace is a secure sandbox.
 
-*Mobius does not record failure as a mere error log. Failure must ultimately transform into boundary — a rule, a permission adjustment, a risk marker, a new capability constraint.*
+## Quickstart
 
-### The System Must Evolve
+See **[docs/quickstart.md](./docs/quickstart.md)** for install and first run.
 
-Agents can be ephemeral. Workers can be destroyed. A task can end. But the system must not stand still. After every action, Mobius asks: should this be deposited as memory? Should a capability be generated? Should a boundary be updated? Should permissions be adjusted? Should the judgment be handed back to a human? Should this experience be explicitly discarded?
+The full guided quickstart is still being finalized as the write-side loop is
+hardened. Read-only inspection commands work today and are safe to run on any repo.
 
-*Evolution is not always accumulation. Sometimes it is remembering. Sometimes it is forgetting. Sometimes it is lowering confidence. Sometimes it is blocking a path. Sometimes it is returning judgment to a human.*
+## Docs
 
----
+- [Quickstart](./docs/quickstart.md) — install and first run
+- [Workflow](./docs/workflow.md) — the protocol objects and the execution loop
+- [Architecture (lite)](./docs/architecture-lite.md) — components and boundaries
+- [Hermes loop lock](./docs/hermes-loop-lock.md) — Hermes = State Machine Runner + Scheduler + Daily Reporter; runner rules and safety locks
 
-## Architecture
+## License
 
-Mobius separates AI production into four temporal governance layers.
-
-### Future Layer (Goal Constraint)
-
-The future is not prediction. The future is constraint. Future Layer preserves purpose, objectives, acceptance criteria, project direction, and inviolable invariants. It answers: why start? Where to go? What counts as done? What must not be betrayed? Future Layer does not execute. It prevents execution from drifting.
-
-*Future = Constitution / Spec / Acceptance Criteria / Project Direction*
-
-### Present Layer (Temporary Execution)
-
-The present is not free action. It is a temporary agent executing a verifiable task within limited permissions. Present Layer handles task execution, tool calls, code changes, test runs, local repair, and evidence emission. But it does not hold unlimited permissions. It cannot hold global memory permanently. It cannot bypass Tool Gateway. It cannot self-certify completion. It cannot forge final authority.
-
-*Present = Worker / Tool Execution / Evidence Emission*
-
-### Past Layer (Experience Sedimentation)
-
-The past is not a chat log. It is system memory validated by evidence. Past Layer preserves execution trajectories, failure causes, repair paths, test results, audit events, decisions, capability routes, and risk boundaries. Only experience with a source, confidence level, validity period, verification status, and audit record may enter Past Layer.
-
-*Mobius does not remember everything. Mobius deposits only the facts that can influence future judgment.*
-
-*Past = StarMap / Audit Log / Validated Execution Path / Failure Memory*
-
-### Evolution Layer (System Evolution)
-
-Evolution Layer is the only layer that does not participate in specific execution but judges whether the entire system is improving. It asks: Is the system closer to the purpose? Has a new capability emerged? Has a new boundary been exposed? Has future risk been reduced? Should Future Layer be adjusted? Should authority be returned to a human?
-
-*Evolution = Meta Evaluation / Governance Audit / Sedimentation Decision*
-
-*This is what separates Mobius from ordinary agent frameworks: it does not just explain how agents run. It explains how a generative system can keep evolving.*
-
----
-
-## Harness OS: Reference Implementation
-
-Harness OS is the first and currently only reference implementation of Mobius Architecture.
-
-It implements the runtime layer — Captain, Worker, Audit, StarMap, Loop Controller, and Tool Gateway — as a concrete engineering product that enforces Mobius principles through code.
-
-- **Theoretically replaceable**: Mobius Architecture does not depend on any specific runtime. Other implementations are possible.
-- **Practically singular**: Harness OS is the first and currently only reference implementation. There are no other runtimes today.
-
-Harness OS is **not** a model provider, not a general coding framework, and not a cloud SaaS product. It is a local-first governance runtime for AI-assisted engineering.
-
----
-
-## Current Status
-
-- **Baseline**: `v1.4-loop-installer-mvp`
-- **Latest capability**: `v1.4-loop-installer-mvp`
-- **Copilot tests**: `616 passed`
-- **Full pytest**: `848 passed`
-- **Mode**: local-first, read-only semantic copilot
-- **GitHub tag policy**: public-safe tags only; large evidence archives are kept out of Git tags
-
-### v1.1 — Real Hermes Loop
-- graph planner, loop runner/controller, executor/auditor
-- eval-triggered repair, review-triggered repair
-- final gate, evidence pack
-
-### v1.2 — Local Semantic Copilot MVP
-- project inspection, diff summary, task cards, merge readiness
-- evidence pack, static shell, realtime monitor
-- agent state machine, PR/MR pack, provider reliability guard, live dashboard
-
-### v1.2.1 — Dogfood Stabilization
-- risk deduplication, source/docs filtering, file type expansion
-- false approval-blocking fix, clean-clone idle explanation
-
-### v1.3 — Runtime Foundation
-- config schema / loader / resolver / validator
-- runtime doctor, version command, provider reliability planning
-- cross-project runtime planning, public-safe evidence strategy
-
-### v1.3.1 — PR Draft Assistant
-- `harness copilot pr-draft`, GitHub CLI detection
-- manual fallback PR draft generation, large-file/cache blocking checks
-- optional authenticated `--create`
-
----
-
-## Tag / Evidence Policy
-
-Some local sealed tags are intentionally **not pushed** to GitHub because their reachable history includes a 373 MB SWE-bench evidence archive, which GitHub rejects due to the 100 MB blob limit.
-
-Public-safe tags are pushed. Large evidence archives should be stored as release assets or external cold archives, while Git keeps manifests and SHA256 references.
-
----
-
-## Important Docs
-
-- [v1.3 Main Integration Seal](docs/v1_3_main_integration_seal.md)
-- [v1.2 Alpha Final Seal Manifest](docs/v1_2_alpha_final_seal_manifest.md)
-- [v1.2 Alpha Command Reference](docs/v1_2_alpha_command_reference.md)
-- [Public-Safe Evidence Strategy](docs/public_safe_evidence_strategy.md)
-- [Public-Safe Tag Mapping](docs/public_safe_tag_mapping.md)
-- [Large Evidence Archive Manifest](docs/large_evidence_archive_manifest.md)
-- [GitHub Cloud Simulation Report](docs/github_cloud_simulation_report.md)
+ISC.
