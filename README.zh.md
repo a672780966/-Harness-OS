@@ -1,218 +1,130 @@
+# Captain Code
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="版本">
-  <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
-  <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot 测试">
-  <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="全量测试">
-  <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="许可证">
-</p>
+> 可审计的 AI 编码工作流。
 
-<p align="center">
-  <a href="README.md"><strong>🇬🇧 English</strong></a> ·
-  <a href="README.zh.md"><strong>🇨🇳 中文</strong></a> ·
-  <a href="README.ja.md"><strong>🇯🇵 日本語</strong></a> ·
-  <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
-</p>
+![License](https://img.shields.io/badge/license-ISC-green?style=flat-square)
+![Status](https://img.shields.io/badge/status-early%20development-orange?style=flat-square)
+![Mode](https://img.shields.io/badge/mode-local--first-blue?style=flat-square)
 
-<p align="center">
-  <img src="assets/brand/mobius-homepage-hero-v1.png" width="360" alt="Mobius — 面向 AI 生产过程的时间治理系统">
-</p>
-<h1 align="center">Mobius</h1>
-<p align="center"><em>面向 AI 生产过程的时间治理系统</em></p>
+[English](./README.md) · **中文** · [日本語](./README.ja.md) · [한국어](./README.ko.md)
 
 ---
 
-**Mobius 是一种面向生成式系统的时间治理结构。**
+## Captain Code 是什么
 
-它以终局约束行动，
-以证据建立信任，
-以记忆保存后果，
-以边界生成能力，
-以演化修正未来判断。
+Captain Code 是一个可审计的 AI 编码工作流，它把开发任务转化为**受控执行、可审查的证据、门禁决策与归还记录**。
 
-它不让 Agent 永恒存在。
-它让每一次短暂执行都有机会回到系统，成为证据、记忆、边界、能力或一次明确的裁决。
+它帮助开发者使用 AI 编码 agent，而不必盲目信任 agent 的原始输出。Captain Code 不接受“agent 说完成了”这种说法，而是要求每个任务都带有契约、每次执行都留下证据，并且在门禁决策接受之前，任何结果都不会进入可信状态。
 
-<p align="center">
-  <a href="#快速开始"><strong>▶ 5 分钟快速上手</strong></a>
-</p>
+Captain Code 是**本地优先（local-first）**、读优先的。它在你本机、针对你的仓库运行，绝不会自行 push、发布或部署。
 
----
+## 要解决的问题
 
-## Mobius 为什么存在
+AI 编码 agent 擅长生成 diff 和自信的总结，却不擅长证明这些改动是正确的、在范围内的、可以安全接受的。
 
-现代 AI Agent 在执行推理、编码、工具调用和多 Agent 协作方面越来越强。但能力本身并不会让 AI 生产过程变得可信。
+- agent 的声明不是证据。
+- 通过的总结不等于通过的测试。
+- 看起来“已完成”的 diff，并不等于可以安全合并的 diff。
 
-更困难的问题是治理：
+如果 agent 周围没有工作流，你最终会信任未经验证的输出。Captain Code 在 agent 与你的可信状态之间加入一层薄薄的、可审计的环节，让“接受”成为有证据支撑的决策，而不是凭感觉。
 
-- 目标从哪来？
-- 谁有执行权？
-- 谁授予工具权限？
-- 谁来评估结果？
-- 谁来决定继续、停止、重试、回滚还是交给人？
+## 核心工作流
 
-当前的 Agent 框架回答"如何执行"。Mobius 回答"如何在时间维度上治理执行"。
-
-**Mobius 存在，是因为 AI 生产需要的不只是更强的 Agent，而是让 Agent 生产过程可治理、可验证、可沉积、可演化的时间型控制系统。**
-
----
-
-## 快速开始
-
-```bash
-git clone https://github.com/a672780966/-Harness-OS.git
-cd -Harness-OS
-# 方式 1：Python CLI（无需安装）
-python -m harness.copilot.cli version --json
-python -m harness.copilot.cli doctor
-python -m harness.copilot.cli inspect .
-python -m harness.copilot.cli dashboard .
-python -m harness.copilot.cli pr-draft --base main
-
-# 方式 2：Node CLI（需要 pnpm + node）
-pnpm install
-pnpm build
-./dist/index.js version --json
-./dist/index.js doctor
+```
+TaskEnvelope → Invocation → Artifact / Evidence → Review → GateDecision → AuditEvent → ReturnRecord
 ```
 
-如果 `harness` 命令不可用：
-```bash
-python -m harness.copilot.cli version --json
-python -m harness.copilot.cli doctor
+| 对象           | 含义                                                       |
+| -------------- | --------------------------------------------------------- |
+| `TaskEnvelope` | 任务契约：目标、范围、验收标准、约束。                     |
+| `Invocation`   | 针对受控工作区的一次执行尝试。                             |
+| `Artifact`     | 产出物（diff、生成的文件、补丁、计划）。                   |
+| `Evidence`     | 支撑判断的依据（测试结果、日志、策略检查）。               |
+| `Review`       | 对 artifact 与 evidence 的评估：通过、修复或阻断。         |
+| `GateDecision` | 流程决策：`PASS` / `REPAIR` / `BLOCK` / `ESCALATE`。       |
+| `AuditEvent`   | 仅追加（append-only）的发生记录，用于可追溯性。            |
+| `ReturnRecord` | 状态归还记录：哪些被接受、被拒绝或仍未解决。               |
+
+这些是**通用协议对象**。Captain Code 是该协议的编码 profile，但这些对象保持可复用，不会被收窄为仅限代码的术语。
+
+## 最小示例
+
+一个任务以 envelope 开始：
+
+```yaml
+# task_envelope.yaml
+task_id: task-001
+title: "Add a usage section to README"
+user_request: "Document how to run the CLI in README.md"
+scope:
+  allowed_paths: ["README.md"]
+  denied_commands: ["git push", "git merge"]
+acceptance_criteria:
+  - "README has a 'Usage' section"
+test_commands: ["pnpm test"]
 ```
-构建后（`pnpm install && pnpm build`），`harness` bin 位于 `./dist/index.js`。
 
----
+随后工作流运行：
 
-## 核心哲学
+1. **Invocation** —— worker 在受控工作区（一个 git worktree）中执行，而不是在你的主工作区。
+2. **Artifact / Evidence** —— diff 被记录为 artifact；日志和测试结果被记录为 evidence。
+3. **Review** —— 对照验收标准评估 artifact 与 evidence。
+4. **GateDecision** —— `PASS`、`REPAIR`、`BLOCK` 或 `ESCALATE`。
+5. **AuditEvent** —— 每一步都追加到审计日志。
+6. **ReturnRecord** —— 关于哪些被接受、还有哪些风险的最终记录。
 
-### 终局先于行动 (Purpose Before Action)
-
-一切执行都必须服务于明确的终局。任何 Agent 在行动前，都必须知道：为什么开始、要去哪里、什么叫完成、什么不能背叛。没有终局，行动只是漂流；没有终局，Loop 只是空转。
-
-*Future Layer 的意义不只是保存需求，而是保存终局、方向、验收标准和不可违反的不变量。*
-
-### 行动必须归还 (Every Action Must Return)
-
-每一次执行都会产生后果。后果不能跟随临时 Agent 一起消失。它们必须归还为证据、轨迹、风险、成本、失败、边界或能力。如果系统接住了后果，它转化为秩序；如果接不住，它以噪声、漂移、债务或风险的形式返回。
-
-*Mobius 遵循执行守恒律：没有一次执行会真正消失。每一次行动都被转化为秩序，或者以混乱的形式返回。*
-
-### 证据先于信任 (Evidence Before Trust)
-
-AI 不能自证完成。Agent 的声明不是完成。模型的总结不是事实。可信来自 trace、diff、test、review、audit，以及——在高风险或最终授权场景中——人工批准。没有证据的完成，不进入可信状态。没有审计的结果，不进入系统记忆。没有验证的经验，不进入未来判断。
-
-*Mobius 不信任"看起来完成"。Mobius 只接受"被证明完成"。*
-
-### 能力来自边界 (Capability Emerges from Boundaries)
-
-真正的能力不是"什么都能做"，而是知道什么时候做、做到哪里停、什么需要证据、什么必须交给人、什么不能再重复。成功提供路径。失败提供边界。证据确认路径。记忆保存边界。系统从二者之间生成能力。
-
-*Mobius 不把失败简单记录为错误。它要求失败最终转化为边界——规则、权限调整、风险标记或新的能力约束。*
-
-### 系统必须演化 (The System Must Evolve)
-
-Agent 可以是临时的。Worker 可以被销毁。一次任务可以结束。但系统不能原地踏步。每次行动后，Mobius 必须判断：是否应该沉积为记忆？是否应该生成能力？是否应该更新边界？是否应该调整权限？是否应该把判断权交还给人？是否应该明确丢弃这次经验？
-
-*演化不等于永远新增。有时演化是记住。有时演化是遗忘。有时演化是降低置信度。有时演化是阻断路径。有时演化是把判断权交还给人。*
-
----
-
-## 架构
-
-Mobius 将 AI 生产过程拆分为四个时间治理层。
-
-### 未来层（目标约束）
-
-未来不是预测。未来是约束。Future Layer 保存终局、目标、验收标准、项目方向和不可违反的不变量。它回答：为什么开始？要去哪里？什么叫完成？什么不能背叛？它不负责执行，它负责防止执行漂流。
-
-*未来层 = 章程 / 规格 / 验收标准 / 项目方向*
-
-### 现在层（临时执行）
-
-现在不是自由行动。现在是临时 Agent 在有限权限内完成一次可验证执行。现在层负责任务执行、工具调用、代码修改、测试运行、局部修复和证据生成。但它不能长期持有全局记忆，不能绕过 Tool Gateway，不能自行宣布可信完成，不能伪造最终授权。
-
-*现在层 = Worker / 工具执行 / 证据生成*
-
-### 过去层（经验沉积）
-
-过去不是聊天记录。过去是经过证据验证的系统记忆。过去层保存执行轨迹、失败原因、修复路径、测试结果、审计事件、决策记录、能力路径和风险边界。只有带有来源、置信度、有效期、验证状态和审计记录的经验，才有资格进入过去层。
-
-*Mobius 不记住一切。Mobius 只沉积能够影响未来判断的事实。*
-
-*过去层 = StarMap / Audit Log / 已验证路径 / 失败记忆*
-
-### 演化层（系统演化）
-
-演化层是唯一不参与具体执行、却判断整个系统是否变好的治理视角。它不看一次任务是否完成，而是看：系统是否更接近终局？是否产生了新的能力？是否暴露了新的边界？是否降低了未来风险？是否需要调整未来层？是否需要交还给人？
-
-*演化层 = 元评估 / 治理审计 / 沉积决策*
-
-*这是 Mobius 与普通 Agent 框架的关键区别：它不是解释 Agent 如何运行，而是解释一个生成式系统为什么能够持续演化。*
-
----
-
-## Harness OS：参考实现
-
-Harness OS 是 Mobius Architecture 的第一个且目前唯一的参考实现。
-
-它将运行时层——Captain、Worker、Audit、StarMap、Loop Controller、Tool Gateway——实现为一个具体的工程产品，通过代码执行 Mobius 原则。
-
-- **理论上可替换**：Mobius Architecture 不依赖特定运行时，可以有其他实现。
-- **实践中唯一**：Harness OS 是第一个且目前唯一的参考实现，没有第二个运行时。
-
-Harness OS **不是**模型提供商，不是通用编码框架，也不是云 SaaS 产品。它是一个面向 AI 辅助工程的本地优先治理运行时。
-
----
+在 `GateDecision` 接受并写入 `ReturnRecord` 之前，任何东西都不算“完成”。
 
 ## 当前状态
 
-- **主线基线**: `v1.4-loop-installer-mvp`
-- **最新能力**: `v1.4-loop-installer-mvp`
-- **Copilot 测试**: `616 passed`
-- **全量测试**: `848 passed`
-- **产品模式**: Local Semantic Copilot MVP
-- **Tag 策略**: 仅推送公开安全 tag，大证据包不进入 Git tag
+Captain Code 处于**早期、活跃的开发阶段**，请据此看待。
 
-### v1.1 — Real Hermes Loop
-- 图规划器、循环运行/控制器、执行/审计
-- 评估触发修复、审查触发修复、最终关卡、证据包
+- **模式：** 本地优先、读优先的语义副驾驶（semantic copilot）。
+- **当前可用：** 项目巡检、diff 与证据收集、一个 runner 循环（plan → execute → collect → review → gate），以及报告生成。
+- **正在加固：** 完整的写入侧 `TaskEnvelope → ReturnRecord` 闭环，包含受控工作区执行与收尾。
+- **并非沙箱声明：** 受控工作区是一个 git worktree。它隔离的是*改动*，而不是宿主机。它**不是**安全沙箱（见安全模型）。
 
-### v1.2 — Local Semantic Copilot MVP
-- 项目检查、差异摘要、任务卡、合并就绪度
-- 证据包、静态仪表盘、实时监控、Agent 状态机
-- PR/MR 包、提供商可靠性守卫、实时仪表盘
+> 命名说明：当前 CLI 通过 `harness` / `python -m harness.copilot.cli` 调用，`captain-code` 命名正在逐步采用。参见 [docs/quickstart.md](./docs/quickstart.md)。
 
-### v1.2.1 — Dogfood 稳定性
-- 风险去重、源文件/文档过滤、文件类型扩展
-- 误报修复、空克隆空闲解释
+## 安全模型
 
-### v1.3 — 运行时基础
-- 配置 schema / loader / resolver / validator
-- 运行时诊断、版本命令、提供商可靠性规划
-- 跨项目运行时规划、公开安全证据策略
+Captain Code 默认保守。以下规则作为工作流的一部分被强制执行，而不是交由 agent 自行决定：
 
-### v1.3.1 — PR 草稿助手
-- `harness copilot pr-draft`、GitHub CLI 检测
-- 手动备用 PR 草稿生成、大文件/缓存拦截检查
-- 可选认证 `--create`
+1. **没有 `TaskEnvelope`，就不执行 worker。**
+2. **没有 `trace_id`，就没有可信执行。**
+3. **没有 diff 引用，就没有完成状态。**
+4. **没有测试结果，就没有完成状态。**
+5. **失败的测试不能变成已接受。**
+6. **超出范围的文件改动会被隔离（quarantine）**，不会被静默应用。
+7. **核心协议变更需要人工批准。**
+8. **连续三次失败会触发暂停或人工审查。**
+9. **`git push`、发布和部署被阻断。**
+10. **在 `ReturnRecord` 被信任之前，必须先有被接受的 `GateDecision`。**
 
----
+受控工作区可以防止污染你的主工作区，并让改动易于 diff 和销毁。但它**无法**阻止恶意命令读取本地文件、环境变量或凭证。强隔离（容器、microVM）不在本阶段范围内。
 
-## Tag / Evidence 策略
+## Captain Code 不做什么
 
-部分本地 sealed tag 未推送到 GitHub，因为其可达历史包含 373 MB SWE-bench 证据包，超出 GitHub 100 MB blob 大小限制。
+- 它**不是**“Agent OS”或 AI 操作系统。
+- 它**不是**企业治理平台。
+- 它**不**替代你的 AI 编码 agent —— 它治理的是 agent 输出如何被接受。
+- 它**不**托管登录态，也不内置任何 API Key。
+- 它**不**执行 push、发布或部署。
+- 它**不**声称自己的工作区是安全沙箱。
 
-仅推送公开安全的 tag。大证据包应通过 Release Asset 或外部冷存储发布，Git 仅保留清单和 SHA256 引用。
+## 快速开始
 
----
+安装与首次运行见 **[docs/quickstart.md](./docs/quickstart.md)**。
 
-## 重要文档
+随着写入侧闭环的加固，完整的引导式快速开始仍在完善中。只读巡检命令现在即可使用，并且可以安全地在任意仓库上运行。
 
-- [v1.3 Main Integration Seal](docs/v1_3_main_integration_seal.md)
-- [v1.2 Alpha Final Seal Manifest](docs/v1_2_alpha_final_seal_manifest.md)
-- [v1.2 Alpha Command Reference](docs/v1_2_alpha_command_reference.md)
-- [Public-Safe Evidence Strategy](docs/public_safe_evidence_strategy.md)
-- [Public-Safe Tag Mapping](docs/public_safe_tag_mapping.md)
-- [Large Evidence Archive Manifest](docs/large_evidence_archive_manifest.md)
+## 文档
+
+- [Quickstart](./docs/quickstart.md) —— 安装与首次运行
+- [Workflow](./docs/workflow.md) —— 协议对象与执行闭环
+- [Architecture (lite)](./docs/architecture-lite.md) —— 组件与边界
+- [Hermes loop lock](./docs/hermes-loop-lock.md) —— Hermes（State Machine Runner + Scheduler + Daily Reporter）的 runner 规则与安全锁
+
+## 许可证
+
+ISC。

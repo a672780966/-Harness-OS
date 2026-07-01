@@ -1,174 +1,130 @@
+# Captain Code
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-v1.4--loop--installer--mvp-blue?style=flat-square" alt="버전">
-  <img src="https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square" alt="Python">
-  <img src="https://img.shields.io/badge/copilot_tests-616%20passed-brightgreen?style=flat-square" alt="Copilot 테스트">
-  <img src="https://img.shields.io/badge/full_pytest-848%20passed-brightgreen?style=flat-square" alt="전체 테스트">
-  <img src="https://img.shields.io/badge/license-ISC-green?style=flat-square" alt="라이선스">
-</p>
+> 감사 가능한 AI 코딩 워크플로.
 
-<p align="center">
-  <a href="README.md"><strong>🇬🇧 English</strong></a> ·
-  <a href="README.zh.md"><strong>🇨🇳 中文</strong></a> ·
-  <a href="README.ja.md"><strong>🇯🇵 日本語</strong></a> ·
-  <a href="README.ko.md"><strong>🇰🇷 한국어</strong></a>
-</p>
+![License](https://img.shields.io/badge/license-ISC-green?style=flat-square)
+![Status](https://img.shields.io/badge/status-early%20development-orange?style=flat-square)
+![Mode](https://img.shields.io/badge/mode-local--first-blue?style=flat-square)
 
-<p align="center">
-  <img src="assets/brand/mobius-homepage-hero-v1.png" width="360" alt="Mobius — AI 프로덕션을 위한 시간 거버넌스 시스템">
-</p>
-<h1 align="center">Mobius</h1>
-<p align="center"><em>AI 프로덕션을 위한 시간 거버넌스 시스템</em></p>
+[English](./README.md) · [中文](./README.zh.md) · [日本語](./README.ja.md) · **한국어**
 
 ---
 
-**Mobius는 생성형 시스템을 위한 시간 거버넌스 구조입니다.**
+## Captain Code란
 
-목적이 행동을 제약하고,
-증거가 신뢰를 뒷받침하며,
-기억이 결과를 보존하고,
-경계가 능력을 형성하며,
-진화가 미래의 판단을 교정합니다.
+Captain Code는 개발 작업을 **통제된 실행, 검토 가능한 증거, 게이트 결정, 반환 기록**으로 바꾸는 감사 가능한 AI 코딩 워크플로입니다.
 
-영구적인 에이전트를 만들지 않습니다.
-일시적인 실행이 증거, 기억, 경계, 능력 또는 명확한 판단으로 시스템에 환원되도록 합니다.
+개발자가 AI 코딩 agent의 원시 출력을 맹목적으로 신뢰하지 않고도 사용할 수 있도록 돕습니다. “agent가 완료했다고 말한다”를 그대로 받아들이는 대신, Captain Code는 모든 작업이 계약을 갖고, 모든 실행이 증거를 남기며, 게이트 결정이 수락하기 전까지는 어떤 결과도 신뢰 상태에 들어가지 않도록 요구합니다.
 
-<p align="center">
-  <a href="#빠른-시작"><strong>▶ 5분 안에 시작하기</strong></a>
-</p>
+Captain Code는 **로컬 우선(local-first)**이며 읽기 우선입니다. 당신의 컴퓨터에서 당신의 저장소를 대상으로 동작하며, 스스로 push, 게시, 배포하지 않습니다.
 
----
+## 해결하려는 문제
 
-## Mobius가 존재하는 이유
+AI 코딩 agent는 diff와 자신감 있는 요약을 잘 만들지만, 그 작업이 올바르고 범위 안에 있으며 수락해도 안전하다는 것을 증명하는 데는 약합니다.
 
-현대 AI 에이전트는 추론, 코딩, 도구 사용, 멀티에이전트 협업에서 빠르게 능력을 향상하고 있습니다. 하지만 능력만으로 AI 프로덕션 프로세스를 신뢰할 수 있게 만들 수는 없습니다.
+- agent의 주장은 증거가 아닙니다.
+- 통과했다는 요약은 통과한 테스트가 아닙니다.
+- “완료된 것처럼 보이는” diff는 안전하게 머지할 수 있는 diff와 같지 않습니다.
 
-더 어려운 문제는 거버넌스입니다:
+agent 주위에 워크플로가 없으면 검증되지 않은 출력을 신뢰하게 됩니다. Captain Code는 agent와 당신의 신뢰 상태 사이에 얇고 감사 가능한 계층을 두어, 수락이 분위기가 아니라 증거에 근거한 결정이 되게 합니다.
 
-- 목표는 누가 정의하는가?
-- 작업은 누가 실행하는가?
-- 도구 접근은 누가 허용하는가?
-- 결과는 누가 평가하는가?
-- 계속, 중지, 재시도, 롤백, 인간에게 인계는 누가 결정하는가?
+## 핵심 워크플로
 
-현재의 에이전트 프레임워크는 "어떻게 실행할 것인가"에 답합니다. Mobius는 "시간을 초월하여 실행을 어떻게 거버넌스할 것인가"에 답합니다.
-
-**Mobius가 존재하는 이유는 AI 프로덕션에 강력한 에이전트뿐만 아니라 모든 행동이 증거, 기억, 경계 또는 더 나은 판단으로 환원됨을 보장하는 시간 지향 거버넌스 구조가 필요하기 때문입니다.**
-
----
-
-## 빠른 시작
-
-```bash
-git clone https://github.com/a672780966/-Harness-OS.git
-cd -Harness-OS
-# 방법 1: Python CLI (설치 불필요)
-python -m harness.copilot.cli version --json
-python -m harness.copilot.cli doctor
-python -m harness.copilot.cli inspect .
-python -m harness.copilot.cli dashboard .
-python -m harness.copilot.cli pr-draft --base main
-
-# 방법 2: Node CLI (pnpm + node 필요)
-pnpm install
-pnpm build
-./dist/index.js version --json
-./dist/index.js doctor
+```
+TaskEnvelope → Invocation → Artifact / Evidence → Review → GateDecision → AuditEvent → ReturnRecord
 ```
 
-`harness` 명령어를 사용할 수 없는 경우:
-```bash
-python -m harness.copilot.cli version --json
-python -m harness.copilot.cli doctor
+| 객체           | 의미                                                          |
+| -------------- | ----------------------------------------------------------- |
+| `TaskEnvelope` | 작업 계약: 목표, 범위, 수락 기준, 제약.                      |
+| `Invocation`   | 통제된 워크스페이스에 대한 한 번의 실행 시도.                |
+| `Artifact`     | 산출물(diff, 생성 파일, 패치, 계획).                         |
+| `Evidence`     | 판단을 뒷받침하는 근거(테스트 결과, 로그, 정책 점검).        |
+| `Review`       | artifact와 evidence에 대한 평가: 승인, 수리, 차단.          |
+| `GateDecision` | 흐름 결정: `PASS` / `REPAIR` / `BLOCK` / `ESCALATE`.        |
+| `AuditEvent`   | 발생한 일에 대한 추가 전용(append-only) 기록. 추적성 목적.   |
+| `ReturnRecord` | 상태 반환 기록: 무엇이 수락·거부되었거나 미해결로 남았는지.  |
+
+이들은 **범용 프로토콜 객체**입니다. Captain Code는 이 프로토콜의 코딩 profile이지만, 객체는 재사용 가능하게 유지되며 코드 전용 용어로 좁혀지지 않습니다.
+
+## 최소 예시
+
+작업은 envelope로 시작합니다:
+
+```yaml
+# task_envelope.yaml
+task_id: task-001
+title: "Add a usage section to README"
+user_request: "Document how to run the CLI in README.md"
+scope:
+  allowed_paths: ["README.md"]
+  denied_commands: ["git push", "git merge"]
+acceptance_criteria:
+  - "README has a 'Usage' section"
+test_commands: ["pnpm test"]
 ```
-빌드 후(`pnpm install && pnpm build`), `harness` 바이너리는 `./dist/index.js`에 있습니다.
 
----
+이후 워크플로가 실행됩니다:
 
-## 핵심 철학
+1. **Invocation** —— worker는 메인 체크아웃이 아니라 통제된 워크스페이스(git worktree) 안에서 실행합니다.
+2. **Artifact / Evidence** —— diff는 artifact로, 로그와 테스트 결과는 evidence로 기록됩니다.
+3. **Review** —— 수락 기준에 비추어 artifact와 evidence를 평가합니다.
+4. **GateDecision** —— `PASS`, `REPAIR`, `BLOCK` 또는 `ESCALATE`.
+5. **AuditEvent** —— 모든 단계가 감사 로그에 추가됩니다.
+6. **ReturnRecord** —— 무엇이 수락되었고 어떤 위험이 남았는지에 대한 최종 기록.
 
-### 목적은 행동에 선행한다 (Purpose Before Action)
-
-모든 실행은 명확한 목적을 위해 존재해야 합니다. 에이전트는 행동하기 전에 왜 시작하는지, 어디로 가는지, 무엇이 완료인지, 무엇을 배반해서는 안 되는지를 알아야 합니다.
-
-### 모든 행동은 환원되어야 한다 (Every Action Must Return)
-
-실행은 항상 결과를 낳습니다. 결과는 일시적 에이전트와 함께 사라져서는 안 됩니다. 증거, 궤적, 위험, 비용, 실패, 경계, 능력으로 시스템에 환원되어야 합니다.
-
-### 증거는 신뢰에 선행한다 (Evidence Before Trust)
-
-AI는 완료를 스스로 증명할 수 없습니다. 에이전트의 주장은 증거가 아닙니다. 신뢰는 trace, diff, test, review, audit, 그리고 고위험 또는 최종 권한 시나리오에서의 인간 승인에서 비롯됩니다.
-
-### 능력은 경계에서 emerges한다 (Capability Emerges from Boundaries)
-
-진정한 능력은 "무엇이든 할 수 있는 것"이 아닙니다. 언제 행동해야 하는지, 어디서 멈춰야 하는지, 무엇에 증거가 필요한지, 무엇을 인간에게 맡겨야 하는지를 아는 것입니다.
-
-### 시스템은 진화해야 한다 (The System Must Evolve)
-
-에이전트는 일시적일 수 있습니다. 워커는 폐기될 수 있습니다. 작업은 종료될 수 있습니다. 그러나 시스템은 정체되어서는 안 됩니다. 모든 행동 후 Mobius는 판단합니다: 이것을 기억으로 침적해야 하는가? 능력을 생성해야 하는가? 경계를 업데이트해야 하는가? 판단을 인간에게 되돌려야 하는가?
-
----
-
-## 아키텍처
-
-Mobius는 AI 프로덕션 프로세스를 4개의 시간 거버넌스 레이어로 분할합니다.
-
-### Future Layer (목표 제약)
-미래는 예측이 아닌 제약입니다. 목적, 목표, 합격 기준, 프로젝트 방향, 불가침 불변 조건을 보존합니다.
-
-### Present Layer (일시적 실행)
-현재는 제한된 권한 내에서 일시적 에이전트가 검증 가능한 작업을 실행하는 장소입니다. 작업 실행, 도구 호출, 코드 변경, 테스트 실행, 증거 생성을 담당합니다.
-
-### Past Layer (경험 침적)
-과거는 채팅 로그가 아닙니다. 증거로 검증된 시스템 메모리입니다. 실행 궤적, 실패 원인, 수정 경로, 테스트 결과, 감사 이벤트, 결정 기록을 보존합니다.
-
-### Evolution Layer (시스템 진화)
-특정 실행에는 참여하지 않으면서 시스템 전체가 개선되고 있는지 판단하는 유일한 레이어입니다.
-
----
-
-## Harness OS: 참조 구현
-
-Harness OS는 Mobius Architecture의 최초이자 현재 유일한 참조 구현입니다.
-
-Captain, Worker, Audit, StarMap, Loop Controller, Tool Gateway를 포함한 런타임 레이어를 Mobius 원칙을 코드로 강제하는 구체적인 엔지니어링 제품으로 구현합니다.
-
-- **이론적 대체 가능성**: Mobius Architecture는 특정 런타임에 의존하지 않습니다. 다른 구현도 가능합니다.
-- **실질적 유일성**: Harness OS는 최초이자 현재 유일한 참조 구현입니다.
-
-Harness OS는 모델 제공자, 범용 코딩 프레임워크, 클라우드 SaaS 제품이 아닙니다. AI 지원 엔지니어링을 위한 로컬 우선 거버넌스 런타임입니다.
-
----
+`GateDecision`이 수락하고 `ReturnRecord`가 기록되기 전까지는 아무것도 “완료”가 아닙니다.
 
 ## 현재 상태
 
-- **베이스라인**: `v1.4-loop-installer-mvp`
-- **Copilot 테스트**: `616 passed`
-- **전체 테스트**: `848 passed`
-- **모드**: local-first semantic copilot
+Captain Code는 **초기이며 활발히 개발 중**이므로 그에 맞게 다뤄 주세요.
 
-### v1.1 — Real Hermes Loop
-그래프 플래너, 루프 러너/컨트롤러, 실행/감사, 평가 트리거 수정, 리뷰 트리거 수정, 파이널 게이트, 증거 팩
+- **모드:** 로컬 우선, 읽기 우선 시맨틱 copilot.
+- **현재 사용 가능:** 프로젝트 점검, diff 및 증거 수집, runner 루프(plan → execute → collect → review → gate), 보고서 생성.
+- **강화 중:** 통제된 워크스페이스 실행과 마무리를 포함한 쓰기 측의 완전한 `TaskEnvelope → ReturnRecord` 루프.
+- **샌드박스 주장 아님:** 통제된 워크스페이스는 git worktree입니다. 격리하는 것은 *변경*이지 호스트가 아닙니다. 보안 샌드박스가 **아닙니다**(안전 모델 참조).
 
-### v1.2 — Local Semantic Copilot MVP
-프로젝트 검사, diff 요약, 태스크 카드, 병합 준비 상태, 증거 팩, 정적 셸, 실시간 모니터, 에이전트 상태 머신, PR/MR 팩, 제공자 신뢰성 가드, 라이브 대시보드
+> 명칭 안내: CLI는 현재 `harness` / `python -m harness.copilot.cli`로 호출되며, `captain-code` 명칭은 채택이 진행 중입니다. [docs/quickstart.md](./docs/quickstart.md)를 참조하세요.
 
-### v1.3 — 런타임 기반
-설정 스키마/로더/리졸버/밸리데이터, 런타임 닥터, 버전 명령어, 제공자 신뢰성 계획
+## 안전 모델
 
-### v1.3.1 — PR 초안 어시스턴트
-`harness copilot pr-draft`, GitHub CLI 감지, 수동 폴백 PR 초안 생성, 대용량 파일/캐시 차단 검사
+Captain Code는 기본적으로 보수적입니다. 다음 규칙은 agent의 재량에 맡기지 않고 워크플로의 일부로 강제됩니다:
 
----
+1. **`TaskEnvelope`가 없으면 worker를 실행하지 않는다.**
+2. **`trace_id`가 없으면 신뢰된 실행이 없다.**
+3. **diff 참조가 없으면 완료 상태가 없다.**
+4. **테스트 결과가 없으면 완료 상태가 없다.**
+5. **실패한 테스트는 수락될 수 없다.**
+6. **범위를 벗어난 파일 변경은 격리되며**, 조용히 적용되지 않는다.
+7. **코어 프로토콜 변경에는 사람의 승인이 필요하다.**
+8. **세 번 연속 실패 시 일시 중지 또는 사람 검토가 발동된다.**
+9. **`git push`, 게시, 배포는 차단된다.**
+10. **`ReturnRecord`가 신뢰되기 전에 수락된 `GateDecision`이 있어야 한다.**
 
-## 태그 / 증거 정책
+통제된 워크스페이스는 메인 체크아웃 오염을 방지하고 변경을 diff·삭제하기 쉽게 합니다. 다만 악의적인 명령이 로컬 파일, 환경 변수, 자격 증명을 읽는 것을 **막지는 못합니다**. 강한 격리(컨테이너, microVM)는 이 단계의 범위 밖입니다.
 
-일부 로컬 sealed 태그는 도달 가능한 히스토리에 373MB SWE-bench 증거 아카이브가 포함되어 GitHub에 푸시되지 않습니다. 공개 안전 태그만 푸시됩니다.
+## Captain Code가 하지 않는 것
 
----
+- “Agent OS”나 AI 운영체제가 **아닙니다**.
+- 엔터프라이즈 거버넌스 플랫폼이 **아닙니다**.
+- 당신의 AI 코딩 agent를 **대체하지 않습니다** —— 그 출력이 어떻게 수락되는지를 통제합니다.
+- 로그인 상태를 **보관하지 않고**, API 키를 포함하지 **않습니다**.
+- push, 게시, 배포를 **하지 않습니다**.
+- 자신의 워크스페이스가 보안 샌드박스라고 **주장하지 않습니다**.
 
-## 중요 문서
+## 빠른 시작
 
-- [v1.3 Main Integration Seal](docs/v1_3_main_integration_seal.md)
-- [v1.2 Alpha Final Seal Manifest](docs/v1_2_alpha_final_seal_manifest.md)
-- [Public-Safe Evidence Strategy](docs/public_safe_evidence_strategy.md)
+설치와 첫 실행은 **[docs/quickstart.md](./docs/quickstart.md)**를 참조하세요.
+
+쓰기 측 루프가 강화되는 동안 완전한 가이드형 빠른 시작은 아직 마무리 중입니다. 읽기 전용 점검 명령은 지금 사용할 수 있으며 어떤 저장소에서도 안전하게 실행됩니다.
+
+## 문서
+
+- [Quickstart](./docs/quickstart.md) —— 설치와 첫 실행
+- [Workflow](./docs/workflow.md) —— 프로토콜 객체와 실행 루프
+- [Architecture (lite)](./docs/architecture-lite.md) —— 구성 요소와 경계
+- [Hermes loop lock](./docs/hermes-loop-lock.md) —— Hermes(State Machine Runner + Scheduler + Daily Reporter)의 runner 규칙과 안전 잠금
+
+## 라이선스
+
+ISC.
